@@ -97,3 +97,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Ignore Code Coverage settings
+/[Pp]roject[Ss]ettings/Packages/com.unity.testtools.codecoverage/Settings.json
