@@ -43,57 +43,64 @@ void GenerateGrid()
     // ✅ 위치 기반 방향 결정
 Dir GetRequiredDir(int x, int y)
 {
-    // ✅ 코너 (2방향)
-    if ((x == 0 && y == 0)) return Dir.Up | Dir.Right;
-    if ((x == 0 && y == size - 1)) return Dir.Down | Dir.Right;
-    if ((x == size - 1 && y == 0)) return Dir.Up | Dir.Left;
-    if ((x == size - 1 && y == size - 1)) return Dir.Down | Dir.Left;
+    // 코너 (2방향)
+    if (x == 0 && y == 0) return Dir.Up | Dir.Right;
+    if (x == 0 && y == size - 1) return Dir.Down | Dir.Right;
+    if (x == size - 1 && y == 0) return Dir.Up | Dir.Left;
+    if (x == size - 1 && y == size - 1) return Dir.Down | Dir.Left;
 
-    // ✅ 테두리 (3방향)
+    // 테두리 (3방향)
     if (x == 0) return Dir.Up | Dir.Down | Dir.Right;
     if (x == size - 1) return Dir.Up | Dir.Down | Dir.Left;
     if (y == 0) return Dir.Up | Dir.Left | Dir.Right;
     if (y == size - 1) return Dir.Down | Dir.Left | Dir.Right;
 
-    // ✅ 내부 (4방향)
+    // 내부 (4방향)
     return Dir.Up | Dir.Down | Dir.Left | Dir.Right;
 }
 
 
-    // ✅ 타일 선택
-GameObject GetMatchingTile(Dir need)
-{
-    List<GameObject> candidates = new List<GameObject>();
 
-    // 찾는 값(need)을 숫자로 변환 (Everything -1이면 15로 강제 변환)
-    int targetVal = (int)need;
-    if (targetVal == -1) targetVal = 15;
+
+    // ✅ 타일 선택
+GameObject GetMatchingTile(Dir need, out Quaternion rotOut)
+{
+    List<(GameObject, Quaternion)> candidates = new();
+
+    int target = (int)need;
+    if (target == -1) target = 15;
 
     foreach (var go in tileSet.tiles)
     {
         Tile t = go.GetComponent<Tile>();
         if (t == null) continue;
 
-        // 타일이 가진 값 (-1이면 15로 변환)
-        int tileVal = (int)t.openings;
-        if (tileVal == -1) tileVal = 15;
-
-        // 🛡️ [핵심] 오직 숫자가 완벽하게 일치할 때만 후보에 넣음
-        if (tileVal == targetVal)
+        for (int r = 0; r < 4; r++)
         {
-            candidates.Add(go);
+            Dir rotated = RotateDir(t.openings, r);
+            int val = (int)rotated;
+            if (val == -1) val = 15;
+
+            if (val == target)
+            {
+                Quaternion rot = Quaternion.Euler(0, r * 90f, 0);
+                candidates.Add((go, rot));
+            }
         }
     }
 
     if (candidates.Count == 0)
     {
-        Debug.LogError($"매칭 실패: {need} ({targetVal})");
+        Debug.LogError($"매칭 실패: {need}");
+        rotOut = Quaternion.identity;
         return null;
     }
 
-    // 후보가 여러 개라면 랜덤, 하나라면 그 타일이 리턴됨
-    return candidates[Random.Range(0, candidates.Count)];
+    var pick = candidates[Random.Range(0, candidates.Count)];
+    rotOut = pick.Item2;
+    return pick.Item1;
 }
+
 
 // 비트 개수를 세어주는 보조 함수 (동일 위치에 추가)
 int GetBitCount(int value)
@@ -117,28 +124,38 @@ void Build()
         for (int y = 0; y < size; y++)
         {
             Dir need = grid[x, y];
-            
-            // ✅ (2,1)과 (2,3)에서 실제로 어떤 값이 들어오는지 확인
-            if ((x == 2 && y == 1) || (x == 2 && y == 3))
-            {
-                Debug.Log($"[생성 직전 체크] 좌표 ({x}, {y})의 데이터: {need} ({(int)need})");
-            }
 
-            GameObject prefab = GetMatchingTile(need);
+            Quaternion rot;
+            GameObject prefab = GetMatchingTile(need, out rot);
             if (prefab == null) continue;
 
             Vector3 pos = new Vector3(x * tileSize, 0, y * tileSize);
-            GameObject instance = Instantiate(prefab, pos, Quaternion.identity, transform);
-            
-            // ✅ 생성된 오브젝트 이름에 좌표를 붙여서 씬에서 확인하기 쉽게 만듭니다.
-            instance.name = $"Tile_{x}_{y}_{need}";
-
-            if ((x == 2 && y == 1))
-{
-    // (2,1) 자리에 실제로 '어떤 이름'의 프리팹이 소환됐는지 출력
-    Debug.Log($"[결과] (2,1) 자리에 생성된 프리팹 이름: {prefab.name}");
-}
+            Instantiate(prefab, pos, rot, transform);
         }
     }
 }
+
+
+Dir RotateDir(Dir d, int rot)
+{
+    int val = (int)d;
+    if (val == -1) val = 15;
+
+    for (int i = 0; i < rot; i++)
+    {
+        int newVal = 0;
+
+        if ((val & (int)Dir.Up) != 0) newVal |= (int)Dir.Right;
+        if ((val & (int)Dir.Right) != 0) newVal |= (int)Dir.Down;
+        if ((val & (int)Dir.Down) != 0) newVal |= (int)Dir.Left;
+        if ((val & (int)Dir.Left) != 0) newVal |= (int)Dir.Up;
+
+        val = newVal;
+    }
+
+    return (Dir)val;
+}
+
+
+
 }

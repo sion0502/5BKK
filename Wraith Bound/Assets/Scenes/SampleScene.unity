@@ -435,7 +435,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapGenerator
   size: 5
-  tileSize: 150
+  tileSize: 250
   tileSet: {fileID: 11400000, guid: 376d1fb7207f0f840b40d9cf22734dd2, type: 2}
 --- !u!4 &1328198042
 Transform:
@@ -694,7 +694,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 243b231ea6c8b4c5f9612fcdf5babfce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  moveSpeed: 35
+  moveSpeed: 50
   mouseSpeed: 1000
 --- !u!54 &2124620070
 Rigidbody:
@@ -777,7 +777,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9098951836820259232, guid: 1aa23528e3dbdf242ac9971141fbe0ed, type: 3}
       propertyPath: moveSpeed
-      value: 35
+      value: 50
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
