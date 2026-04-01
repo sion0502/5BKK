@@ -7,7 +7,8 @@ public enum Dir
     Up = 1,
     Down = 2,
     Left = 4,
-    Right = 8
+    Right = 8,
+    Everything = 15
 }
 
 public class Tile : MonoBehaviour

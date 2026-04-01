@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 522715603745867934}
   - component: {fileID: 7872617110043161297}
   m_Layer: 0
-  m_Name: Tile_T_RIghtWall 2
+  m_Name: Tile_3Way updownright
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -127,7 +127,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81a5d6fcc13928b4aa7b5f88afe8ee6a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Tile
-  openings: 7
+  openings: 11
 --- !u!1 &8610402299921214028
 GameObject:
   m_ObjectHideFlags: 0

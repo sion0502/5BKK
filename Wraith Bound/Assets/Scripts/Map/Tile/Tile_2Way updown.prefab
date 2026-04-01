@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8629640102955073714}
   - component: {fileID: 4883617290049396194}
   m_Layer: 0
-  m_Name: Tile_2WayWall
+  m_Name: Tile_2Way updown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -127,7 +127,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81a5d6fcc13928b4aa7b5f88afe8ee6a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Tile
-  openings: 5
+  openings: 3
 --- !u!1 &7126518842503182367
 GameObject:
   m_ObjectHideFlags: 0
