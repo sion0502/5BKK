@@ -1,10 +1,8 @@
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class MapGenerator : MonoBehaviour
 {
-
     public int size = 5;
     public float tileSize = 10f;
     public TileSet tileSet;
@@ -14,169 +12,91 @@ public class MapGenerator : MonoBehaviour
     Vector2Int start = new Vector2Int(2, 0);
     Vector2Int end = new Vector2Int(2, 4);
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         grid = new Dir[size, size];
-        
-        CreateMainPath();
-        AddExtraConnections(0.3f);
+
+        GenerateGrid();
         Build();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    void CreateMainPath()
-    {
-        HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
-        DFS(start, visited);
-    }
-
-    bool DFS(Vector2Int cur, HashSet<Vector2Int> visited)
-    {
-        if (cur == end)
-            return true;
-
-        visited.Add(cur);
-
-        List<Vector2Int> dirs = new List<Vector2Int>
-        {
-            Vector2Int.up,
-            Vector2Int.down,
-            Vector2Int.left,
-            Vector2Int.right
-        };
-
-        Shuffle(dirs);
-
-        foreach (var d in dirs)
-        {
-            Vector2Int next = cur + d;
-
-            if (!InRange(next) || visited.Contains(next))
-                continue;
-
-            if (DFS(next, visited))
-            {
-                Connect(cur, next);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    void Connect(Vector2Int a, Vector2Int b)
-    {
-        Vector2Int diff = b - a;
-
-        if (diff == Vector2Int.up)
-        {
-            grid[a.x, a.y] |= Dir.Up;
-            grid[b.x, b.y] |= Dir.Down;
-        }
-        else if (diff == Vector2Int.down)
-        {
-            grid[a.x, a.y] |= Dir.Down;
-            grid[b.x, b.y] |= Dir.Up;
-        }
-        else if (diff == Vector2Int.left)
-        {
-            grid[a.x, a.y] |= Dir.Left;
-            grid[b.x, b.y] |= Dir.Right;
-        }
-        else if (diff == Vector2Int.right)
-        {
-            grid[a.x, a.y] |= Dir.Right;
-            grid[b.x, b.y] |= Dir.Left;
-        }
-    }
-
-
-    void AddExtraConnections(float chance)
+    // ✅ 규칙 기반 생성 (핵심)
+    void GenerateGrid()
     {
         for (int x = 0; x < size; x++)
         {
             for (int y = 0; y < size; y++)
             {
-                Vector2Int cur = new Vector2Int(x, y);
-
-                foreach (var dir in new[] { Vector2Int.right, Vector2Int.up })
-                {
-                    Vector2Int next = cur + dir;
-
-                    if (!InRange(next)) continue;
-
-                    if (Random.value < chance)
-                        Connect(cur, next);
-                }
+                grid[x, y] = GetRequiredDir(x, y);
             }
         }
+
+        // ✅ 입구 / 출구 앞은 무조건 4방향
+        grid[2, 1] = Dir.Up | Dir.Down | Dir.Left | Dir.Right;
+        grid[2, 3] = Dir.Up | Dir.Down | Dir.Left | Dir.Right;
+
+        // ✅ 입구 / 출구
+        grid[start.x, start.y] = Dir.Up;
+        grid[end.x, end.y] = Dir.Down;
     }
 
-
-GameObject GetMatchingTile(Dir need)
-{
-    List<GameObject> candidates = new List<GameObject>();
-
-    foreach (var go in tileSet.tiles)
+    // ✅ 위치 기반 방향 결정
+    Dir GetRequiredDir(int x, int y)
     {
-        Tile t = go.GetComponent<Tile>();
+        bool up = y < size - 1;
+        bool down = y > 0;
+        bool left = x > 0;
+        bool right = x < size - 1;
 
-        if (t != null && t.openings == need)
-            candidates.Add(go);
+        Dir result = Dir.None;
+
+        if (up) result |= Dir.Up;
+        if (down) result |= Dir.Down;
+        if (left) result |= Dir.Left;
+        if (right) result |= Dir.Right;
+
+        return result;
     }
 
-    if (candidates.Count == 0)
+    // ✅ 타일 선택
+    GameObject GetMatchingTile(Dir need)
     {
-        Debug.LogError("매칭되는 타일 없음: " + need);
-        return null;
-    }
+        List<GameObject> candidates = new List<GameObject>();
 
-    return candidates[Random.Range(0, candidates.Count)];
-}
-
-
-
-void Build()
-{
-    for (int x = 0; x < size; x++)
-    {
-        for (int y = 0; y < size; y++)
+        foreach (var go in tileSet.tiles)
         {
-            Dir need = grid[x, y];
+            Tile t = go.GetComponent<Tile>();
 
-            GameObject prefab = GetMatchingTile(need);
-
-            if (prefab == null) continue;
-
-            Vector3 pos = new Vector3(x * tileSize, 0, y * tileSize);
-
-            Instantiate(prefab, pos, Quaternion.identity, transform);
+            if (t != null && ((t.openings & need) == need))
+                candidates.Add(go);
         }
-    }
-}
 
-
-
-
-    bool InRange(Vector2Int p)
-    {
-        return p.x >= 0 && p.x < size && p.y >= 0 && p.y < size;
-    }
-
-    void Shuffle(List<Vector2Int> list)
-    {
-        for (int i = 0; i < list.Count; i++)
+        if (candidates.Count == 0)
         {
-            int r = Random.Range(i, list.Count);
-            var tmp = list[i];
-            list[i] = list[r];
-            list[r] = tmp;
+            Debug.LogError("매칭되는 타일 없음: " + need);
+            return null;
+        }
+
+        return candidates[Random.Range(0, candidates.Count)];
+    }
+
+    // ✅ 생성
+    void Build()
+    {
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                Dir need = grid[x, y];
+
+                GameObject prefab = GetMatchingTile(need);
+
+                if (prefab == null) continue;
+
+                Vector3 pos = new Vector3(x * tileSize, 0, y * tileSize);
+
+                Instantiate(prefab, pos, Quaternion.identity, transform);
+            }
         }
     }
 }

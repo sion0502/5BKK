@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[System.Flags]
 public enum Dir
 {
     None = 0,
