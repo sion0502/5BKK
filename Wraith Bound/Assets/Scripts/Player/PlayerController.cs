@@ -9,10 +9,16 @@ using System.Net.NetworkInformation;
 public class PlayerController : MonoBehaviour
 {
     Rigidbody rb;
+    GameObject nearObject; // 트리거 된 아이템을 저장하기 위한 변수 선언
     
     public float moveSpeed;
+    public GameObject[] items;
+    public bool[] hasItems;
+
     float h;
     float v;
+
+    bool iDown;
 
     [Header("Rotate")]
     public float mouseSpeed;
@@ -36,6 +42,7 @@ public class PlayerController : MonoBehaviour
     {
         Rotate();
         Move();
+        Interaction();
     }
 
     void Rotate()
@@ -63,5 +70,37 @@ public class PlayerController : MonoBehaviour
         transform.position += moveVec.normalized * moveSpeed * Time.deltaTime;
     }
 
+    void Interaction()
+    {
+        iDown = Input.GetButtonDown("Interaction");
+
+        if(iDown && nearObject != null)
+        {
+            if(nearObject.tag == "Active" || nearObject.tag == "Passive" || nearObject.tag == "Equip")
+            {
+                Item item = nearObject.GetComponent<Item>();
+                int itemIndex = item.value;
+                hasItems[itemIndex] = true;
+
+                Destroy(nearObject);
+            }
+        }
+    }
+
+    void OnTriggerStay(Collider other)
+    {
+        if (other.tag == "Active" || other.tag == "Passive" || other.tag == "Equip")
+        {
+            nearObject = other.gameObject;
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "Active" || other.tag == "Passive" || other.tag == "Equip")
+        {
+            nearObject = null;
+        }
+    }
   
 }
