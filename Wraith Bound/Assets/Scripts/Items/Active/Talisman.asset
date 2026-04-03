@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40818d721ef80f64b82406346894cfed, type: 3}
+  m_Name: Talisman
+  m_EditorClassIdentifier: Assembly-CSharp::ActiveItem
+  id: 1007
+  itemName: "\uBD80\uC801"
+  type: 0
+  description: "\uC2E0\uBE44\uD55C \uD798\uC774 \uAE43\uB4E4\uC5B4\uC788\uB294 \uBD80\uC801.\n\uADC0\uC2E0\uC744
+    \uB0B4\uCAD3\uB294 \uD798\uC774 \uC788\uB2E4."
+  icon: {fileID: 0}
+  maxCount: 3
+  value: 0
+  duration: 5
+  isInstantUse: 0
+  prefab: {fileID: 0}
