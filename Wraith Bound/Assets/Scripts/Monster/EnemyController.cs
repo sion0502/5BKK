@@ -5,203 +5,224 @@ public enum State
 {
     PATROL,
     CHASE,
-    ATTACK
+    SEARCH
 }
 
 public class EnemyController : MonoBehaviour
 {
-    public Monsters data;
     public Transform player;
+    public Monsters data;
 
-    private NavMeshAgent agent;
-    private Animator anim;
+    NavMeshAgent agent;
+    Animator anim;
 
-    public float runSpeed = 8f;
+    State state;
 
-    public State currentState;
+    float currentSpeed;
 
-    private float attackCooldown = 2f;
-    private float lastAttackTime = 0f;
+    Vector3 lastSeenPosition;
 
-    private enum PatrolType { IDLE, WALK, RUN }
-    private PatrolType patrolState;
+    float searchTimer;
+    float searchTime = 5f;
 
-    float actionTimer = 0f;
-    float actionTime = 2f;
+    float patrolTimer;
+    float patrolTime;
+
+    bool isChasing = false;
+
+    DoorScript targetDoor;
+
+    float attackTimer;
+    float attackDelay = 1f;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        anim = GetComponent<Animator>();
+        anim = GetComponentInChildren<Animator>();
 
-        currentState = State.PATROL;
+        agent.speed = data.moveSpeed;
+        agent.stoppingDistance = 2.5f;
 
-        agent.acceleration = 20f;
-        agent.angularSpeed = 300f;
-        agent.autoBraking = false;
-        agent.stoppingDistance = 0f;
+        state = State.PATROL;
+        SetPatrolTime();
     }
 
     void Update()
     {
-        switch (currentState)
+        if (player == null) return;
+
+        float dist = Vector3.Distance(transform.position, player.position);
+        bool inSafeZone = IsPlayerInSafeZone();
+
+        if (!inSafeZone && dist < data.detectRange)
         {
-            case State.PATROL:
-                Patrol();
-                break;
-
-            case State.CHASE:
-                Chase();
-                break;
-
-            case State.ATTACK:
-                Attack();
-                break;
+            isChasing = true;
+            lastSeenPosition = player.position;
+            state = State.CHASE;
+        }
+        else
+        {
+            if (isChasing)
+            {
+                state = State.SEARCH;
+                searchTimer = 0f;
+                isChasing = false;
+                targetDoor = null;
+            }
         }
 
-        UpdateAnimation();
+        switch (state)
+        {
+            case State.PATROL: Patrol(); break;
+            case State.CHASE: Chase(); break;
+            case State.SEARCH: Search(); break;
+        }
+
+        currentSpeed = Mathf.Lerp(currentSpeed, agent.velocity.magnitude, Time.deltaTime * 10f);
     }
 
-    // 🔥 corridor 체크
-    public bool IsInCorridor(Transform target)
+    void LateUpdate()
     {
-        RaycastHit hit;
+        anim.SetFloat("speed", currentSpeed);
+    }
 
-        if (Physics.Raycast(target.position, Vector3.down, out hit, 5f))
+    bool IsPlayerInSafeZone()
+    {
+        Collider[] cols = Physics.OverlapSphere(player.position, 1f);
+
+        foreach (Collider col in cols)
         {
-            return hit.collider.gameObject.layer == LayerMask.NameToLayer("corridor");
+            if (col.CompareTag("SafeZone"))
+                return true;
         }
 
         return false;
     }
 
-    // 🔥 배회 (완성)
     void Patrol()
     {
-        agent.isStopped = false;
+        agent.speed = data.moveSpeed;
 
-        actionTimer += Time.deltaTime;
+        patrolTimer += Time.deltaTime;
 
-        if (actionTimer >= actionTime)
+        if (patrolTimer >= patrolTime || !agent.hasPath)
         {
-            actionTimer = 0f;
-            actionTime = Random.Range(2f, 5f);
+            patrolTimer = 0f;
+            SetPatrolTime();
 
-            patrolState = (PatrolType)Random.Range(0, 3);
+            Vector3 rand = Random.insideUnitSphere * 20f + transform.position;
 
-            if (patrolState == PatrolType.IDLE)
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(rand, out hit, 20f, NavMesh.AllAreas))
             {
-                agent.ResetPath();
+                agent.isStopped = false;
+                agent.SetDestination(hit.position);
             }
-            else
-            {
-                Vector3 randomDir = Random.insideUnitSphere * 40f;
-                randomDir += transform.position;
+        }
+    }
 
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(randomDir, out hit, 40f, NavMesh.AllAreas))
+    void Chase()
+    {
+        agent.speed = data.moveSpeed * 2f;
+
+        DetectDoor();
+
+        if (targetDoor != null)
+        {
+            // 🔥 문을 발견하면 무조건 문으로 이동
+            agent.isStopped = false;
+            agent.SetDestination(targetDoor.transform.position);
+
+            float dist = Vector3.Distance(
+                transform.position,
+                targetDoor.GetComponent<Collider>().ClosestPoint(transform.position)
+            );
+
+            if (dist < 3.5f)
+            {
+                agent.isStopped = true;
+
+                transform.LookAt(targetDoor.transform);
+
+                anim.SetTrigger("attack");
+
+                AttackDoor();
+            }
+        }
+        else
+        {
+            // 문 없으면 플레이어 추적
+            agent.isStopped = false;
+            agent.SetDestination(player.position);
+        }
+    }
+
+    void DetectDoor()
+    {
+        RaycastHit hit;
+
+        Vector3 origin = transform.position + Vector3.up * 1.0f;
+        Vector3 dir = (player.position - transform.position).normalized;
+
+        int mask = LayerMask.GetMask("Door");
+
+        if (Physics.Raycast(origin, dir, out hit, 7f, mask))
+        {
+            if (hit.collider.CompareTag("Door"))
+            {
+                DoorScript door = hit.collider.GetComponent<DoorScript>();
+
+                if (door != null)
                 {
-                    agent.SetDestination(hit.position);
+                    targetDoor = door;
+                    return;
                 }
             }
         }
 
-        if (patrolState == PatrolType.WALK)
-            agent.speed = data.moveSpeed;
-
-        if (patrolState == PatrolType.RUN)
-            agent.speed = runSpeed;
+        targetDoor = null;
     }
 
-    // 🔥 추적
-    void Chase()
+    void AttackDoor()
     {
-        if (player == null)
+        if (targetDoor == null) return;
+
+        attackTimer += Time.deltaTime;
+
+        if (attackTimer >= attackDelay)
         {
-            currentState = State.PATROL;
+            attackTimer = 0f;
+
+            targetDoor.TakeDamage(1);
+        }
+    }
+
+    void Search()
+    {
+        agent.speed = data.moveSpeed;
+
+        searchTimer += Time.deltaTime;
+
+        if (searchTimer >= searchTime)
+        {
+            state = State.PATROL;
             return;
         }
 
-        agent.isStopped = false;
-        agent.speed = runSpeed;
-        agent.SetDestination(player.position);
-    }
-
-    // 🔥 공격
-    void Attack()
-    {
-        if (player == null)
+        if (!agent.pathPending && agent.remainingDistance < 1f)
         {
-            currentState = State.PATROL;
-            return;
-        }
+            Vector3 rand = Random.insideUnitSphere * 6f + lastSeenPosition;
 
-        agent.ResetPath();
-        transform.LookAt(player);
-
-        if (Time.time - lastAttackTime > attackCooldown)
-        {
-            lastAttackTime = Time.time;
-
-            anim.ResetTrigger("attack");
-            anim.SetTrigger("attack");
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(rand, out hit, 6f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(hit.position);
+            }
         }
     }
 
-    // 🔥 감지
-    public void OnDetectPlayer(Transform target)
+    void SetPatrolTime()
     {
-        if (currentState == State.ATTACK) return;
-
-        if (IsInCorridor(target))
-        {
-            OnLosePlayer();
-            return;
-        }
-
-        player = target;
-        currentState = State.CHASE;
-    }
-
-    public void OnLosePlayer()
-    {
-        if (currentState == State.ATTACK) return;
-
-        player = null;
-        currentState = State.PATROL;
-    }
-
-    // 🔥 공격 진입
-    public void OnAttackEnter()
-    {
-        if (player == null) return;
-
-        currentState = State.ATTACK;
-    }
-
-    public void OnAttackExit()
-    {
-        currentState = State.CHASE;
-    }
-
-    // 🔥 애니메이션
-    void UpdateAnimation()
-    {
-        if (currentState == State.ATTACK)
-        {
-            anim.SetBool("isRun", false);
-            anim.SetBool("isWalk", false);
-            return;
-        }
-
-        if (currentState == State.CHASE)
-        {
-            anim.SetBool("isRun", true);
-            anim.SetBool("isWalk", false);
-            return;
-        }
-
-        anim.SetBool("isRun", patrolState == PatrolType.RUN);
-        anim.SetBool("isWalk", patrolState == PatrolType.WALK);
+        patrolTime = Random.Range(2f, 4f);
     }
 }
