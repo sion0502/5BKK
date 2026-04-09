@@ -1,103 +1,113 @@
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UIElements;
-using System.Collections;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
 
 public class PlayerController : MonoBehaviour
 {
-    Rigidbody rb;
+    [Header("조작 설정")]
+    public float moveSpeed = 5f;
+    public float mouseSpeed = 200f;
+    public float interactDistance = 3f;
 
-    public float moveSpeed;
-    float h;
-    float v;
-
-    [Header("Rotate")]
-    public float mouseSpeed;
-    float xRotation;
-    float yRotation;
-    Camera cam;
-
-    // --- 추가된 변수 (삭제 금지) ---
-    [Header("Interaction")]
-    public float interactDistance = 3f; // 아이템을 주울 수 있는 거리
-    // ----------------------------
+    [Header("참조")]
+    private Camera cam;
+    private InventoryManager inv;
+    private float xRotation = 0f;
 
     void Start()
     {
-        UnityEngine.Cursor.lockState = CursorLockMode.Locked; // 마우스 커서를 화면 안에서 고정
-        UnityEngine.Cursor.visible = false; // 마우스 커서를 보이지 않도록 설정
+        cam = Camera.main;
+        inv = GetComponent<InventoryManager>();
 
-        rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true; // Rigidbody의 회전을 고정하여 물리 연산에 영향을 주지 않도록 설정
+        // 마우스 커서 설정
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
 
-        cam = Camera.main; // 메인 카메라를 할당
+        // 물리 회전 고정 (쓰러짐 방지)
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.freezeRotation = true;
     }
 
     void Update()
     {
-        Rotate();
-        Move();
+        HandleLook();
+        HandleMovement();
 
-        // --- 추가된 로직: E키 입력 시 상호작용 시도 ---
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.E)) TryInteract();
+
+        // 휠/숫자키 선택 처리
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (scroll != 0) inv.HandleScroll(scroll);
+
+        for (int i = 0; i < 9; i++)
         {
-            TryInteract();
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i)) inv.SelectByIndex(i);
         }
-        // ------------------------------------------
-    }
 
-    // --- 추가된 함수: 앞의 아이템을 감지하고 줍는 기능 ---
-    void TryInteract()
-    {
-        // 카메라의 정중앙(0.5, 0.5)에서 앞으로 레이(광선)를 쏩니다.
-        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
-
-        // 설정한 사거리(interactDistance) 내에 물체가 부딪혔는지 확인
-        if (Physics.Raycast(ray, out hit, interactDistance))
+        // [아이템 사용 및 꺼내기]
+        if (Input.GetMouseButtonDown(0) && inv.currentItem != null)
         {
-            // 맞은 오브젝트에 ItemObject 컴포넌트가 있는지 확인
-            ItemObject targetItem = hit.collider.GetComponent<ItemObject>();
-
-            if (targetItem != null)
+            // 1. 손에 아무것도 안 들고 있다면? -> 꺼내기
+            if (inv.currentItem.spawnedInstance != null && !inv.currentItem.spawnedInstance.activeSelf)
             {
-                // 아이템 오브젝트의 획득 함수 호출
-                targetItem.OnPickedUp();
+                inv.currentItem.spawnedInstance.SetActive(true);
+                return;
+            }
+
+            // 2. 이미 들고 있다면? -> 사용하기
+            inv.currentItem.Use(this);
+        }
+
+        // 우클릭하면 다시 집어넣기 (필요할 때 화면 가리는 거 치우기용)
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (inv.currentItem != null && inv.currentItem.spawnedInstance != null)
+            {
+                inv.currentItem.spawnedInstance.SetActive(false);
             }
         }
     }
-    // -----------------------------------------------
 
-    void Rotate()
+    // 시점 회전 함수
+    void HandleLook()
     {
-        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSpeed * Time.deltaTime;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSpeed * Time.deltaTime;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSpeed * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSpeed * Time.deltaTime;
 
-        yRotation += mouseX; // 마우스 x축 입력에 따라 수평 회전 값을 조정
-        xRotation -= mouseY; // 마우스 y축 입력에 따라 수직 회전 값을 조정
+        // 좌우 회전
+        transform.Rotate(Vector3.up * mouseX);
 
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // 수직 회전 값을 -90도에서 90도 사이로 제한
-
-        cam.transform.rotation = Quaternion.Euler(xRotation, yRotation, 0); // 카메라의 회전을 조절
-        transform.rotation = Quaternion.Euler(0, yRotation, 0); // 플레이어 캐릭터의 회전을 조절
+        // 상하 회전 및 각도 제한
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        cam.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
     }
 
-    void Move()
+    // 이동 함수
+    void HandleMovement()
     {
-        h = Input.GetAxisRaw("Horizontal");
-        v = Input.GetAxisRaw("Vertical");
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
 
-        // 입력에 따라 이동 방향 벡터 계산
-        Vector3 moveVec = transform.forward * v + transform.right * h;
+        Vector3 move = transform.right * x + transform.forward * z;
+        transform.Translate(move * moveSpeed * Time.deltaTime, Space.World);
+    }
 
-        // 이동 벡터를 정규화하여 이동 속도와 시간 간격을 곱한 후 현재 위치에 더함
-        // (moveVec.normalized를 사용하여 대각선 이동 시 속도가 빨라지는 것을 방지)
-        if (moveVec.magnitude > 0)
+    // 상호작용 함수
+    void TryInteract()
+    {
+        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        if (Physics.Raycast(ray, out RaycastHit hit, interactDistance))
         {
-            transform.position += moveVec.normalized * moveSpeed * Time.deltaTime;
+            // IInteractable 인터페이스를 가진 오브젝트(ItemObject 등)를 찾음
+            if (hit.collider.TryGetComponent<IInteractable>(out var target))
+            {
+                target.Interact(this);
+            }
         }
+    }
+
+    // 아이템 제거 통로 (Items SO에서 호출용)
+    public void RemoveItemFromInventory(Items item)
+    {
+        if (inv != null) inv.RemoveItem(item);
     }
 }

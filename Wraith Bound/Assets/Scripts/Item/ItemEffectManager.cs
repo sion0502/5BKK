@@ -33,10 +33,10 @@ public class ItemEffectManager : MonoBehaviour
         Debug.Log($"{active.itemName} 사용! {active.value}만큼 효과 발생.");
         // 예: player.Heal(active.value); 
 
-        if (active.prefab != null)
+        if (active.deployPrefab != null)
         {
             // 설치형 아이템일 경우 플레이어 앞이나 발밑에 프리팹 생성
-            Instantiate(active.prefab, transform.position + transform.forward, Quaternion.identity);
+            Instantiate(active.deployPrefab, transform.position + transform.forward, Quaternion.identity);
         }
     }
 
