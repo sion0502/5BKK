@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ghost
+  - Lobby
+  - Door
   layers:
   - Default
   - TransparentFX
@@ -15,11 +17,11 @@ TagManager:
   - RaderIcon
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Lobby
+  - Corridor
+  - Hide
+  - Door
   - 
   - 
   - 
