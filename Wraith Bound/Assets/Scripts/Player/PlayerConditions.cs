@@ -1,68 +1,99 @@
 using System;
+using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-[Serializable]
-public class Condition
-{
-    [HideInInspector]
-    public float curValue;
-    public float maxValue;
-    public float startValue;
-    public float regenRate;
-
-    public void Add(float amount)
-    {
-        // Condition의 값이 추가가 될 때 추가된 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값을 현재 Value로 변경
-        curValue = Mathf.Min(curValue + amount, maxValue);
-    }
-
-    public void Subtract(float amount)
-    {
-        // Condition의 값이 차감될 때 추가된 현재 값이 최소값을 넘지 않도록, 최소값보다 작을 경우 최소값을 현재 Value로 변경
-        curValue = Mathf.Max(curValue - amount, 0.0f);
-    }
-}
-
 public class PlayerConditions : MonoBehaviour
 {
-    public Condition health;
-    public Condition stamina;
+    [SerializeField]
+    private float maxHealth;
 
-    public UnityEvent onTakeDamage; //데미지
+    [SerializeField]
+    private float maxStamina;
+
+    [SerializeField]
+    private float staminaRegenRate;
+    private float regenDelay = 1.5f;
+
+
+    private float currentStamina;
+    private Coroutine regenCoroutine;
+    private float currentHealth;
+
+    PlayerController playerController;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        health.curValue = health.startValue;
-        stamina.curValue = stamina.startValue;
+        currentHealth = maxHealth;
+        currentStamina = maxStamina;
+
+        playerController = GetComponent<PlayerController>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        // 1초마다 스태미나 회복
-        stamina.Add(stamina.regenRate * Time.deltaTime);
-
-        if(health.curValue == 0.0f)
+        if(currentHealth == 0.0f)
         {
-            
+            Die();
         }
     }
 
-    public void Heal(float amount)
+    public void RecoverHealth(int amount)
     {
-        health.Add(amount);
+        // 아이템을 통해 체력을 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값을 현재 Value로 변경
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
     }
 
-    public bool UseStamina(float amount)
+    public void RecoverStamina(int amount)
     {
-        // 스태미나가 없을 경우 스태미나를 사용하지 못하도록
-        if(stamina.curValue - amount < 0) return false;
+        // 아이템을 통해 스태미나를 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값을 현재 Value로 변경
+        currentStamina = Mathf.Min(currentStamina + amount, maxStamina);
+    }
 
-        stamina.Subtract(amount);
-        return true;
+
+    public void ConsumeStamina(float deltaTime)
+    {
+        if (regenCoroutine != null)
+        {
+            StopCoroutine(regenCoroutine);
+            regenCoroutine = null;
+        }
+
+        currentStamina -= playerController.staminaDrainRate * deltaTime;
+        currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+    }
+
+    public void StartStaminaRegen()
+    {
+        if (regenCoroutine == null && currentStamina < maxStamina)
+        {
+            regenCoroutine = StartCoroutine(RegenRoutine());
+        }
+    }
+
+    private IEnumerator RegenRoutine()
+    {
+        yield return new WaitForSeconds(regenDelay);
+
+        while (currentStamina < maxStamina)
+        {
+            currentStamina += staminaRegenRate * Time.deltaTime;
+            currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+
+            yield return null;
+        }
+
+        regenCoroutine = null;
+    }
+
+    public float GetCurrentStamina()
+    {
+        // 현재 스태미나 수치를 리턴
+        return currentStamina;
     }
 
     public void Die()

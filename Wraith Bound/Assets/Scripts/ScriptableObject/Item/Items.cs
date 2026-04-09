@@ -16,6 +16,7 @@ public class Items : ScriptableObject
     public ItemType type; // Active, Equip, Passive
     [TextArea] public string description; // 설명
     public Sprite icon; // 아이콘
+    public bool isConsumable;
 
     [Header("수치 데이터")]
     public float value; // 회복량, 지속시간, 스테미나 수치 등
