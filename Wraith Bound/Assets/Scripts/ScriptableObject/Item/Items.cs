@@ -24,6 +24,9 @@ public abstract class Items : ScriptableObject // 추상 클래스
     [Header("시각적 요소")]
     public GameObject itemPrefab; // 획득 시 생성할 프리팹 (손에 들 모델 등)
 
+    // [추가] 이 아이템을 획득했을 때 ItemHolder에 생성할지 여부
+    public bool showInHand;
+
     // 런타임에 생성된 실제 오브젝트 보관용
     [HideInInspector] public GameObject spawnedInstance;
 

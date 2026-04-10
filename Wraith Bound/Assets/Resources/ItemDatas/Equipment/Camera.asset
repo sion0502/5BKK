@@ -19,6 +19,11 @@ MonoBehaviour:
     \uC874\uC7AC\uB4E4\uC740 \uBAA8\uC2B5\uC744 \uB0A8\uAE30\uB294 \uAC83\uC744 \uAEBC\uB9B0\uB2E4."
   icon: {fileID: 0}
   maxCount: 1
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
   maxEnergy: 5
   consumeRate: 1
   range: 5

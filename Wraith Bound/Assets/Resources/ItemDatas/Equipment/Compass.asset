@@ -18,6 +18,11 @@ MonoBehaviour:
   description: "\uD0C8\uCD9C\uAD6C\uC758 \uBC29\uD5A5\uC744 \uC54C\uB824\uC900\uB2E4."
   icon: {fileID: 0}
   maxCount: 0
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 8275486934440506803, guid: 0d0ca4a2781ca044f91c514e09e44a4b, type: 3}
+  showInHand: 1
+  spawnedInstance: {fileID: 0}
   maxEnergy: 0
   consumeRate: 0
   range: 0
