@@ -752,6 +752,9 @@ GameObject:
   - component: {fileID: 2124620064}
   - component: {fileID: 2124620069}
   - component: {fileID: 2124620070}
+  - component: {fileID: 2124620073}
+  - component: {fileID: 2124620072}
+  - component: {fileID: 2124620071}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -868,10 +871,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 10
+  runSpeed: 0
+  crouchSpeed: 0
+  staminaDrainRate: 0
+  applySpeed: 0
+  isRun: 0
+  crouchPosY: 0
   mouseSpeed: 500
-  interactDistance: 10
-  inventory: []
-  currentItem: {fileID: 0}
 --- !u!54 &2124620070
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -899,6 +905,53 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &2124620071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2124620063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0605fb2b8f494cf89ecab523c596b48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InventroyManager
+  capacity: 0
+  slots: []
+--- !u!114 &2124620072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2124620063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a105f9b2aeed0426689da0164ece711e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractor
+  playerCamera: {fileID: 0}
+  interactRange: 3
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  interactKey: 101
+--- !u!114 &2124620073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2124620063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1dfbb5df75b43b996565691dff4d05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerConditions
+  maxHealth: 0
+  maxStamina: 0
+  staminaRegenRate: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

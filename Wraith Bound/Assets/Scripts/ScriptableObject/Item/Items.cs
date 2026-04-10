@@ -30,7 +30,7 @@ public abstract class Items : ScriptableObject // 추상 클래스
     // 아이템 사용 함수 (플레이어 정보를 인자로 받음)
     public virtual void Use(PlayerController player)
     {
-        // 기본 동작: 실체(프리팹)가 있다면 껐다 켜기
+        // 1. 시각적 실체(프리팹) 토글
         if (spawnedInstance != null)
         {
             bool isActive = spawnedInstance.activeSelf;
@@ -38,18 +38,24 @@ public abstract class Items : ScriptableObject // 추상 클래스
             Debug.Log($"{itemName} 상태 변경: {!isActive}");
         }
 
-        // 확률적 파괴 체크
+        // 2. [수정] 팀원분의 인벤토리 매니저 가져오기
+        var inv = player.GetComponent<InventroyManager>();
+        if (inv == null) return;
+
+        // 3. 확률적 파괴 체크
         if (breakageChance > 0 && Random.Range(0f, 100f) < breakageChance)
         {
             Debug.Log($"{itemName}이(가) 사용 중 파괴되었습니다.");
-            player.RemoveItemFromInventory(this);
+            // 팀원분의 인벤토리 매니저에서 아이템 제거 호출
+            inv.RemoveItem(this, 1);
             return;
         }
 
-        // 즉시 소모 체크
+        // 4. 즉시 소모 체크
         if (destroyOnUse)
         {
-            player.RemoveItemFromInventory(this);
+            // 팀원분의 인벤토리 매니저에서 아이템 제거 호출
+            inv.RemoveItem(this, 1);
         }
     }
 }
