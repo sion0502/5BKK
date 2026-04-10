@@ -35,7 +35,26 @@ public class InventroyManager : MonoBehaviour
         {
             slots.Add(new InventorySlot(itemToAdd, amount));
             return true;
-        } 
+        }
+
+        if(itemToAdd.showInHand && itemToAdd.itemPrefab != null)
+{
+            // 씬에 있는 ItemHolder를 찾음 (또는 미리 SerializeField로 받아둔 변수 사용)
+            GameObject holder = GameObject.Find("ItemHolder");
+
+            if (holder != null && itemToAdd.spawnedInstance == null)
+            {
+                // 프리팹 생성 및 부모 설정
+                GameObject instance = Instantiate(itemToAdd.itemPrefab, holder.transform, false);
+
+                // SO에 생성된 실체 연결
+                itemToAdd.spawnedInstance = instance;
+
+                // 처음엔 비활성화 (인벤토리에서 '사용' 누를 때 켜짐)
+                instance.SetActive(false);
+            }
+        }
+
 
         Debug.LogWarning("Inventory is full!");
         return false;
