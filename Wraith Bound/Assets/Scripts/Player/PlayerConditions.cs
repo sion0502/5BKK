@@ -8,10 +8,10 @@ using UnityEngine.UI;
 public class PlayerConditions : MonoBehaviour
 {
     [SerializeField]
-    private float maxHealth;
+    public float maxHealth;
 
     [SerializeField]
-    private float maxStamina;
+    public float maxStamina;
 
     [SerializeField]
     private float staminaRegenRate;
