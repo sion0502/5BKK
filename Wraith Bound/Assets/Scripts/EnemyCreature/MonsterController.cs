@@ -10,32 +10,46 @@ public enum State
 
 public class MonsterController : MonoBehaviour
 {
-    [Header("참조")]
     public Monsters data;
     public Transform player;
 
     private NavMeshAgent agent;
     private Animator anim;
 
-    [Header("속도 설정 🔥 여기서 수정하세요")]
-    public float walkSpeed = 6f; // 👈 걷기 속도 (여기 바꾸면 됨)
-    public float runSpeed = 12f;  // 👈 뛰기 속도 (여기 바꾸면 됨)
+    private float walkSpeed;
+    private float runSpeed;
 
     private State state;
 
     private float patrolTimer;
+    private float doorCheckTimer;
     private float suspiciousTimer;
-    private float suspiciousMoveTimer;
 
     private Vector3 lastKnownPos;
+
+    private float attackCooldown = 1.2f;
+    private float lastAttackTime;
+
+    private bool isAttacking = false;
+
+    private int attackDamage = 999;
+
+    private bool doorTransition = false;
+    private float doorTimer = 0f;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
 
+        agent.updateUpAxis = false;
+        agent.angularSpeed = 180f;
+        agent.acceleration = 25f;
+
+        runSpeed = data.moveSpeed;
+        walkSpeed = data.moveSpeed * 0.5f;
+
         state = State.PATROL;
-        agent.speed = walkSpeed;
     }
 
     void Update()
@@ -44,10 +58,34 @@ public class MonsterController : MonoBehaviour
 
         float distance = Vector3.Distance(transform.position, player.position);
 
+        if (CanDetectPlayer(distance))
+        {
+            lastKnownPos = player.position;
+            state = State.CHASE;
+        }
+
+        // 🔥 문 부순 직후 처리
+        if (doorTransition)
+        {
+            doorTimer += Time.deltaTime;
+
+            // 👉 핵심: 강제로 플레이어 방향 재지정
+            agent.isStopped = false;
+            agent.SetDestination(player.position);
+
+            if (doorTimer > 0.5f)
+            {
+                doorTransition = false;
+            }
+
+            UpdateAnimation();
+            return;
+        }
+
         switch (state)
         {
             case State.PATROL:
-                HandlePatrol(distance);
+                HandlePatrol();
                 break;
 
             case State.CHASE:
@@ -55,120 +93,117 @@ public class MonsterController : MonoBehaviour
                 break;
 
             case State.SUSPICIOUS:
-                HandleSuspicious(distance);
+                HandleSuspicious();
                 break;
         }
 
         UpdateAnimation();
     }
 
-    // =========================
-    // 감지
-    // =========================
     bool CanDetectPlayer(float distance)
     {
-        // 가까우면 무조건 감지
-        if (distance < data.detectRange * 0.7f)
-            return true;
+        if (distance < 3f) return true;
+        if (distance > data.detectRange) return false;
 
-        // 범위 밖
-        if (distance > data.detectRange)
-            return false;
+        Vector3 origin = transform.position + Vector3.up * 1f;
+        Vector3 dir = (player.position - origin).normalized;
 
-        // 부채꼴 시야
-        Vector3 dir = (player.position - transform.position).normalized;
         float angle = Vector3.Angle(transform.forward, dir);
+        if (angle > data.viewAngle * 0.6f) return false;
 
-        return angle < data.viewAngle * 0.5f;
+        int mask = data.playerLayer | data.obstacleLayer | LayerMask.GetMask("Door");
+
+        if (Physics.SphereCast(origin, 0.5f, dir, out RaycastHit hit, data.detectRange, mask))
+        {
+            if (!hit.transform.CompareTag("Player"))
+                return false;
+        }
+
+        return true;
     }
 
-    // =========================
-    // PATROL
-    // =========================
-    void HandlePatrol(float distance)
+    void HandlePatrol()
     {
         patrolTimer += Time.deltaTime;
 
-        agent.isStopped = false;
         agent.speed = walkSpeed;
+        agent.isStopped = false;
 
         if (patrolTimer > data.checkInterval)
         {
             patrolTimer = 0f;
 
             if (Random.value < 0.3f)
-            {
-                agent.ResetPath(); // Idle
-            }
+                agent.ResetPath();
             else
-            {
-                MoveRandom(transform.position, 10f);
-            }
+                MoveRandom(transform.position, 20f);
         }
-
-        if (CanDetectPlayer(distance))
-            state = State.CHASE;
     }
 
-    // =========================
-    // CHASE
-    // =========================
     void HandleChase(float distance)
     {
-        agent.isStopped = false;
         agent.speed = runSpeed;
 
-        // 🔥 문 감지 (SphereCast로 안정성 ↑)
-        if (DetectDoor())
-            return;
+        doorCheckTimer += Time.deltaTime;
 
-        agent.SetDestination(player.position);
-
-        // 공격 거리
-        if (distance < 2f)
+        if (doorCheckTimer > 0.2f)
         {
-            anim.SetTrigger("Attack");
-            Debug.Log("플레이어 사망");
+            doorCheckTimer = 0f;
+
+            if (HandleDoor())
+                return;
         }
 
-        // 너무 멀어지면 의심모드
-        if (distance > data.detectRange * 1.8f)
+        agent.isStopped = false;
+
+        // 🔥 핵심: 계속 플레이어로 갱신
+        agent.SetDestination(player.position);
+
+        if (distance > data.detectRange)
         {
-            lastKnownPos = player.position;
             suspiciousTimer = 0f;
-            suspiciousMoveTimer = 0f;
             state = State.SUSPICIOUS;
+        }
+
+        if (distance < 2f && !isAttacking && Time.time > lastAttackTime + attackCooldown)
+        {
+            isAttacking = true;
+            lastAttackTime = Time.time;
+            anim.SetTrigger("Attack");
+        }
+
+        // 🔥 추가: 벽 stuck 방지
+        if (!agent.pathPending && agent.remainingDistance < 0.5f)
+        {
+            agent.SetDestination(player.position);
         }
     }
 
-    // =========================
-    // SUSPICIOUS
-    // =========================
-    void HandleSuspicious(float distance)
+    void HandleSuspicious()
     {
         suspiciousTimer += Time.deltaTime;
-        suspiciousMoveTimer += Time.deltaTime;
 
-        agent.isStopped = false;
         agent.speed = walkSpeed;
 
-        // 주변 탐색
-        if (suspiciousMoveTimer > 1.5f)
+        if (!agent.hasPath || agent.remainingDistance < 1f)
         {
-            suspiciousMoveTimer = 0f;
             MoveRandom(lastKnownPos, 6f);
         }
 
-        if (CanDetectPlayer(distance))
-            state = State.CHASE;
+        float distance = Vector3.Distance(transform.position, player.position);
 
-        if (suspiciousTimer > 6f)
+        if (CanDetectPlayer(distance))
+        {
+            state = State.CHASE;
+            return;
+        }
+
+        if (suspiciousTimer > 5f)
+        {
             state = State.PATROL;
+        }
     }
 
-    // =========================
-    // 랜덤 이동 함수 (재사용)
-    // =========================
     void MoveRandom(Vector3 center, float radius)
     {
         Vector3 randomDir = center + Random.insideUnitSphere * radius;
@@ -179,21 +214,40 @@ public class MonsterController : MonoBehaviour
         }
     }
 
-    // =========================
-    // 문 감지 (핵심)
-    // =========================
-    bool DetectDoor()
+    bool HandleDoor()
     {
-        if (Physics.SphereCast(transform.position + Vector3.up, 0.8f, transform.forward, out RaycastHit hit, 3f))
+        int mask = LayerMask.GetMask("Door");
+
+        Vector3 origin = transform.position + Vector3.up * 1f;
+
+        if (Physics.SphereCast(origin, 1.2f, transform.forward, out RaycastHit hit, 4f, mask))
         {
-            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Door"))
+            DoorController door = hit.collider.GetComponentInParent<DoorController>();
+
+            if (door != null)
             {
                 agent.isStopped = true;
-                anim.SetTrigger("Attack");
+                agent.velocity = Vector3.zero;
+                agent.ResetPath();
 
-                DoorController door = hit.collider.GetComponent<DoorController>();
-                if (door != null)
-                    door.TakeDamage(1);
+                Vector3 dir = (door.transform.position - transform.position).normalized;
+                dir.y = 0;
+
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 6f);
+
+                if (!isAttacking && Time.time > lastAttackTime + attackCooldown)
+                {
+                    isAttacking = true;
+                    lastAttackTime = Time.time;
+
+                    anim.SetTrigger("Attack");
+
+                    door.TakeDamage(attackDamage);
+
+                    // 🔥 핵심
+                    doorTransition = true;
+                    doorTimer = 0f;
+                }
 
                 return true;
             }
@@ -202,24 +256,21 @@ public class MonsterController : MonoBehaviour
         return false;
     }
 
-    // =========================
-    // 애니메이션 (상태 기반)
-    // =========================
     void UpdateAnimation()
     {
-        switch (state)
-        {
-            case State.PATROL:
-            case State.SUSPICIOUS:
-                if (agent.velocity.magnitude < 0.1f)
-                    anim.SetFloat("Speed", 0f);   // Idle
-                else
-                    anim.SetFloat("Speed", walkSpeed); // Walk
-                break;
+        float speed = agent.velocity.magnitude;
 
-            case State.CHASE:
-                anim.SetFloat("Speed", runSpeed); // Run
-                break;
-        }
+        if (speed < 0.1f)
+            anim.SetFloat("Speed", 0f);
+        else if (state == State.CHASE)
+            anim.SetFloat("Speed", 1f);
+        else
+            anim.SetFloat("Speed", 0.5f);
+    }
+
+    public void EndAttack()
+    {
+        isAttacking = false;
+        agent.isStopped = false;
     }
 }

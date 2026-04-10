@@ -2,8 +2,8 @@
 
 public class DoorController : MonoBehaviour
 {
-    public GameObject fallingDoorPrefab; // 쓰러지는 문
-    public int hp = 3;
+    public GameObject brokenDoorPrefab;
+    public int hp = 10;
 
     private bool isBroken = false;
 
@@ -23,16 +23,34 @@ public class DoorController : MonoBehaviour
     {
         isBroken = true;
 
-        // 🔥 쓰러지는 문 생성
-        GameObject fallDoor = Instantiate(
-            fallingDoorPrefab,
-            transform.position,
+        var obs = GetComponent<UnityEngine.AI.NavMeshObstacle>();
+        if (obs != null) obs.enabled = false;
+
+        GameObject broken = Instantiate(
+            brokenDoorPrefab,
+            transform.position + Vector3.up * 2f,
             transform.rotation
         );
 
-        // 🔥 앞으로 쓰러지게 힘
-        Rigidbody rb = fallDoor.GetComponent<Rigidbody>();
-        rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+        broken.SetActive(true);
+
+        Rigidbody[] rbs = broken.GetComponentsInChildren<Rigidbody>();
+
+        foreach (Rigidbody rb in rbs)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // 🔥 핵심: 회전 + 랜덤 방향
+            Vector3 force = transform.forward * Random.Range(4f, 7f)
+                            + Vector3.up * Random.Range(3f, 5f)
+                            + transform.right * Random.Range(-2f, 2f);
+
+            rb.AddForce(force, ForceMode.Impulse);
+
+            // 🔥 회전 힘 추가 (이게 핵심)
+            rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
+        }
 
         Destroy(gameObject);
     }
