@@ -10,10 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3d93490d8cefdf74b80d50ad9df5d939, type: 3}
-  m_Name: TileSet_Main
+  m_Name: Chapter1 Tiles
   m_EditorClassIdentifier: Assembly-CSharp::TileSet
   tiles:
-  - {fileID: 8966562417064288515, guid: 3b561d95208c4124b9ef05118ad0da6a, type: 3}
   - {fileID: 8966562417064288515, guid: 0085481a55e8dca4fba603f18e125170, type: 3}
   - {fileID: 8966562417064288515, guid: 7e2beed3e372be242ba84fe1eaf7727c, type: 3}
   - {fileID: 8966562417064288515, guid: 78f5a747a40a5624ead73057fc3d11f1, type: 3}
+  - {fileID: 8966562417064288515, guid: 5f6454c7ff1ab7442a1fc41b94d7c54b, type: 3}
+  - {fileID: 8966562417064288515, guid: 7f1a11990bac3364c9986743a259e6f2, type: 3}
+  - {fileID: 8966562417064288515, guid: ecd6be8592e2abe49af611a395e4fd00, type: 3}
