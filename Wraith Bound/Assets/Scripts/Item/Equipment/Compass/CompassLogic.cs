@@ -29,7 +29,7 @@ public class CompassLogic : MonoBehaviour
         {
             // 3. 로컬 좌표계 기준으로 바늘이 가야 할 방향(회전값)을 계산합니다.
 
-            Quaternion targetLocalRot = Quaternion.LookRotation(localTargetPos) * Quaternion.Euler(0, 180, 0);
+            Quaternion targetLocalRot = Quaternion.LookRotation(localTargetPos);
 
             // 4. localRotation을 사용하여 부모가 기울어져도 바늘은 판 위에서만 돕니다.
             needle.localRotation = Quaternion.Slerp(needle.localRotation, targetLocalRot, Time.deltaTime * rotationSpeed);

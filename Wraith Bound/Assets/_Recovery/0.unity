@@ -184,7 +184,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -859,7 +859,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -921,9 +921,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 10
   runSpeed: 1000
-  h: 0
+  crouchSpeed: 0
+  staminaDrainRate: 0
+  applySpeed: 0
   isRun: 0
-  crounchPosY: 0
+  crouchPosY: 0
   mouseSpeed: 1000
 --- !u!54 &2124620070
 Rigidbody:
@@ -964,19 +966,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c1dfbb5df75b43b996565691dff4d05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerConditions
-  health:
-    curValue: 0
-    maxValue: 100
-    startValue: 100
-    regenRate: 0
-  stamina:
-    curValue: 0
-    maxValue: 100
-    startValue: 100
-    regenRate: 0.1
-  onTakeDamage:
-    m_PersistentCalls:
-      m_Calls: []
+  maxHealth: 0
+  maxStamina: 0
+  staminaRegenRate: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
