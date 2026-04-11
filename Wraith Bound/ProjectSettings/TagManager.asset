@@ -5,23 +5,23 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ghost
-  - Lobby
-  - Door
+  - Exit
+  - Equip
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Interactable
   - Water
   - UI
   - RaderIcon
-  - Ghost
-  - Monster
-  - Player
-  - Lobby
-  - Corridor
-  - Hide
-  - Door
+  - PickupItem
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
   - 
   - 
   - 

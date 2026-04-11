@@ -1,13 +1,38 @@
 using UnityEngine;
 
-public class ItemObject : MonoBehaviour
+// IInteractable 인터페이스를 상속받아 규칙을 따릅니다.
+public class ItemObject : MonoBehaviour, IInteractable
 {
     [Header("연결된 아이템 데이터")]
-    // ActiveItem, Equipment, PassiveItem 모두 'Items'를 상속받았으므로 
-    // 이 변수 하나에 셋 다 넣을 수 있습니다.
     public Items itemData;
 
-    // 아이템을 획득할 때 호출되는 함수
+    // 1. 상호작용 실행 (플레이어가 E키를 눌렀을 때 호출됨)
+    public void Interact(GameObject interactor)
+    {
+        InventroyManager inv = interactor.GetComponent<InventroyManager>();
+
+        if (inv != null)
+        {
+            if (inv.AddItem(itemData))
+            {
+                // 아이템을 인벤토리에 넣은 후, 기존에 만드셨던 로그/효과 로직 실행
+                OnPickedUp();
+            }
+        }
+    }
+
+    // 2. [추가] 인터페이스 에러 해결을 위한 필수 함수
+    // 팀원분이 만든 인터페이스 규칙을 지키기 위해 반드시 필요합니다.
+    public string GetInteractPrompt()
+    {
+        if (itemData != null)
+        {
+            return $"[E] {itemData.itemName} 획득";
+        }
+        return "[E] 아이템 획득";
+    }
+
+    // 아이템을 획득할 때 호출되는 함수 (기존 로직 그대로 유지)
     public void OnPickedUp()
     {
         if (itemData == null)
@@ -16,17 +41,14 @@ public class ItemObject : MonoBehaviour
             return;
         }
 
-        // 1. 아이템 타입에 따른 로그 출력 (테스트용)
         Debug.Log($"[{itemData.type}] {itemData.itemName} 획득!");
 
-
-        ItemEffectManager manager = FindObjectOfType<ItemEffectManager>();
+        ItemEffectManager manager = Object.FindFirstObjectByType<ItemEffectManager>();
         if (manager != null)
         {
-            manager.Use(itemData); // 아이템 데이터 전달 및 기능 실행
+            manager.Use(itemData);
         }
 
-        // 2. [중요] 아이템 종류별 특수 로직 분기 (나중에 구현)
         switch (itemData.type)
         {
             case ItemType.Active:
@@ -45,10 +67,7 @@ public class ItemObject : MonoBehaviour
                 break;
         }
 
-        // 3. 인벤토리에 데이터 넘겨주기 (예정)
-        // InventoryManager.Instance.AddItem(itemData);
-
-        // 4. 바닥에서 박스 제거
+        // 4. 바닥에서 오브젝트 제거 (상단 Interact에서 안 했다면 여기서 처리)
         Destroy(gameObject);
     }
 }
