@@ -7,6 +7,8 @@ TagManager:
   - Ghost
   - Exit
   - Equip
+  - Door
+  - Lobby
   layers:
   - Default
   - TransparentFX
@@ -16,8 +18,8 @@ TagManager:
   - UI
   - RaderIcon
   - PickupItem
-  - 
-  - 
+  - Door
+  - Player
   - 
   - 
   - 
