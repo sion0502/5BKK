@@ -17,14 +17,14 @@ MonoBehaviour:
   description: 
   hp: 4000
   moveSpeed: 10
-  detectRange: 50
-  viewAngle: 133
+  detectRange: 35
+  viewAngle: 70
   checkInterval: 2
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1
   playerLayer:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 256
   targetLostTIme: 5
   hearingRange: 5

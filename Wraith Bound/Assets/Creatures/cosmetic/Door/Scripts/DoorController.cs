@@ -1,57 +1,82 @@
 ﻿using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorController : MonoBehaviour
 {
-    public GameObject brokenDoorPrefab;
-    public int hp = 10;
+    public GameObject brokenDoor;
 
-    private bool isBroken = false;
+    private bool isBroken;
+
+    void Start()
+    {
+        // 🔥 Player만 문 통과 가능하게 설정
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+        if (player != null)
+        {
+            Collider playerCol = player.GetComponent<Collider>();
+            Collider doorCol = GetComponent<Collider>();
+
+            if (playerCol != null && doorCol != null)
+            {
+                Physics.IgnoreCollision(playerCol, doorCol, true);
+            }
+        }
+    }
 
     public void TakeDamage(int damage)
     {
         if (isBroken) return;
 
-        hp -= damage;
-
-        if (hp <= 0)
-        {
-            BreakDoor();
-        }
+        BreakDoor();
     }
 
     void BreakDoor()
     {
         isBroken = true;
 
-        var obs = GetComponent<UnityEngine.AI.NavMeshObstacle>();
-        if (obs != null) obs.enabled = false;
+        // 기존 문 제거
+        gameObject.SetActive(false);
 
-        GameObject broken = Instantiate(
-            brokenDoorPrefab,
-            transform.position + Vector3.up * 2f,
-            transform.rotation
-        );
+        // 부서진 문 활성화
+        brokenDoor.SetActive(true);
 
-        broken.SetActive(true);
+        // 부모 막힘 제거
+        var parentCol = brokenDoor.GetComponent<Collider>();
+        if (parentCol) Destroy(parentCol);
 
-        Rigidbody[] rbs = broken.GetComponentsInChildren<Rigidbody>();
+        var parentObs = brokenDoor.GetComponent<NavMeshObstacle>();
+        if (parentObs) parentObs.enabled = false;
 
-        foreach (Rigidbody rb in rbs)
+        foreach (Transform piece in brokenDoor.transform)
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            var rb = piece.GetComponent<Rigidbody>();
+            var col = piece.GetComponent<Collider>();
+            var obs = piece.GetComponent<NavMeshObstacle>();
 
-            // 🔥 핵심: 회전 + 랜덤 방향
-            Vector3 force = transform.forward * Random.Range(4f, 7f)
-                            + Vector3.up * Random.Range(3f, 5f)
-                            + transform.right * Random.Range(-2f, 2f);
+            if (obs) obs.enabled = false;
 
-            rb.AddForce(force, ForceMode.Impulse);
+            // 🔥 Player만 조각도 통과하게
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null && col != null)
+            {
+                Collider playerCol = player.GetComponent<Collider>();
+                if (playerCol != null)
+                {
+                    Physics.IgnoreCollision(playerCol, col, true);
+                }
+            }
 
-            // 🔥 회전 힘 추가 (이게 핵심)
+            if (!rb) continue;
+
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.constraints = RigidbodyConstraints.None;
+
+            Vector3 pushDir = (piece.forward + Vector3.down * 0.2f).normalized;
+
+            rb.AddForce(pushDir * 5f, ForceMode.Impulse);
             rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
         }
-
-        Destroy(gameObject);
     }
 }
