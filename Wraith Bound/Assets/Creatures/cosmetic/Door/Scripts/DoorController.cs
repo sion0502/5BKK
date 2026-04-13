@@ -9,7 +9,7 @@ public class DoorController : MonoBehaviour
 
     void Start()
     {
-        // 🔥 Player만 문 통과 가능하게 설정
+        // Player만 문 통과 가능 (원래 문일 때만)
         GameObject player = GameObject.FindGameObjectWithTag("Player");
 
         if (player != null)
@@ -22,6 +22,10 @@ public class DoorController : MonoBehaviour
                 Physics.IgnoreCollision(playerCol, doorCol, true);
             }
         }
+
+        // 🔥 부서진 문은 처음엔 꺼져있어야 함
+        if (brokenDoor != null)
+            brokenDoor.SetActive(false);
     }
 
     public void TakeDamage(int damage)
@@ -41,7 +45,7 @@ public class DoorController : MonoBehaviour
         // 부서진 문 활성화
         brokenDoor.SetActive(true);
 
-        // 부모 막힘 제거
+        // 부모 콜라이더 제거
         var parentCol = brokenDoor.GetComponent<Collider>();
         if (parentCol) Destroy(parentCol);
 
@@ -56,16 +60,8 @@ public class DoorController : MonoBehaviour
 
             if (obs) obs.enabled = false;
 
-            // 🔥 Player만 조각도 통과하게
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null && col != null)
-            {
-                Collider playerCol = player.GetComponent<Collider>();
-                if (playerCol != null)
-                {
-                    Physics.IgnoreCollision(playerCol, col, true);
-                }
-            }
+            // 🔥 핵심: 충돌 유지 (삭제된 부분)
+            // → 이제 플레이어가 밀고 지나감
 
             if (!rb) continue;
 
