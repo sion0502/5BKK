@@ -4,9 +4,8 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - Floor
-  - Active
-  - Passive
+  - Ghost
+  - Exit
   - Equip
   layers:
   - Default
@@ -15,8 +14,8 @@ TagManager:
   - Interactable
   - Water
   - UI
-  - Player
-  - 
+  - RaderIcon
+  - PickupItem
   - 
   - 
   - 

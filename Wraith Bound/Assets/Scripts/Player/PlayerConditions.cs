@@ -22,6 +22,10 @@ public class PlayerConditions : MonoBehaviour
     private Coroutine regenCoroutine;
     private float currentHealth;
 
+    public float maxHealthPublic => maxHealth; // 읽기 전용 프로퍼티
+    public float maxStaminaPublic => maxStamina;
+    public float GetCurrentHealth() => currentHealth;
+
     PlayerController playerController;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
