@@ -5,19 +5,16 @@ public class PlayerInteractor : MonoBehaviour
 {
     [Header("Interaction Settings")]
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private float interactRange = 3f;
+    [SerializeField] public float interactRange = 3f;
     [SerializeField] private LayerMask interactableLayer;
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
 
     private IInteractable currentTarget;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         
     }
 
-    // Update is called once per frame
     void Update()
     {
         HandleRaycast();
@@ -62,7 +59,7 @@ public class PlayerInteractor : MonoBehaviour
 
     private void HandleInput()
     {
-        if (currentTarget != null && Input.GetKeyDown(interactKey))
+        if (currentTarget != null && Input.GetButtonDown("Interact"))
         {
             // 인터페이스를 통해 다형성 호출. 자기 자신(플레이어)의 게임 오브젝트를 넘겨줍니다.
             currentTarget.Interact(this.gameObject);
