@@ -4344,6 +4344,7 @@ GameObject:
   - component: {fileID: 2124620064}
   - component: {fileID: 2124620069}
   - component: {fileID: 2124620070}
+  - component: {fileID: 2124620071}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -4460,8 +4461,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 6
-  runSpeed: 0
-  crouchSpeed: 0
+  runSpeed: 12
+  crouchSpeed: 3
   staminaDrainRate: 0
   applySpeed: 0
   isRun: 0
@@ -4494,6 +4495,21 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &2124620071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2124620063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1dfbb5df75b43b996565691dff4d05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerConditions
+  maxHealth: 100
+  maxStamina: 100
+  staminaRegenRate: 0
 --- !u!1001 &2197400091725256620
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4613,8 +4629,16 @@ PrefabInstance:
       value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 9098951836820259232, guid: 1aa23528e3dbdf242ac9971141fbe0ed, type: 3}
+      propertyPath: runSpeed
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 9098951836820259232, guid: 1aa23528e3dbdf242ac9971141fbe0ed, type: 3}
       propertyPath: moveSpeed
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 9098951836820259232, guid: 1aa23528e3dbdf242ac9971141fbe0ed, type: 3}
+      propertyPath: crouchSpeed
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
