@@ -17,8 +17,8 @@ MonoBehaviour:
   description: 
   hp: 3000
   moveSpeed: 10
-  detectRange: 25
-  viewAngle: 80
+  detectRange: 20
+  viewAngle: 100
   checkInterval: 0
   obstacleLayer:
     serializedVersion: 2
@@ -27,4 +27,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   targetLostTIme: 0
-  hearingRange: 0
+  hearingRange: 50
