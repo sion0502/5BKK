@@ -154,7 +154,7 @@ public class InventroyManager : MonoBehaviour
 
                 // 4. PickupCam에서만 보이도록 레이어 설정
                 // (레이어 이름이 "Weapon"인지 "PickupItem"인지 확인하세요)
-                SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("Weapon"));
+                SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
             }
         }
     }

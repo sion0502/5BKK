@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6907476746997997189}
   - component: {fileID: 194370876650002736}
   - component: {fileID: 7839151617736678390}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Compass Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -99,7 +99,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2215885268058574828}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Needle_Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -135,7 +135,7 @@ GameObject:
   - component: {fileID: 7127671995645332514}
   - component: {fileID: 3916040224820145470}
   - component: {fileID: 2902597199917613169}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Compass 2
   m_TagString: Equip
   m_Icon: {fileID: 0}
@@ -254,7 +254,7 @@ GameObject:
   - component: {fileID: 6053681784390632065}
   - component: {fileID: 6871734907761483784}
   - component: {fileID: 6087568848813030617}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Needle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
