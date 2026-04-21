@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEditor.Rendering.Universal;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,7 +8,7 @@ public class PlayerHidingController : MonoBehaviour
     [Header("References")]
     public Transform playerCamera;
     private PlayerController playerController; // 기존 1인칭 이동 스크립트 (비활성화 용도)
-    private MouseLook mouseLook; // 기존 1인칭 카메라 스크립트 (비활성화 용도)
+    private MonoBehaviour mouseLook; // 기존 1인칭 카메라 스크립트 (비활성화 용도)
 
     [Header("Raycast Settings")]
     [Tooltip("상호작용 가능한 최대 거리")]
@@ -64,6 +65,12 @@ public class PlayerHidingController : MonoBehaviour
                 StartCoroutine(EnterHidingRoutine());
             }
         }
+
+        // 숨어있는 동안 제한된 시야 제어
+        if (isHiding && !isTransitioning)
+        {
+            HandleRestrictedLook();
+        }
     }
 
     private void DetectHidingSpot()
@@ -88,7 +95,7 @@ public class PlayerHidingController : MonoBehaviour
                 if (hitAngle <= maxFrontAngle)
                 {
                     currentSpot = spot;
-                    Debug.Log("숨기 가능한 오브젝트 감지됨!");
+                    //Debug.Log("숨기 가능한 오브젝트 감지됨!");
                     //TODO: 이곳에서 UI 매니저를 호출해 화면에 "E: 숨기" 같은 텍스트 띄우기
                     return;
                 }
@@ -146,12 +153,6 @@ public class PlayerHidingController : MonoBehaviour
         currentPitch = 0f;
 
         isTransitioning = false;
-
-        // 숨어있는 동안 제한된 시야 제어
-        if (isHiding && !isTransitioning)
-        {
-            HandleRestrictedLook();
-        }
     }
 
     private IEnumerator ExitHidingRoutine()
@@ -212,7 +213,7 @@ public class PlayerHidingController : MonoBehaviour
         Quaternion localRotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
         playerCamera.rotation = currentSpot.hideCameraPosition.rotation * localRotation;
 
-        Debug.Log("에러 없이 회전 로직 통과 완료!"); // 이 로그가 안 뜨면 위 코드 중 어딘가 터진 것입니다.
+        Debug.Log("에러 없이 회전 로직 통과 완료!");
         }
         catch (System.Exception e)
         {

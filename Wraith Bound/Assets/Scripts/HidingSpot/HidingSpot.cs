@@ -9,10 +9,10 @@ public class HidingSpot : MonoBehaviour
     public Transform exitPosition;
 
     [Tooltip("숨어있을 때 좌우로 고개를 돌릴 수 있는 최대 각도")]
-    public float lookLimitX = 45f;
+    public float lookLimitX;
 
     [Tooltip("숨어있을 때 상하로 고개를 돌릴 수 있는 최대 각도")]
-    public float lookLimitY = 30f;
+    public float lookLimitY;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
