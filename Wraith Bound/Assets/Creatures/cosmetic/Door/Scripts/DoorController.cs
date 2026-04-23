@@ -1,48 +1,46 @@
 ﻿using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorController : MonoBehaviour
 {
-    [SerializeField] private int hp = 3;
-    [SerializeField] private GameObject brokenDoor;
+    public GameObject brokenDoor;
 
-    private Collider col;
+    NavMeshObstacle obstacle;
+    bool isBroken = false;
 
     void Awake()
     {
-        col = GetComponent<Collider>();
-    }
-
-    void OnCollisionEnter(Collision other)
-    {
-        // ⭐ 플레이어는 무조건 통과
-        if (other.gameObject.CompareTag("Player"))
-        {
-            Physics.IgnoreCollision(col, other.collider);
-        }
+        obstacle = GetComponent<NavMeshObstacle>();
     }
 
     public bool IsBroken()
     {
-        return hp <= 0;
+        return isBroken;
     }
 
     public void TakeDamage(int damage)
     {
-        if (hp <= 0) return;
+        if (isBroken) return;
 
-        hp -= damage;
-
-        if (hp <= 0)
-        {
-            BreakDoor();
-        }
+        Break();
     }
 
-    void BreakDoor()
+    void Break()
     {
-        gameObject.SetActive(false);
+        isBroken = true;
 
         if (brokenDoor != null)
+        {
+            // ⭐ 바닥 위로 위치만 정확히 맞춤 (핵심)
+            brokenDoor.transform.position = transform.position + Vector3.up * 0.6f;
+            brokenDoor.transform.rotation = transform.rotation;
+
             brokenDoor.SetActive(true);
+        }
+
+        gameObject.SetActive(false);
+
+        if (obstacle != null)
+            obstacle.enabled = false;
     }
 }

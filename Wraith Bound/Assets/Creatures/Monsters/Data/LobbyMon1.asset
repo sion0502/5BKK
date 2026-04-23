@@ -16,13 +16,13 @@ MonoBehaviour:
   monsterType: 0
   description: 
   hp: 3000
-  moveSpeed: 10
-  detectRange: 20
-  viewAngle: 100
+  moveSpeed: 7.2
+  detectRange: 50
+  viewAngle: 200
   checkInterval: 0
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 2097152
+    m_Bits: 1
   playerLayer:
     serializedVersion: 2
     m_Bits: 256

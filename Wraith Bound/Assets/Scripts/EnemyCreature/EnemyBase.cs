@@ -1,293 +1,173 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 
-public abstract class EnemyBase : MonoBehaviour
+public class EnemyBase : MonoBehaviour
 {
-    public enum EnemyState { Patrol, Chase, Investigate }
+    public enum State { Patrol, Investigate, Chase }
+    public State currentState;
 
-    [Header("Core")]
-    [SerializeField] protected NavMeshAgent agent;
-    [SerializeField] protected Animator animator;
-    [SerializeField] protected Transform eyePoint;
+    public Monsters data;
 
-    [Header("Perimeter")]
-    [SerializeField] protected float patrolRange = 40f;
-    [SerializeField] protected float defaultViewDistance = 60f;
-    [SerializeField] protected float defaultViewAngle = 100f;
+    public NavMeshAgent agent;
+    public Transform player;
+    public Transform eyePoint;
+    public Animator animator;
 
-    protected Transform player;
-    protected EnemyState currentState;
+    float runSpeed;
+    float walkSpeed;
 
-    protected float walkSpeed;
-    protected float runSpeed;
-    protected float viewDistance;
-    protected float viewAngle;
-
-    protected Vector3 lastKnownPosition;
-    protected bool canSeePlayer;
-
-    protected float forcedChaseTimer = 0f;
-    float chaseMemoryTimer = 0f;
-    float chaseMemoryDuration = 8f;
-
+    float forcedChaseTimer;
     float investigateTimer;
-    Vector3 investigateCenter;
 
-    float idleTimer = 0f;
-    bool isIdling = false;
+    Vector3 lastKnownPos;
+    float patrolTimer;
 
-    bool investigateIdle = false;
-    float investigateIdleTimer = 0f;
-
-    // 의심 모드 상수: 10초 고정 지속
-    const float InvestigateDuration = 10f;
-
-    protected virtual void Start()
+    void Start()
     {
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        currentState = EnemyState.Patrol;
-        viewDistance = defaultViewDistance;
-        viewAngle = defaultViewAngle;
-        SetRandomWalk();
+        runSpeed = data.moveSpeed;
+        walkSpeed = data.moveSpeed * 0.35f;
+
+        currentState = State.Patrol;
     }
 
-    protected virtual void Update()
+    void Update()
     {
-        // 벽/시야 이슈를 줄이기 위한 안정화 CheckVision
-        CheckVision();
+        bool visible = CheckVision();
+
+        if (visible)
+        {
+            currentState = State.Chase;
+            lastKnownPos = player.position;
+            forcedChaseTimer = 5f;
+        }
+        else if (currentState == State.Chase)
+        {
+            forcedChaseTimer -= Time.deltaTime;
+
+            if (forcedChaseTimer <= 0f)
+            {
+                currentState = State.Investigate;
+                investigateTimer = 10f;
+            }
+        }
 
         switch (currentState)
         {
-            case EnemyState.Patrol: UpdatePatrol(); break;
-            case EnemyState.Chase: UpdateChase(); break;
-            case EnemyState.Investigate: UpdateInvestigate(); break;
+            case State.Patrol:
+                agent.speed = walkSpeed;
+                UpdatePatrol();
+                break;
+
+            case State.Chase:
+                agent.speed = runSpeed;
+                UpdateChase();
+                break;
+
+            case State.Investigate:
+                agent.speed = walkSpeed;
+                UpdateInvestigate();
+                break;
         }
 
-        UpdateAnimator();
+        UpdateAnimation();
     }
 
-    void ResetMovement()
+    // ⭐ 문 뒤 감지 완전 차단
+    bool CheckVision()
     {
-        if (agent != null) agent.isStopped = false;
-        isIdling = false;
-        investigateIdle = false;
-    }
-
-    // 시야 판단: 벽 차단 포함
-    void CheckVision()
-    {
-        if (player == null || eyePoint == null) return;
+        if (player == null) return false;
 
         Vector3 origin = eyePoint.position;
         Vector3 dir = (player.position - origin).normalized;
         float dist = Vector3.Distance(origin, player.position);
 
-        bool seen = false;
+        if (dist > data.detectRange) return false;
 
-        if (dist <= viewDistance)
+        if (Physics.Raycast(origin, dir, out RaycastHit hit, dist))
         {
-            float angle = Vector3.Angle(eyePoint.forward, dir);
-            if (angle <= viewAngle)
-            {
-                RaycastHit hit;
-                int layerMask = LayerMask.GetMask("Default", "Wall", "Player");
-                if (Physics.Raycast(origin, dir, out hit, viewDistance, layerMask))
-                {
-                    if (hit.collider != null && hit.collider.CompareTag("Player"))
-                    {
-                        seen = true;
-                        lastKnownPosition = player.position;
-                    }
-                }
-            }
+            if (hit.collider.CompareTag("Player"))
+                return true;
+
+            // ⭐ 문이면 무조건 차단
+            if (hit.collider.CompareTag("Door"))
+                return false;
+
+            // 벽 차단
+            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Default"))
+                return false;
         }
 
-        if (seen)
-        {
-            canSeePlayer = true;
-            chaseMemoryTimer = chaseMemoryDuration;
-            currentState = EnemyState.Chase;
-            ResetMovement();
-        }
-        else
-        {
-            chaseMemoryTimer -= Time.deltaTime;
-            if (chaseMemoryTimer <= 0f)
-                canSeePlayer = false;
-        }
-
-        if (forcedChaseTimer > 0f)
-        {
-            forcedChaseTimer -= Time.deltaTime;
-            canSeePlayer = true;
-            currentState = EnemyState.Chase;
-        }
+        return false;
     }
 
     void UpdatePatrol()
     {
-        if (agent == null) return;
-        agent.speed = walkSpeed;
+        patrolTimer -= Time.deltaTime;
 
-        if (canSeePlayer)
+        if (patrolTimer > 0f) return;
+
+        patrolTimer = Random.Range(2f, 4f);
+
+        Vector3 dir = Random.insideUnitSphere;
+        dir.y = 0;
+
+        Vector3 target = transform.position + dir.normalized * Random.Range(8f, 15f);
+
+        if (NavMesh.SamplePosition(target, out NavMeshHit hit, 15f, NavMesh.AllAreas))
         {
-            currentState = EnemyState.Chase;
-            ResetMovement();
-            return;
+            agent.SetDestination(hit.position);
         }
-
-        if (isIdling)
-        {
-            idleTimer -= Time.deltaTime;
-            agent.isStopped = true;
-            if (idleTimer <= 0f)
-            {
-                isIdling = false;
-                agent.isStopped = false;
-                SetRandomWalk();
-            }
-            return;
-        }
-
-        if (!agent.pathPending && agent.remainingDistance <= 0.5f)
-        {
-            if (Random.value < 0.08f)
-            {
-                isIdling = true;
-                idleTimer = Random.Range(1f, 2f);
-            }
-            else
-            {
-                SetRandomWalk();
-            }
-        }
-    }
-
-    protected virtual bool IsActionBlocked()
-    {
-        return false;
-    }
-
-    void UpdateChase()
-    {
-        if (IsActionBlocked()) return;
-
-        agent.speed = runSpeed;
-        agent.isStopped = false;
-
-        Vector3 dirToPlayer = (player.position - transform.position).normalized;
-        dirToPlayer.y = 0f;
-
-        if (dirToPlayer.sqrMagnitude > 0.01f)
-        {
-            Quaternion rot = Quaternion.LookRotation(dirToPlayer);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 10f);
-        }
-
-        // 플레이어 위치로 매 프레임 이동 목표
-        agent.SetDestination(player.position);
-
-        if (canSeePlayer)
-        {
-            lastKnownPosition = player.position;
-            OnChaseUpdate();
-            return;
-        }
-
-        if (chaseMemoryTimer > 0f)
-        {
-            agent.SetDestination(lastKnownPosition);
-            return;
-        }
-
-        // 시야를 잃고 기억도 없으면 Investigate
-        investigateTimer = InvestigateDuration;
-        investigateCenter = lastKnownPosition;
-        currentState = EnemyState.Investigate;
-        ResetMovement();
     }
 
     void UpdateInvestigate()
     {
-        agent.speed = walkSpeed;
-
-        if (canSeePlayer)
-        {
-            currentState = EnemyState.Chase;
-            ResetMovement();
-            return;
-        }
-
         investigateTimer -= Time.deltaTime;
 
-        if (investigateIdle)
+        if (agent.remainingDistance < 2f)
         {
-            investigateIdleTimer -= Time.deltaTime;
-            agent.isStopped = true;
-            if (investigateIdleTimer <= 0f)
-            {
-                investigateIdle = false;
-                agent.isStopped = false;
-            }
-            return;
-        }
+            Vector3 rand = lastKnownPos + Random.insideUnitSphere * 5f;
+            rand.y = 0;
 
-        if (!agent.pathPending && agent.remainingDistance <= 0.5f)
-        {
-            if (Random.value < 0.3f)
+            if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 5f, NavMesh.AllAreas))
             {
-                investigateIdle = true;
-                investigateIdleTimer = Random.Range(1f, 2.5f);
-            }
-            else
-            {
-                Vector3 randomPos = investigateCenter + Random.insideUnitSphere * 6f;
-                randomPos.y = 0;
-
-                if (NavMesh.SamplePosition(randomPos, out NavMeshHit hit, 6f, NavMesh.AllAreas))
-                    agent.SetDestination(hit.position);
+                agent.SetDestination(hit.position);
             }
         }
 
         if (investigateTimer <= 0f)
         {
-            currentState = EnemyState.Patrol;
-            ResetMovement();
-            SetRandomWalk();
+            currentState = State.Patrol;
         }
     }
 
-    void SetRandomWalk()
+    void UpdateChase()
     {
-        for (int i = 0; i < 20; i++)
-        {
-            Vector3 randomDir = Random.insideUnitSphere * patrolRange;
-            randomDir += transform.position;
-            randomDir.y = 0;
+        agent.SetDestination(player.position);
 
-            if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, patrolRange, NavMesh.AllAreas))
+        Collider[] hits = Physics.OverlapSphere(transform.position, 5f);
+
+        foreach (var hit in hits)
+        {
+            if (!hit.CompareTag("Door")) continue;
+
+            DoorController door = hit.GetComponentInParent<DoorController>();
+
+            if (door != null && !door.IsBroken())
             {
-                if (Vector3.Distance(hit.position, transform.position) > 1f)
-                {
-                    agent.isStopped = false;
-                    agent.SetDestination(hit.position);
-                    return;
-                }
+                agent.SetDestination(door.transform.position);
+                HandleDoor(door);
+                return;
             }
         }
-        agent.ResetPath();
-        agent.isStopped = true;
     }
 
-    void UpdateAnimator()
+    protected virtual void HandleDoor(DoorController door) { }
+
+    void UpdateAnimation()
     {
-        if (animator == null) return;
-
-        float speed = agent.velocity.magnitude;
-        if (speed < 0.1f) animator.SetFloat("Speed", 0f);
-        else if (currentState == EnemyState.Chase) animator.SetFloat("Speed", 2f);
-        else animator.SetFloat("Speed", 1f);
+        if (currentState == State.Patrol)
+            animator.SetFloat("Speed", 0.3f);
+        else if (currentState == State.Chase)
+            animator.SetFloat("Speed", 1f);
     }
-
-    protected virtual void OnChaseUpdate() { }
 }
