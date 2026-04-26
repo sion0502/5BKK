@@ -5601,6 +5601,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3055220119583811024}
     m_Modifications:
+    - target: {fileID: -8008531551568155357, guid: 11072a11cd32c5c45b9c3a59360dfb45, type: 3}
+      propertyPath: targetDoor
+      value: 
+      objectReference: {fileID: 5678153545423512894}
     - target: {fileID: 2318832961025599313, guid: 11072a11cd32c5c45b9c3a59360dfb45, type: 3}
       propertyPath: m_Name
       value: Lever
@@ -9031,6 +9035,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8849915556774564525, guid: e618a28ac06566d40be51d7c8a33a9d5, type: 3}
   m_PrefabInstance: {fileID: 8770537504029208146}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5678153545423512894 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3998052929766493036, guid: e618a28ac06566d40be51d7c8a33a9d5, type: 3}
+  m_PrefabInstance: {fileID: 8770537504029208146}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d27041c4aef168446b345a718bc2c1c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LockDoor
 --- !u!1001 &9080638656549024193
 PrefabInstance:
   m_ObjectHideFlags: 0

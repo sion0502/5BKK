@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6927304549523783338}
   - component: {fileID: 5269258905871946847}
   - component: {fileID: 6951717416788604865}
+  - component: {fileID: 3998052929766493036}
   m_Layer: 0
   m_Name: LeverDoor
   m_TagString: Untagged
@@ -114,3 +115,16 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.0000077188015}
+--- !u!114 &3998052929766493036
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4988269703631812629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d27041c4aef168446b345a718bc2c1c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LockDoor
+  isLocked: 1
