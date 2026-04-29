@@ -7,162 +7,227 @@ using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using UnityEngine.InputSystem;
 using NUnit.Framework;
+using System;
 
 public class PlayerController : MonoBehaviour
 {
-    Rigidbody rb;
-    
-    [SerializeField]
+    [Header("Movement Settings")]
     public float moveSpeed; // 걷기 속도
     public float runSpeed; // 달리기 속도
-    public float crouchSpeed; // 웅크리기 시 속도
     public float staminaDrainRate; // 달리기 시 소비할 스태미나
-    public float applySpeed; // 초기화용 변수
+    public float gravity = -3.0f; // 중력
+    public bool isRun = false; // 달리기 상태
 
-    float h; // 좌우
-    float v; // 상하
+    [Header("Crouch Settings")]
+    public float crouchSpeed; // 웅크리기 속도
+    public float normalHeight = 2.0f;
+    public float crouchHeight = 1.0f;
+    private float normalCameraHeight; // 캐릭터 중심 기준 카메라 로컬 Y 위치
+    private float crouchCameraHeight;
+    public float crouchTransitionSpeed = 10f; // 웅크리기 전환 속도
 
-    [SerializeField]
-    private bool isRun = false; // 달리기 상태
-    private bool isCrouch = false; // 웅크리기 상태
+    public bool isCrouching = false; // 웅크리기 상태
+    private float targetHeight;
+    private float targetCameraHeight;
 
-    [SerializeField]
-    private float crouchPosY; // 웅크리기 상태의 y축
-    private float originPosY; // 걷기 상태의 y축 
-    private float applyCrouchPosY; // 초기화용 변수
+    [Header("References")]
+    private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
+    private CharacterController controller; // CharacterController 컴포넌트 가져오기
+    public Transform cameraTransform; // 1인칭 카메라 할당
+    private Vector3 velocity;
+    private Vector3 horizontalVelocity;
 
-    
-    PlayerConditions conditions; // PlayerConditions 컴포넌트 가져오기
-    Rigidbody rigid;
-
-    [Header("Rotate")]
-    public float mouseSpeed; // 마우스 속도
-    float xRotation;
-    float yRotation;
-    Camera cam; // 카메라 컴포넌트
+    [Tooltip("천장 충돌을 체크할 레이어 (예: Ground, Obstacle)")]
+    public LayerMask ceilingCheckLayer;
 
     void Start()
     {
-        UnityEngine.Cursor.lockState = CursorLockMode.Locked; // 마우스 커서를 화면 안에서 고정
-        UnityEngine.Cursor.visible = false; // 마우스 커서를 보이지 않도록 설정
-
-        rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true; // Rigidbody의 회전을 고정하여 물리 연산에 영향을 주지 않도록 설정
-
         conditions = GetComponent<PlayerConditions>();
-        rigid = GetComponent<Rigidbody>();
+        controller = GetComponent<CharacterController>();
 
-        cam = Camera.main; // 메인 카메라를 할당
+        normalCameraHeight = cameraTransform.localPosition.y;
+        // 웅크렸을 때의 카메라 높이는 기본 눈높이에서 일정 값(예: 1.0f)을 뺀 값으로 자동 설정
+        crouchCameraHeight = normalCameraHeight - 1.0f;
 
-        // 초기화
-        applySpeed = moveSpeed;
-        originPosY = cam.transform.localPosition.y;
-        applyCrouchPosY = originPosY;
+        targetHeight = normalHeight;
+        targetCameraHeight = normalCameraHeight;
     }
 
     void Update()
     {
-        Run();
-        Crouch();
-        Rotate();
-        Move();
+        HandleGrounded();
+        HandleMovement();
+        HandleGravity();
+
+        Vector3 finalMovement = horizontalVelocity + velocity;
+        controller.Move(finalMovement * Time.deltaTime);
     }
 
-    // 1인칭 카메라 회전
-    void Rotate()
+    private void HandleGrounded()
     {
-        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSpeed * Time.deltaTime;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSpeed * Time.deltaTime;
-
-        yRotation += mouseX; // 마우스 x축 입력에 따라 수평 회전 값을 조정
-        xRotation -= mouseY; // 마우스 y축 입력에 따라 수직 회전 값을 조정
-
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // 수직 회전 값을 -90도에서 90도 사이로 제한
-
-        cam.transform.rotation = Quaternion.Euler(xRotation, yRotation, 0); // 카메라의 회전을 조절
-        transform.rotation = Quaternion.Euler(0, yRotation, 0); // 플레이어 캐릭터의 회전을 조절
+        if (controller.isGrounded)
+        {
+            controller.stepOffset = 0.3f; // 지상에서는 기본 stepOffset 값으로 적용함
+        }
+        else
+        {
+            controller.stepOffset = 0f; // 공중에서는 stepOffset을 0으로 설정하여 벽에 걸리는 것을 방지함
+        }
     }
 
-    // 걷기(기본 상태)
-    void Move()
+    // 움직임 처리
+    private void HandleMovement()
     {
-        h = Input.GetAxisRaw("Horizontal");
-        v = Input.GetAxisRaw("Vertical");
+        float x = Input.GetAxisRaw("Horizontal");
+        float z = Input.GetAxisRaw("Vertical");
 
-        // 입력에 따라 이동 방향 벡터 계산
-        Vector3 moveVec = transform.forward * v + transform.right * h;
-        // 이동 벡터를 정규화하여 이동 속도와 시간 간격을 곱한 후 현재 위치에 더함
-        rigid.linearVelocity = new Vector3(moveVec.x * applySpeed, rigid.linearVelocity.y, moveVec.z * applySpeed);
-    }
+        Vector3 move = transform.right * x + transform.forward * z;
 
-    // 달리기
-    void Run()
-    {
-        // 스태미나가 0보다 높을 때, 왼쪽 쉬프트를 누르면 달린다
-        // 스태미나를 다 썼거나 왼쪽 쉬프트를 떼면 다시 걷는다
-        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isRun == false)
+        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false)
         {
             isRun = true;
-            conditions.ConsumeStamina(Time.deltaTime);
-            applySpeed = runSpeed;
+            conditions.ConsumeStamina(staminaDrainRate);
         }
 
         else if (Input.GetKeyUp(KeyCode.LeftShift) || conditions.GetCurrentStamina() <= 0f)
         {
             isRun = false;
-            applySpeed = moveSpeed;
             conditions.StartStaminaRegen();
-
-
-
             /*디버그 로그(Debug.Log)로 매 프레임마다 깎이는 스태미나 수치를 확인 중이시라면, 0.01씩 깎이는 것이 정상일 수 있습니다.
-
-원리: 초당 10을 소비한다는 것은 1초에 걸쳐 총 10이 깎인다는 의미입니다. 만약 게임이 1000프레임(FPS)으로 돌아가고 있다면, 1프레임당 10 / 1000 = 0.01씩 깎이게 됩니다.
-확인 방법: 디버그 로그가 0.01씩 찍히더라도, 스태미나 바 UI가 10초에 걸쳐 서서히 0(최대치 100 기준)으로 줄어든다면 정상적으로 작동하고 있는 것입니다.  */
-            Debug.Log("현재 스태미나: " + conditions.GetCurrentStamina()); 
+            원리: 초당 10을 소비한다는 것은 1초에 걸쳐 총 10이 깎인다는 의미입니다. 만약 게임이 1000프레임(FPS)으로 돌아가고 있다면, 1프레임당 10 / 1000 = 0.01씩 깎이게 됩니다.
+            확인 방법: 디버그 로그가 0.01씩 찍히더라도, 스태미나 바 UI가 10초에 걸쳐 서서히 0(최대치 100 기준)으로 줄어든다면 정상적으로 작동하고 있는 것입니다. */
+            Debug.Log("현재 스태미나: " + conditions.GetCurrentStamina());
         }
-    }
 
-    // 웅크리기
-    void Crouch()
-    {
-        // 왼쪽 컨트롤을 누르면 웅크린다
-        // 왼쪽 컨트롤을 떼면 다시 걷는다
+        // 웅크리기 키 (예: 좌측 컨트롤 키)
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
-            isCrouch = true;
-            applySpeed = crouchSpeed;
-            applyCrouchPosY = crouchPosY;
+            isCrouching = true;
         }
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
-            isCrouch = false;
-            applySpeed = moveSpeed;
-            applyCrouchPosY = originPosY;
+            // 일어서기 시도
+            if (CanStandUp())
+            {
+                isCrouching = false;
+            }
         }
 
-        // 코루틴 시작
-        StartCoroutine(CrouchCoroutine());
-    }
 
-    // 부드러운 웅크리기 동작을 위한 코루틴
-    IEnumerator CrouchCoroutine()
-    {
-        float _posY = cam.transform.localPosition.y;
-        int count = 0;
-
-        // 카메라의 현재 위치에서 출발하여 applyCrounchPosY와 일치할 때까지 계속해서 Lerp로 업데이트
-        while(_posY != applyCrouchPosY)
+        // 만약 키를 뗐는데 머리 위에 장애물이 있어서 못 일어난 상태라면,
+        // 장애물이 없어졌을 때 자동으로 일어서도록 처리 (Toggle 방식이 아닌 Hold 방식일 때)
+        if (!isCrouching && !Input.GetKey(KeyCode.LeftControl))
         {
-            count++;
-            _posY = Mathf.Lerp(_posY, applyCrouchPosY, 0.2f);
-            cam.transform.localPosition = new Vector3(0, _posY, 0);
-            if(count > 15)
-            break;
-
-            yield return null;
+            if (CanStandUp())
+            {
+                isCrouching = false;
+            }
+            else
+            {
+                isCrouching = true; // 강제 유지
+            }
         }
-        cam.transform.localPosition = new Vector3(0, applyCrouchPosY, 0);
+
+
+        if (isCrouching)
+        {
+            Crouch(move);
+        }
+        else if (isRun)
+        {
+            Run(move);
+        }
+        else
+        {
+            Move(move);
+        }
+
+
+        if (isCrouching)
+        {
+            // 목표 높이 설정
+            targetHeight = isCrouching ? crouchHeight : normalHeight;
+            targetCameraHeight = isCrouching ? crouchCameraHeight : normalCameraHeight;
+
+
+            // 1. 콜라이더 높이 부드럽게 조절
+            float currentHeight = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
+            controller.height = currentHeight;
+
+            // 콜라이더 중심점(Center)도 높이에 맞춰 조절해야 바닥을 뚫거나 공중에 뜨지 않음
+            controller.center = new Vector3(0, currentHeight / 2f, 0);
+
+            // 2. 카메라 높이 부드럽게 조절
+            Vector3 newCameraPos = cameraTransform.localPosition;
+            newCameraPos.y = Mathf.Lerp(cameraTransform.localPosition.y, targetCameraHeight, Time.deltaTime * crouchTransitionSpeed);
+            cameraTransform.localPosition = newCameraPos;
+        }
+
+        else
+        {
+            // isCrouching이 false가 되면, 목표 높이는 원래 키(normalHeight)가 됩니다.
+            float targetHeight = isCrouching ? crouchHeight : normalHeight;
+            float targetCameraHeight = isCrouching ? crouchCameraHeight : normalCameraHeight;
+
+            // 콜라이더 높이를 원래대로 부드럽게 복구
+            float currentHeight = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
+            controller.height = currentHeight;
+            controller.center = new Vector3(0, currentHeight / 2f, 0);
+
+            // 카메라 위치를 원래 눈높이로 부드럽게 복구
+            Vector3 newCameraPos = cameraTransform.localPosition;
+            newCameraPos.y = Mathf.Lerp(cameraTransform.localPosition.y, targetCameraHeight, Time.deltaTime * crouchTransitionSpeed);
+            cameraTransform.localPosition = newCameraPos;
+        }
     }
-  
+
+    // 걷기
+    private void Move(Vector3 direction)
+    {
+        horizontalVelocity = direction * moveSpeed;
+    }
+
+
+    // 달리기
+    private void Run(Vector3 direction)
+    {
+        horizontalVelocity = direction * runSpeed;
+    }
+
+    // 웅크리기
+    private void Crouch(Vector3 direction)
+    {
+        horizontalVelocity = direction * crouchSpeed;
+    }
+
+    // 중력 처리
+    private void HandleGravity()
+    {
+        if (controller.isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f;
+        }
+
+        velocity.y += gravity * Time.deltaTime;
+
+        if (velocity.y < -50f)
+        {
+            velocity.y = -50f;
+        }
+    }
+
+    // 머리 위에 장애물이 있는지 확인하여 일어설 수 있는지 체크
+    private bool CanStandUp()
+    {
+        // 현재 캐릭터 위치에서 위쪽으로 Ray를 쏴서 체크
+        // radius는 캐릭터의 반경, distance는 일어섰을 때의 높이 차이만큼
+        float radius = controller.radius;
+        Vector3 origin = transform.position + Vector3.up * controller.height;
+        float distance = normalHeight - controller.height;
+
+        // 레이어 마스크를 추가하여 특정 레이어(예: Ground, Obstacle)만 체크하는 것이 좋습니다.
+        bool hitCeiling = Physics.SphereCast(origin, radius, Vector3.up, out RaycastHit hit, distance, ceilingCheckLayer);
+
+        return !hitCeiling;
+    }
 }
