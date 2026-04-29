@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed; // 걷기 속도
     public float runSpeed; // 달리기 속도
     public float staminaDrainRate; // 달리기 시 소비할 스태미나
-    public float gravity = -9.81f; // 중력
+    public float gravity = -3.0f; // 중력
     public bool isRun = false; // 달리기 상태
 
     [Header("Crouch Settings")]
@@ -55,11 +55,24 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        HandleGrounded();
         HandleMovement();
         HandleGravity();
 
         Vector3 finalMovement = horizontalVelocity + velocity;
         controller.Move(finalMovement * Time.deltaTime);
+    }
+
+    private void HandleGrounded()
+    {
+        if (controller.isGrounded)
+        {
+            controller.stepOffset = 0.3f; // 지상에서는 기본 stepOffset 값으로 적용함
+        }
+        else
+        {
+            controller.stepOffset = 0f; // 공중에서는 stepOffset을 0으로 설정하여 벽에 걸리는 것을 방지함
+        }
     }
 
     // 움직임 처리
