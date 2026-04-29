@@ -10,10 +10,10 @@ public class TheMimicController : EnemyBase
 
         isAttacking = true;
 
-        agent.isStopped = true;
+        Agent.isStopped = true;
 
-        if (animator != null)
-            animator.SetTrigger("Attack");
+        if (Anim != null)
+            Anim.SetTrigger("Attack");
 
         door.TakeDamage(1);
 
@@ -23,6 +23,6 @@ public class TheMimicController : EnemyBase
     void EndAttack()
     {
         isAttacking = false;
-        agent.isStopped = false;
+        Agent.isStopped = false;
     }
 }

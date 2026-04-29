@@ -6,12 +6,17 @@ public class EnemyBase : MonoBehaviour
     public enum State { Patrol, Investigate, Chase }
     public State currentState;
 
-    public Monsters data;
+    [SerializeField] private Monsters data;
+    [SerializeField] private Transform player;
+    [SerializeField] private Transform eyePoint;
 
-    public NavMeshAgent agent;
-    public Transform player;
-    public Transform eyePoint;
-    public Animator animator;
+    private NavMeshAgent agent;
+    private Animator animator;
+
+    protected NavMeshAgent Agent => agent;
+    protected Animator Anim => animator;
+    protected Transform Player => player;
+    protected Monsters Data => data;
 
     float runSpeed;
     float walkSpeed;
@@ -21,6 +26,12 @@ public class EnemyBase : MonoBehaviour
 
     Vector3 lastKnownPos;
     float patrolTimer;
+
+    void Awake()
+    {
+        agent = GetComponent<NavMeshAgent>();
+        animator = GetComponentInChildren<Animator>();
+    }
 
     void Start()
     {
@@ -37,7 +48,7 @@ public class EnemyBase : MonoBehaviour
         if (visible)
         {
             currentState = State.Chase;
-            lastKnownPos = player.position;
+            lastKnownPos = Player.position;
             forcedChaseTimer = 5f;
         }
         else if (currentState == State.Chase)
@@ -54,17 +65,17 @@ public class EnemyBase : MonoBehaviour
         switch (currentState)
         {
             case State.Patrol:
-                agent.speed = walkSpeed;
+                Agent.speed = walkSpeed;
                 UpdatePatrol();
                 break;
 
             case State.Chase:
-                agent.speed = runSpeed;
+                Agent.speed = runSpeed;
                 UpdateChase();
                 break;
 
             case State.Investigate:
-                agent.speed = walkSpeed;
+                Agent.speed = walkSpeed;
                 UpdateInvestigate();
                 break;
         }
@@ -74,22 +85,22 @@ public class EnemyBase : MonoBehaviour
 
     bool CheckVision()
     {
-        if (player == null) return false;
+        if (Player == null) return false;
 
         Vector3 origin = transform.position + Vector3.up * 1.3f;
-        Vector3 dir = (player.position - origin).normalized;
-        float dist = Vector3.Distance(origin, player.position);
+        Vector3 dir = (Player.position - origin).normalized;
+        float dist = Vector3.Distance(origin, Player.position);
 
-        if (dist > data.detectRange) return false;
+        if (dist > Data.detectRange) return false;
 
-        int mask = data.obstacleLayer | data.playerLayer;
+        int mask = Data.obstacleLayer | Data.playerLayer;
 
         if (Physics.Raycast(origin, dir, out RaycastHit hit, dist, mask))
         {
-            if (((1 << hit.collider.gameObject.layer) & data.obstacleLayer) != 0)
+            if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
                 return false;
 
-            if (((1 << hit.collider.gameObject.layer) & data.playerLayer) != 0)
+            if (((1 << hit.collider.gameObject.layer) & Data.playerLayer) != 0)
                 return true;
         }
 
@@ -112,22 +123,20 @@ public class EnemyBase : MonoBehaviour
 
             Ray ray = new Ray(transform.position + Vector3.up * 0.5f, dir);
 
-            // 🔥 벽/문 감지 → 바로 다른 방향
             if (Physics.Raycast(ray, out RaycastHit hit, 5f))
             {
-                if (((1 << hit.collider.gameObject.layer) & data.obstacleLayer) != 0)
+                if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
                     continue;
 
                 if (hit.collider.CompareTag("Door"))
                     continue;
             }
 
-            // 🔥 넓은 순찰 (핵심)
             Vector3 target = transform.position + dir * Random.Range(15f, 30f);
 
             if (NavMesh.SamplePosition(target, out NavMeshHit navHit, 15f, NavMesh.AllAreas))
             {
-                agent.SetDestination(navHit.position);
+                Agent.SetDestination(navHit.position);
                 return;
             }
         }
@@ -137,15 +146,14 @@ public class EnemyBase : MonoBehaviour
     {
         investigateTimer -= Time.deltaTime;
 
-        if (agent.remainingDistance < 2f)
+        if (Agent.remainingDistance < 2f)
         {
-            // 🔥 작은 범위 수색 (핵심)
             Vector3 rand = lastKnownPos + Random.insideUnitSphere * 5f;
             rand.y = 0;
 
             if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 5f, NavMesh.AllAreas))
             {
-                agent.SetDestination(hit.position);
+                Agent.SetDestination(hit.position);
             }
         }
 
@@ -153,7 +161,6 @@ public class EnemyBase : MonoBehaviour
         {
             currentState = State.Patrol;
 
-            // 🔥 수색 끝 → 바로 멀리 이동 (핵심)
             Vector3 dir = Random.insideUnitSphere;
             dir.y = 0;
 
@@ -161,14 +168,14 @@ public class EnemyBase : MonoBehaviour
 
             if (NavMesh.SamplePosition(farTarget, out NavMeshHit navHit, 20f, NavMesh.AllAreas))
             {
-                agent.SetDestination(navHit.position);
+                Agent.SetDestination(navHit.position);
             }
         }
     }
 
     void UpdateChase()
     {
-        agent.SetDestination(player.position);
+        Agent.SetDestination(Player.position);
 
         Collider[] hits = Physics.OverlapSphere(transform.position, 5f);
 
@@ -180,7 +187,7 @@ public class EnemyBase : MonoBehaviour
 
             if (door != null && !door.IsBroken())
             {
-                agent.SetDestination(door.transform.position);
+                Agent.SetDestination(door.transform.position);
                 HandleDoor(door);
                 return;
             }
@@ -192,12 +199,10 @@ public class EnemyBase : MonoBehaviour
     void UpdateAnimation()
     {
         if (currentState == State.Patrol)
-            animator.SetFloat("Speed", 0.3f);
-
+            Anim.SetFloat("Speed", 0.3f);
         else if (currentState == State.Chase)
-            animator.SetFloat("Speed", 1f);
-
+            Anim.SetFloat("Speed", 1f);
         else if (currentState == State.Investigate)
-            animator.SetFloat("Speed", 0.3f);
+            Anim.SetFloat("Speed", 0.3f);
     }
 }

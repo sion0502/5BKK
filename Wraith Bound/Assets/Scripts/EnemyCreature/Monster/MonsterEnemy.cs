@@ -12,10 +12,10 @@ public class MonsterEnemy : EnemyBase
         isAttacking = true;
         timer = 1.2f;
 
-        agent.isStopped = true;
+        Agent.isStopped = true;
 
-        animator.ResetTrigger("Attack");
-        animator.SetTrigger("Attack");
+        Anim.ResetTrigger("Attack");
+        Anim.SetTrigger("Attack");
 
         door.TakeDamage(999);
     }
@@ -29,7 +29,7 @@ public class MonsterEnemy : EnemyBase
         if (timer <= 0f)
         {
             isAttacking = false;
-            agent.isStopped = false;
+            Agent.isStopped = false;
         }
     }
 }
