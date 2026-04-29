@@ -5,19 +5,16 @@ public class PlayerInteractor : MonoBehaviour
 {
     [Header("Interaction Settings")]
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private float interactRange = 3f;
+    [SerializeField] public float interactRange = 3f;
     [SerializeField] private LayerMask interactableLayer;
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
 
     private IInteractable currentTarget;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         
     }
 
-    // Update is called once per frame
     void Update()
     {
         HandleRaycast();
@@ -35,11 +32,11 @@ public class PlayerInteractor : MonoBehaviour
             // 충돌한 오브젝트가 IInteractable 인터페이스를 가지고 있는지 검사
             IInteractable interactable = hit.collider.GetComponent<IInteractable>();
 
-            Debug.Log($"Ray에 맞은 오브젝트: {hit.collider.name}");
+            //Debug.Log($"Ray에 맞은 오브젝트: {hit.collider.name}");
 
             if (interactable != null)
             {
-                Debug.Log("상호작용 가능한 오브젝트 감지됨!");
+                //Debug.Log("상호작용 가능한 오브젝트 감지됨!");
                 if (currentTarget != interactable)
                 {
                     currentTarget = interactable;
@@ -49,7 +46,7 @@ public class PlayerInteractor : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("맞은 오브젝트에 IInteractable 컴포넌트가 없습니다.");
+                //Debug.LogWarning("맞은 오브젝트에 IInteractable 컴포넌트가 없습니다.");
             }
         }
 
@@ -62,7 +59,7 @@ public class PlayerInteractor : MonoBehaviour
 
     private void HandleInput()
     {
-        if (currentTarget != null && Input.GetKeyDown(interactKey))
+        if (currentTarget != null && Input.GetButtonDown("Interact"))
         {
             // 인터페이스를 통해 다형성 호출. 자기 자신(플레이어)의 게임 오브젝트를 넘겨줍니다.
             currentTarget.Interact(this.gameObject);

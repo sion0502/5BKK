@@ -37,6 +37,7 @@ public class InventroyManager : MonoBehaviour
             return true;
         }
 
+        /*
         if(itemToAdd.showInHand && itemToAdd.itemPrefab != null)
 {
             // 씬에 있는 ItemHolder를 찾음 (또는 미리 SerializeField로 받아둔 변수 사용)
@@ -53,7 +54,7 @@ public class InventroyManager : MonoBehaviour
                 // 처음엔 비활성화 (인벤토리에서 '사용' 누를 때 켜짐)
                 instance.SetActive(false);
             }
-        }
+        } */
 
 
         Debug.LogWarning("Inventory is full!");
