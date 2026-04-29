@@ -1,57 +1,97 @@
 ﻿using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorController : MonoBehaviour
 {
-    public GameObject brokenDoorPrefab;
-    public int hp = 10;
+    public GameObject brokenDoor;
 
-    private bool isBroken = false;
+    NavMeshObstacle obstacle;
+    Collider doorCollider;
+
+    bool isBroken = false;
+
+    void Awake()
+    {
+        obstacle = GetComponent<NavMeshObstacle>();
+        doorCollider = GetComponent<Collider>();
+    }
+
+    void Start()
+    {
+        IgnorePlayerCollision();
+    }
+
+    void IgnorePlayerCollision()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+        if (player != null)
+        {
+            Collider[] playerCols = player.GetComponentsInChildren<Collider>();
+
+            foreach (Collider col in playerCols)
+            {
+                Physics.IgnoreCollision(col, doorCollider);
+            }
+        }
+    }
+
+    public bool IsBroken()
+    {
+        return isBroken;
+    }
 
     public void TakeDamage(int damage)
     {
         if (isBroken) return;
 
-        hp -= damage;
-
-        if (hp <= 0)
-        {
-            BreakDoor();
-        }
+        Break();
     }
 
-    void BreakDoor()
+    void Break()
     {
         isBroken = true;
 
-        var obs = GetComponent<UnityEngine.AI.NavMeshObstacle>();
-        if (obs != null) obs.enabled = false;
-
-        GameObject broken = Instantiate(
-            brokenDoorPrefab,
-            transform.position + Vector3.up * 2f,
-            transform.rotation
-        );
-
-        broken.SetActive(true);
-
-        Rigidbody[] rbs = broken.GetComponentsInChildren<Rigidbody>();
-
-        foreach (Rigidbody rb in rbs)
+        if (brokenDoor != null)
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            RaycastHit hit;
+            Vector3 startPos = transform.position + Vector3.up * 2f;
 
-            // 🔥 핵심: 회전 + 랜덤 방향
-            Vector3 force = transform.forward * Random.Range(4f, 7f)
-                            + Vector3.up * Random.Range(3f, 5f)
-                            + transform.right * Random.Range(-2f, 2f);
+            if (Physics.Raycast(startPos, Vector3.down, out hit, 5f))
+            {
+                Collider col = brokenDoor.GetComponent<Collider>();
 
-            rb.AddForce(force, ForceMode.Impulse);
+                float height = 0.5f;
 
-            // 🔥 회전 힘 추가 (이게 핵심)
-            rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
+                if (col != null)
+                    height = col.bounds.extents.y;
+
+                // 🔥 바닥보다 살짝 위에서 시작 (핵심)
+                Vector3 spawnPos = hit.point + Vector3.up * (height + 0.05f);
+
+                brokenDoor.transform.position = spawnPos;
+                brokenDoor.transform.rotation = transform.rotation;
+            }
+            else
+            {
+                brokenDoor.transform.position = transform.position + Vector3.up;
+                brokenDoor.transform.rotation = transform.rotation;
+            }
+
+            brokenDoor.SetActive(true);
+
+            // 🔥 물리 초기 안정화 (중요)
+            Rigidbody rb = brokenDoor.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
         }
 
-        Destroy(gameObject);
+        gameObject.SetActive(false);
+
+        if (obstacle != null)
+            obstacle.enabled = false;
     }
 }
