@@ -7,6 +7,9 @@ TagManager:
   - Ghost
   - Exit
   - Equip
+  - Lobby
+  - Door
+  - Monster
   layers:
   - Default
   - TransparentFX
@@ -16,6 +19,8 @@ TagManager:
   - UI
   - RaderIcon
   - PickupItem
+  - Player
+  - Enemy
   - 
   - 
   - 
@@ -26,11 +31,9 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Lobby
+  - Door
+  - Obstacle
   - 
   - 
   - 
