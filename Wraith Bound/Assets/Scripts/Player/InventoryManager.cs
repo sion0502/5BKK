@@ -37,7 +37,6 @@ public class InventroyManager : MonoBehaviour
             return true;
         }
 
-        /*
         if(itemToAdd.showInHand && itemToAdd.itemPrefab != null)
 {
             // 씬에 있는 ItemHolder를 찾음 (또는 미리 SerializeField로 받아둔 변수 사용)
@@ -54,7 +53,7 @@ public class InventroyManager : MonoBehaviour
                 // 처음엔 비활성화 (인벤토리에서 '사용' 누를 때 켜짐)
                 instance.SetActive(false);
             }
-        } */
+        }
 
 
         Debug.LogWarning("Inventory is full!");
@@ -154,7 +153,7 @@ public class InventroyManager : MonoBehaviour
                 currentHeldItem.transform.localRotation = Quaternion.identity;
 
                 // 4. PickupCam에서만 보이도록 레이어 설정
-                // (레이어 이름이 "Weapon"인지 "PickupItem"인지 확인하세요)
+                // (레이어 이름이 "Weapon"인지 "PickupItem"인지 확인 필요)
                 SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
             }
         }
