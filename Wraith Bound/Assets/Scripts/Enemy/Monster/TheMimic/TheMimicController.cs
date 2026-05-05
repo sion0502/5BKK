@@ -1,28 +1,46 @@
 ﻿using UnityEngine;
 
-public class TheMimicController : EnemyBase
+public class TheMimicController : MonoBehaviour
 {
-    bool isAttacking = false;
+    Animator anim;
 
-    protected override void HandleDoor(DoorController door)
+    bool isRushing;
+    float timer;
+
+    void Awake()
     {
-        if (isAttacking) return;
-
-        isAttacking = true;
-
-        Agent.isStopped = true;
-
-        if (Anim != null)
-            Anim.SetTrigger("Attack");
-
-        door.TakeDamage(1);
-
-        Invoke(nameof(EndAttack), 2f);
+        anim = GetComponentInChildren<Animator>();
     }
 
-    void EndAttack()
+    public bool IsRushing()
     {
-        isAttacking = false;
-        Agent.isStopped = false;
+        return isRushing;
+    }
+
+    public void StartRush()
+    {
+        if (isRushing) return;
+
+        isRushing = true;
+
+        transform.position -= transform.forward * 0.8f;
+
+        anim.SetFloat("Speed", 1f);
+
+        timer = 1.2f;
+    }
+
+    void Update()
+    {
+        if (!isRushing) return;
+
+        timer -= Time.deltaTime;
+
+        if (timer <= 0f)
+        {
+            isRushing = false;
+
+            anim.SetFloat("Speed", 0.7f);
+        }
     }
 }
