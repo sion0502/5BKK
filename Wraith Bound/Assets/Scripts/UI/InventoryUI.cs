@@ -15,12 +15,12 @@ public class InventoryUI : MonoBehaviour
     public Image quickIcon;            // 화면 왼쪽 상단 아이콘 이미지
     public TextMeshProUGUI quickName;  // 화면 왼쪽 상단 아이템 이름 텍스트
 
-    private InventroyManager invManager;
+    private InventoryManager invManager;
     private bool isInventoryOpen = false;
 
     void Awake()
     {
-        invManager = GetComponent<InventroyManager>();
+        invManager = GetComponent<InventoryManager>();
     }
 
     void Start()

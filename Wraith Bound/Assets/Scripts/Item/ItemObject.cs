@@ -9,7 +9,7 @@ public class ItemObject : MonoBehaviour, IInteractable
     // 1. 상호작용 실행 (플레이어가 E키를 눌렀을 때 호출됨)
     public void Interact(GameObject interactor)
     {
-        InventroyManager inv = interactor.GetComponent<InventroyManager>();
+        InventoryManager inv = interactor.GetComponent<InventoryManager>();
 
         if (inv != null)
         {

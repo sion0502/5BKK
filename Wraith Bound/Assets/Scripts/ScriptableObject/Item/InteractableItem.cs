@@ -2,35 +2,44 @@ using UnityEngine;
 
 public class InteractableItem : MonoBehaviour, IInteractable
 {
-    public Items item;
-    public int amount = 1;
+    [SerializeField] private Items item;
+    [SerializeField] private int amount = 1;
 
     public void Interact(GameObject interactor)
     {
         if (item == null)
         {
-            Debug.LogError($"[인벤토리 에러] '{gameObject.name}' 오브젝트의 InteractableItem 컴포넌트에 Item이 할당되지 않았습니다!");
+            Debug.LogError($"[Item Pickup] {gameObject.name}에 Item이 할당되지 않았습니다.");
             return;
         }
-        InventroyManager inventory = interactor.GetComponent<InventroyManager>();
 
-        if (inventory != null)
+        InventoryManager inventory = interactor.GetComponent<InventoryManager>();
+
+        if (inventory == null)
         {
-            if (inventory.AddItem(item, amount))
-            {
-                Debug.Log($"{item.itemName}을(를) {amount}개 획득했습니다.");
-
-                Destroy(gameObject);
-            }
-            else
-            {
-                Debug.LogWarning("인벤토리가 꽉 차서 아이템을 획득할 수 없습니다.");
-            }
+            Debug.LogWarning("[Item Pickup] 상호작용한 오브젝트에 InventroyManager가 없습니다.");
+            return;
         }
+
+        bool added = inventory.AddItem(item, amount);
+
+        if (!added)
+        {
+            Debug.LogWarning($"[Item Pickup] 인벤토리가 가득 차서 {item.itemName}을(를) 획득하지 못했습니다.");
+            return;
+        }
+
+        Debug.Log($"[Item Pickup] {item.itemName} x{amount} 획득");
+        inventory.DebugPrintInventory(); Destroy(gameObject);
     }
 
     public string GetInteractPrompt()
     {
+        if (item == null)
+        {
+            return "[E] 아이템 획득";
+        }
+
         return $"[E] {item.itemName} 획득";
     }
 }
