@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
+using System.Collections.Generic;
 
 public class EnemyBase : MonoBehaviour
 {
@@ -21,11 +22,19 @@ public class EnemyBase : MonoBehaviour
     float runSpeed;
     float walkSpeed;
 
-    float forcedChaseTimer;
     float investigateTimer;
+    float patrolTimer;
 
     Vector3 lastKnownPos;
-    float patrolTimer;
+
+    // 🔥 경로 기억
+    Queue<Vector3> pathQueue = new Queue<Vector3>();
+
+    // 🔥 추가: 마지막으로 "실제로 봤던" 시간
+    float lastSeenTime = -999f;
+
+    // 🔥 추가: 코너/문 뒤에서 "막 사라진 경우"만 잠깐 유지 (짧게!)
+    [SerializeField] float lostGraceTime = 0.7f; // 0.5~1.0 추천
 
     void Awake()
     {
@@ -37,7 +46,6 @@ public class EnemyBase : MonoBehaviour
     {
         runSpeed = data.moveSpeed;
         walkSpeed = data.moveSpeed * 0.35f;
-
         currentState = State.Patrol;
     }
 
@@ -47,16 +55,35 @@ public class EnemyBase : MonoBehaviour
 
         if (visible)
         {
+            // 🔥 실제로 봤을 때만 시간 갱신
+            lastSeenTime = Time.time;
+
+            if (currentState != State.Chase)
+                Debug.Log("👉 CHASE 시작");
+
             currentState = State.Chase;
-            lastKnownPos = Player.position;
-            forcedChaseTimer = 5f;
+
+            // 🔥 "보는 동안에만" 경로에 추가
+            Vector3 pos = Player.position;
+            if (pathQueue.Count == 0 || Vector3.Distance(lastKnownPos, pos) > 1f)
+            {
+                pathQueue.Enqueue(pos);
+                lastKnownPos = pos;
+
+                if (pathQueue.Count > 30)
+                    pathQueue.Dequeue();
+            }
         }
         else if (currentState == State.Chase)
         {
-            forcedChaseTimer -= Time.deltaTime;
+            // 🔥 핵심: 최근에 본 적이 없으면(= 못 본 채 숨음)
+            // + 더 이상 따라갈 경로도 없으면 → 바로 수색
+            bool withinGrace = (Time.time - lastSeenTime) <= lostGraceTime;
 
-            if (forcedChaseTimer <= 0f)
+            if (!withinGrace && pathQueue.Count == 0)
             {
+                Debug.Log("👉 INVESTIGATE 시작");
+
                 currentState = State.Investigate;
                 investigateTimer = 10f;
             }
@@ -83,11 +110,14 @@ public class EnemyBase : MonoBehaviour
         UpdateAnimation();
     }
 
+    // =========================
+    // 🔥 시야 검사 (그대로)
+    // =========================
     bool CheckVision()
     {
         if (Player == null) return false;
 
-        Vector3 origin = transform.position + Vector3.up * 1.3f;
+        Vector3 origin = eyePoint != null ? eyePoint.position : transform.position + Vector3.up * 1.3f;
         Vector3 dir = (Player.position - origin).normalized;
         float dist = Vector3.Distance(origin, Player.position);
 
@@ -95,16 +125,76 @@ public class EnemyBase : MonoBehaviour
 
         int mask = Data.obstacleLayer | Data.playerLayer;
 
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, dist, mask))
+        RaycastHit[] hits = Physics.RaycastAll(origin, dir, dist, mask, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (var hit in hits)
         {
-            if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
+            int layer = hit.collider.gameObject.layer;
+
+            if (((1 << layer) & Data.obstacleLayer) != 0)
                 return false;
 
-            if (((1 << hit.collider.gameObject.layer) & Data.playerLayer) != 0)
+            if (((1 << layer) & Data.playerLayer) != 0)
                 return true;
         }
 
         return false;
+    }
+
+    // =========================
+    // 🔥 추격 (기존 유지)
+    // =========================
+    void UpdateChase()
+    {
+        if (pathQueue.Count > 0)
+        {
+            Vector3 target = pathQueue.Peek();
+            Agent.SetDestination(target);
+
+            if (Agent.remainingDistance < 1f)
+                pathQueue.Dequeue();
+        }
+
+        // 문 공격 (그대로)
+        Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
+
+        foreach (var hit in hits)
+        {
+            if (!hit.CompareTag("Door")) continue;
+
+            DoorController door = hit.GetComponentInParent<DoorController>();
+
+            if (door != null && !door.IsBroken())
+            {
+                Agent.isStopped = true;
+                HandleDoor(door);
+                return;
+            }
+        }
+
+        Agent.isStopped = false;
+    }
+
+    // =========================
+    void UpdateInvestigate()
+    {
+        investigateTimer -= Time.deltaTime;
+
+        if (Agent.remainingDistance < 1.5f)
+        {
+            Vector3 rand = lastKnownPos + Random.insideUnitSphere * 4f;
+            rand.y = 0;
+
+            if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                Agent.SetDestination(hit.position);
+        }
+
+        if (investigateTimer <= 0f)
+        {
+            Debug.Log("👉 PATROL 복귀");
+            currentState = State.Patrol;
+        }
     }
 
     void UpdatePatrol()
@@ -115,94 +205,20 @@ public class EnemyBase : MonoBehaviour
 
         patrolTimer = Random.Range(2f, 4f);
 
-        for (int i = 0; i < 6; i++)
-        {
-            Vector3 dir = Random.insideUnitSphere;
-            dir.y = 0;
-            dir.Normalize();
+        Vector3 rand = transform.position + Random.insideUnitSphere * 25f;
+        rand.y = 0;
 
-            Ray ray = new Ray(transform.position + Vector3.up * 0.5f, dir);
-
-            if (Physics.Raycast(ray, out RaycastHit hit, 5f))
-            {
-                if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
-                    continue;
-
-                if (hit.collider.CompareTag("Door"))
-                    continue;
-            }
-
-            Vector3 target = transform.position + dir * Random.Range(15f, 30f);
-
-            if (NavMesh.SamplePosition(target, out NavMeshHit navHit, 15f, NavMesh.AllAreas))
-            {
-                Agent.SetDestination(navHit.position);
-                return;
-            }
-        }
-    }
-
-    void UpdateInvestigate()
-    {
-        investigateTimer -= Time.deltaTime;
-
-        if (Agent.remainingDistance < 2f)
-        {
-            Vector3 rand = lastKnownPos + Random.insideUnitSphere * 5f;
-            rand.y = 0;
-
-            if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-            {
-                Agent.SetDestination(hit.position);
-            }
-        }
-
-        if (investigateTimer <= 0f)
-        {
-            currentState = State.Patrol;
-
-            Vector3 dir = Random.insideUnitSphere;
-            dir.y = 0;
-
-            Vector3 farTarget = transform.position + dir * Random.Range(20f, 35f);
-
-            if (NavMesh.SamplePosition(farTarget, out NavMeshHit navHit, 20f, NavMesh.AllAreas))
-            {
-                Agent.SetDestination(navHit.position);
-            }
-        }
-    }
-
-    void UpdateChase()
-    {
-        Agent.SetDestination(Player.position);
-
-        Collider[] hits = Physics.OverlapSphere(transform.position, 5f);
-
-        foreach (var hit in hits)
-        {
-            if (!hit.CompareTag("Door")) continue;
-
-            DoorController door = hit.GetComponentInParent<DoorController>();
-
-            if (door != null && !door.IsBroken())
-            {
-                Agent.SetDestination(door.transform.position);
-                HandleDoor(door);
-                return;
-            }
-        }
+        if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 25f, NavMesh.AllAreas))
+            Agent.SetDestination(hit.position);
     }
 
     protected virtual void HandleDoor(DoorController door) { }
 
     void UpdateAnimation()
     {
-        if (currentState == State.Patrol)
-            Anim.SetFloat("Speed", 0.3f);
-        else if (currentState == State.Chase)
+        if (currentState == State.Chase)
             Anim.SetFloat("Speed", 1f);
-        else if (currentState == State.Investigate)
+        else
             Anim.SetFloat("Speed", 0.3f);
     }
 }
