@@ -72,7 +72,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -133,12 +133,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 6
   runSpeed: 0
-  crouchSpeed: 0
   staminaDrainRate: 0
-  applySpeed: 0
+  gravity: -3
   isRun: 0
-  crouchPosY: 0
-  mouseSpeed: 1000
+  crouchSpeed: 0
+  normalHeight: 2
+  crouchHeight: 1
+  crouchTransitionSpeed: 10
+  isCrouching: 0
+  cameraTransform: {fileID: 0}
+  ceilingCheckLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!54 &6423983486891654604
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -198,7 +204,6 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 0
-  interactKey: 101
 --- !u!1 &4823744206943496819
 GameObject:
   m_ObjectHideFlags: 0
