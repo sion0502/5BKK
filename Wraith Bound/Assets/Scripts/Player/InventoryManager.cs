@@ -5,9 +5,171 @@ using Unity.VisualScripting;
 
 public class InventoryManager : MonoBehaviour
 {
-    [SerializeField]
-    public int capacity;
+    [Header("Capacity")]
+    [SerializeField] private int baseCapacity = 3;
+    [SerializeField] private int maxCapacity = 7;
+    [SerializeField] private int bonusCapacity = 0;
+
+    [Header("Passive Slot")]
+    [SerializeField] private PassiveItem passiveSlot;
+
+    public int capacity
+    {
+        get
+        {
+            return Mathf.Clamp(baseCapacity + bonusCapacity, baseCapacity, maxCapacity);
+        }
+    }
+
+    public void AddCapacityBonus(int value)
+    {
+        if (value <= 0)
+        {
+            return;
+        }
+
+        int beforeCapacity = capacity;
+        bonusCapacity += value;
+        bonusCapacity = Mathf.Clamp(bonusCapacity, 0, maxCapacity - baseCapacity);
+
+        Debug.Log($"[Inventory] 인벤토리 칸 증가: {beforeCapacity} >> {capacity}");
+    }
+
+    public bool RemoveCapacityBonus(int value)
+    {
+        if (value <= 0)
+        {
+            return false;
+        }
+
+        int beforeCapacity = capacity;
+        int targetBonus = Mathf.Clamp(bonusCapacity - value, 0, maxCapacity - baseCapacity);
+        int targetCapacity = Mathf.Clamp(baseCapacity + targetBonus, baseCapacity, maxCapacity);
+
+        // 감소 후 capacity보다 현재 슬롯 수가 많으면 아이템이 잘릴 수 있으므로 감소를 막습니다.
+        if (slots.Count > targetCapacity)
+        {
+            Debug.LogWarning($"[Inventory] 슬롯에 아이템이 있어서 인벤토리 칸을 줄일 수 없습니다. 현재 슬롯 수: {slots.Count}, 목표 칸 수: {targetCapacity}");
+            return false;
+        }
+
+        bonusCapacity = targetBonus;
+
+        // 현재 선택 슬롯이 capacity 밖으로 나가면 마지막 슬롯으로 보정합니다.
+        if (selectedSlotIndex >= capacity)
+        {
+            selectedSlotIndex = capacity - 1;
+        }
+
+        Debug.Log($"[Inventory] 인벤토리 칸 감소: {beforeCapacity} → {capacity}");
+        return true;
+    }
+
+    public void DebugPrintCapacity()
+    {
+        Debug.Log($"[Inventory] Capacity: {capacity} / Max {maxCapacity} | Base {baseCapacity}, Bonus {bonusCapacity}");
+    }
+
+    public PassiveItem GetPassiveItem()
+    {
+        return passiveSlot;
+    }
+
+    private void ApplyPassiveEffect(PassiveItem passiveItem)
+    {
+        if (passiveItem == null)
+        {
+            return;
+        }
+
+        // 현재 1단계에서는 인벤토리 확장 효과(extraSlots)만 먼저 적용합니다.
+        if (passiveItem.extraSlots > 0)
+        {
+            AddCapacityBonus(passiveItem.extraSlots);
+        }
+
+        Debug.Log($"[Inventory] 패시브 효과 적용: {passiveItem.itemName}");
+    }
+
+    public bool AddPassiveItem(PassiveItem passiveItem)
+    {
+        if (passiveItem == null)
+        {
+            Debug.LogWarning("[Inventory] 추가하려는 패시브 아이템이 null입니다.");
+            return false;
+        }
+
+        if (passiveSlot != null)
+        {
+            Debug.LogWarning($"[Inventory] 이미 패시브 슬롯에 {passiveSlot.itemName}이(가) 있습니다.");
+            return false;
+        }
+
+        // 패시브 아이템은 일반 slots에 넣지 않고 전용 passiveSlot에만 보관합니다.
+        passiveSlot = passiveItem;
+        ApplyPassiveEffect(passiveItem);
+
+        Debug.Log($"[Inventory] 패시브 아이템 획득: {passiveItem.itemName}");
+        DebugPrintPassiveSlot();
+
+        return true;
+    }
+
+    public void DebugPrintPassiveSlot()
+    {
+        if (passiveSlot == null)
+        {
+            Debug.Log("[Inventory] 패시브 슬롯: 비어 있음");
+            return;
+        }
+
+        Debug.Log($"[Inventory] 패시브 슬롯: {passiveSlot.itemName}");
+    }
+
     public List<InventorySlot> slots = new List<InventorySlot>();
+
+    public bool TryAcquireItem(Items itemToAcquire, int amount = 1)
+    {
+        if (itemToAcquire == null)
+        {
+            Debug.LogWarning("[Inventory] 획득하려는 아이템이 null입니다.");
+            return false;
+        }
+
+        if (amount <= 0)
+        {
+            Debug.LogWarning("[Inventory] 획득 수량은 1 이상이어야 합니다.");
+            return false;
+        }
+
+        // PassiveItem은 일반 인벤토리 slots를 사용하지 않고 passiveSlot으로만 들어갑니다.
+        if (itemToAcquire is PassiveItem passiveItem)
+        {
+            return AddPassiveItem(passiveItem);
+        }
+
+        // item.type이 Passive로 설정되어 있는데 실제 클래스가 PassiveItem이 아니면 잘못된 데이터로 보고 실패시킵니다.
+        if (itemToAcquire.type == ItemType.Passive)
+        {
+            Debug.LogWarning($"[Inventory] {itemToAcquire.itemName}은(는) Passive 타입이지만 PassiveItem 클래스가 아닙니다.");
+            return false;
+        }
+
+        // ActiveItem과 Equipment만 일반 인벤토리 slots에 들어갈 수 있습니다.
+        if (itemToAcquire is ActiveItem || itemToAcquire is Equipment)
+        {
+            return AddItem(itemToAcquire, amount);
+        }
+
+        // 클래스 판별이 애매한 경우에도 ItemType이 Active 또는 Equip이면 기존 흐름을 유지하기 위해 일반 아이템으로 처리합니다.
+        if (itemToAcquire.type == ItemType.Active || itemToAcquire.type == ItemType.Equip)
+        {
+            return AddItem(itemToAcquire, amount);
+        }
+
+        Debug.LogWarning($"[Inventory] 획득할 수 없는 아이템 타입입니다: {itemToAcquire.itemName}");
+        return false;
+    }
 
     public bool AddItem(Items itemToAdd, int amount = 1)
     {
@@ -23,9 +185,23 @@ public class InventoryManager : MonoBehaviour
             return false;
         }
 
+        // PassiveItem은 일반 slots에 들어가면 안 되므로 여기서 한 번 더 방어합니다.
+        if (itemToAdd is PassiveItem || itemToAdd.type == ItemType.Passive)
+        {
+            Debug.LogWarning($"[Inventory] {itemToAdd.itemName}은(는) 패시브 아이템이라 일반 인벤토리 슬롯에 추가할 수 없습니다.");
+            return false;
+        }
+
+        // 일반 slots에는 ActiveItem과 Equipment만 들어갈 수 있도록 제한합니다.
+        if (!(itemToAdd is ActiveItem) && !(itemToAdd is Equipment) && itemToAdd.type != ItemType.Active && itemToAdd.type != ItemType.Equip)
+        {
+            Debug.LogWarning($"[Inventory] {itemToAdd.itemName}은(는) 일반 인벤토리에 추가할 수 없는 아이템입니다.");
+            return false;
+        }
+
         int maxCount = Mathf.Max(1, itemToAdd.maxCount);
 
-        // 1. 기존 슬롯 확인 및 수량 추가
+        // 기존 슬롯에 같은 아이템이 있으면 새 슬롯을 쓰지 않고 수량만 증가시킵니다.
         foreach (var slot in slots)
         {
             if (slot.item == itemToAdd)
@@ -48,7 +224,7 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        // 2. 새 슬롯 추가 조건 검사
+        // 새 슬롯을 만들어야 하는 경우 capacity를 넘지 않는지 확인합니다.
         if (slots.Count >= capacity)
         {
             Debug.LogWarning("[Inventory] 인벤토리 슬롯이 가득 찼습니다.");
@@ -61,7 +237,6 @@ public class InventoryManager : MonoBehaviour
             return false;
         }
 
-        // 3. 새 슬롯 생성 및 추가
         slots.Add(new InventorySlot(itemToAdd, amount));
         return true;
     }
@@ -78,42 +253,51 @@ public class InventoryManager : MonoBehaviour
                 }
                 else
                 {
-                    // 수량이 0 이하가 되면 슬롯에서 제거
+                    // 수량이 0 이하가 되면 슬롯에서 제거합니다.
                     slots.RemoveAt(i);
                 }
             }
         }
     }
 
-
-    // 현재 선택된 슬롯 번호를 추적하고, 휠/숫자키 입력을 처리하는 로직을 추가
     [Header("Selection")]
-    public int selectedSlotIndex = 0; // 현재 선택된 슬롯 인덱스 (0~8 등)
-    public GameObject currentHeldItem; // 현재 손에 생성된 아이템 오브젝트
-    public Transform holdPos; // PickUpScript에서 가져올 위치
+    public int selectedSlotIndex = 0;
+    public GameObject currentHeldItem;
+    public Transform holdPos;
 
     void Update()
     {
         HandleSlotInput();
+
+        // 임시 테스트 코드입니다. 가방 아이템 제작 후 제거 예정입니다.
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            AddCapacityBonus(2);
+            DebugPrintCapacity();
+        }
+
+        // 임시 테스트 코드입니다. 가방 아이템 제작 후 제거 예정입니다.
+        if (Input.GetKeyDown(KeyCode.F6))
+        {
+            RemoveCapacityBonus(2);
+            DebugPrintCapacity();
+        }
     }
 
     private void HandleSlotInput()
     {
-        // 1. 마우스 휠로 슬롯 전환
         float wheel = Input.GetAxis("Mouse ScrollWheel");
         if (wheel > 0f) ChangeSelectedSlot(-1);
         else if (wheel < 0f) ChangeSelectedSlot(1);
 
-        // 2. 숫자키(1~9)로 슬롯 전환
         for (int i = 0; i < 9; i++)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i)) 
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
             {
                 SetSelectedSlot(i);
                 break;
             }
         }
-
     }
 
     private void ChangeSelectedSlot(int direction)
@@ -148,33 +332,25 @@ public class InventoryManager : MonoBehaviour
         DebugPrintSelectedSlot();
     }
 
-    // InventoryManager.cs 내부
-
     public void UpdateHeldItem()
     {
-        // 1. 이전 아이템 삭제
         if (currentHeldItem != null)
         {
             Destroy(currentHeldItem);
         }
 
-        // 2. 현재 선택된 인덱스에 아이템이 있는지 검사
         if (selectedSlotIndex < slots.Count && slots[selectedSlotIndex].item != null)
         {
             Items item = slots[selectedSlotIndex].item;
 
-            // 3. 손에 보여주는 설정이 켜져 있고 프리팹이 있다면 생성
+            // showInHand가 켜진 장비 아이템만 손 위치에 프리팹을 생성합니다.
             if (item.showInHand && item.itemPrefab != null)
             {
-                // holdPos는 MainCamera 자식의 HoldPosition 오브젝트여야 함
                 currentHeldItem = Instantiate(item.itemPrefab, holdPos);
 
-                // 위치/회전 초기화 (부모인 holdPos의 위치를 따름)
                 currentHeldItem.transform.localPosition = Vector3.zero;
                 currentHeldItem.transform.localRotation = Quaternion.identity;
 
-                // 4. PickupCam에서만 보이도록 레이어 설정
-                // (레이어 이름이 "Weapon"인지 "PickupItem"인지 확인 필요)
                 SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
             }
         }
@@ -202,7 +378,7 @@ public class InventoryManager : MonoBehaviour
         return slot.item;
     }
 
-    private void DebugPrintSelectedSlot() // 디버그 로그
+    private void DebugPrintSelectedSlot()
     {
         InventorySlot slot = GetSelectedSlot();
 
@@ -215,7 +391,7 @@ public class InventoryManager : MonoBehaviour
         Debug.Log($"[Inventory] 선택 슬롯 {selectedSlotIndex}: {slot.item.itemName} x{slot.amount}");
     }
 
-    public void DebugPrintInventory() // 디버그 로그
+    public void DebugPrintInventory()
     {
         Debug.Log("[Inventory] 현재 슬롯 목록");
 
@@ -235,6 +411,7 @@ public class InventoryManager : MonoBehaviour
     private void SetLayerRecursively(GameObject obj, int newLayer)
     {
         obj.layer = newLayer;
+
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, newLayer);
