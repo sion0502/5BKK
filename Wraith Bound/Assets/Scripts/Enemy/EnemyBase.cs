@@ -27,14 +27,11 @@ public class EnemyBase : MonoBehaviour
 
     Vector3 lastKnownPos;
 
-    // 🔥 경로 기억
     Queue<Vector3> pathQueue = new Queue<Vector3>();
 
-    // 🔥 추가: 마지막으로 "실제로 봤던" 시간
     float lastSeenTime = -999f;
 
-    // 🔥 추가: 코너/문 뒤에서 "막 사라진 경우"만 잠깐 유지 (짧게!)
-    [SerializeField] float lostGraceTime = 0.7f; // 0.5~1.0 추천
+    [SerializeField] float chaseMemoryTime = 2.0f;
 
     void Awake()
     {
@@ -55,16 +52,11 @@ public class EnemyBase : MonoBehaviour
 
         if (visible)
         {
-            // 🔥 실제로 봤을 때만 시간 갱신
             lastSeenTime = Time.time;
-
-            if (currentState != State.Chase)
-                Debug.Log("👉 CHASE 시작");
-
             currentState = State.Chase;
 
-            // 🔥 "보는 동안에만" 경로에 추가
             Vector3 pos = Player.position;
+
             if (pathQueue.Count == 0 || Vector3.Distance(lastKnownPos, pos) > 1f)
             {
                 pathQueue.Enqueue(pos);
@@ -76,16 +68,10 @@ public class EnemyBase : MonoBehaviour
         }
         else if (currentState == State.Chase)
         {
-            // 🔥 핵심: 최근에 본 적이 없으면(= 못 본 채 숨음)
-            // + 더 이상 따라갈 경로도 없으면 → 바로 수색
-            bool withinGrace = (Time.time - lastSeenTime) <= lostGraceTime;
-
-            if (!withinGrace && pathQueue.Count == 0)
+            if (Time.time - lastSeenTime > chaseMemoryTime && pathQueue.Count == 0)
             {
-                Debug.Log("👉 INVESTIGATE 시작");
-
                 currentState = State.Investigate;
-                investigateTimer = 10f;
+                investigateTimer = 8f;
             }
         }
 
@@ -108,11 +94,17 @@ public class EnemyBase : MonoBehaviour
         }
 
         UpdateAnimation();
+        DebugState();
     }
 
-    // =========================
-    // 🔥 시야 검사 (그대로)
-    // =========================
+    bool IsPlayerHidden()
+    {
+        var cc = Player.GetComponent<CharacterController>();
+        if (cc == null) return false;
+
+        return cc.enabled == false;
+    }
+
     bool CheckVision()
     {
         if (Player == null) return false;
@@ -123,40 +115,68 @@ public class EnemyBase : MonoBehaviour
 
         if (dist > Data.detectRange) return false;
 
-        int mask = Data.obstacleLayer | Data.playerLayer;
-
-        RaycastHit[] hits = Physics.RaycastAll(origin, dir, dist, mask, QueryTriggerInteraction.Ignore);
+        RaycastHit[] hits = Physics.RaycastAll(origin, dir, dist);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var hit in hits)
         {
-            int layer = hit.collider.gameObject.layer;
+            // 🔥 숨었으면 Player 무시
+            if (IsPlayerHidden() && hit.collider.CompareTag("Player"))
+                continue;
 
-            if (((1 << layer) & Data.obstacleLayer) != 0)
-                return false;
+            // 🔥 문 처리
+            if (hit.collider.CompareTag("Door"))
+            {
+                if (currentState != State.Chase)
+                    return false;
 
-            if (((1 << layer) & Data.playerLayer) != 0)
+                continue;
+            }
+
+            // 🔥 플레이어 감지
+            if (hit.collider.CompareTag("Player"))
+            {
+                if (IsPlayerHidden())
+                {
+                    if (Time.time - lastSeenTime < chaseMemoryTime)
+                        return true;
+
+                    return false;
+                }
+
                 return true;
+            }
+
+            // 장애물
+            if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
+                return false;
         }
 
         return false;
     }
 
-    // =========================
-    // 🔥 추격 (기존 유지)
-    // =========================
     void UpdateChase()
     {
-        if (pathQueue.Count > 0)
-        {
-            Vector3 target = pathQueue.Peek();
-            Agent.SetDestination(target);
+        bool visible = CheckVision();
 
-            if (Agent.remainingDistance < 1f)
-                pathQueue.Dequeue();
+        if (visible)
+        {
+            Agent.SetDestination(Player.position);
+            pathQueue.Clear();
+        }
+        else
+        {
+            if (pathQueue.Count > 0)
+            {
+                Vector3 target = pathQueue.Peek();
+                Agent.SetDestination(target);
+
+                if (Agent.remainingDistance < 1f)
+                    pathQueue.Dequeue();
+            }
         }
 
-        // 문 공격 (그대로)
+        // 🔥 문 공격 (추격 상태에서만)
         Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
 
         foreach (var hit in hits)
@@ -176,7 +196,6 @@ public class EnemyBase : MonoBehaviour
         Agent.isStopped = false;
     }
 
-    // =========================
     void UpdateInvestigate()
     {
         investigateTimer -= Time.deltaTime;
@@ -192,7 +211,6 @@ public class EnemyBase : MonoBehaviour
 
         if (investigateTimer <= 0f)
         {
-            Debug.Log("👉 PATROL 복귀");
             currentState = State.Patrol;
         }
     }
@@ -220,5 +238,15 @@ public class EnemyBase : MonoBehaviour
             Anim.SetFloat("Speed", 1f);
         else
             Anim.SetFloat("Speed", 0.3f);
+    }
+
+    void DebugState()
+    {
+        if (currentState == State.Patrol)
+            Debug.Log("🟢 순찰중");
+        else if (currentState == State.Chase)
+            Debug.Log("🔴 추격중");
+        else if (currentState == State.Investigate)
+            Debug.Log("🟡 수색중");
     }
 }

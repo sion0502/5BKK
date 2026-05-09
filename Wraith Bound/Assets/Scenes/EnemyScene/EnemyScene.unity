@@ -132,6 +132,10 @@ PrefabInstance:
       value: Cabinet
       objectReference: {fileID: 0}
     - target: {fileID: 952559236416211909, guid: 11ac91e55fd278849a2846408b1b5605, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 952559236416211909, guid: 11ac91e55fd278849a2846408b1b5605, type: 3}
       propertyPath: m_TagString
       value: Cabinet
       objectReference: {fileID: 0}
@@ -214,7 +218,7 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: af44d17c4e6cbe64db5af3e9c0f1434a, type: 2}
   player: {fileID: 0}
   eyePoint: {fileID: 0}
-  lostGraceTime: 0.8
+  chaseMemoryTime: 2
 --- !u!195 &181728761
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -276,7 +280,7 @@ MonoBehaviour:
   data: {fileID: 0}
   player: {fileID: 0}
   eyePoint: {fileID: 0}
-  lostGraceTime: 0.8
+  chaseMemoryTime: 2
   doorLayer:
     serializedVersion: 2
     m_Bits: 0
@@ -1329,7 +1333,7 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   player: {fileID: 289671672}
   eyePoint: {fileID: 1722278304}
-  lostGraceTime: 0.8
+  chaseMemoryTime: 2
 --- !u!136 &1026369864
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1611,7 +1615,7 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   player: {fileID: 289671672}
   eyePoint: {fileID: 1722278304}
-  lostGraceTime: 0.7
+  chaseMemoryTime: 2
 --- !u!114 &1305420019
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2734,6 +2738,10 @@ PrefabInstance:
       value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: edf4603ecb26b0d40b1a1f6d7fa7f006, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: edf4603ecb26b0d40b1a1f6d7fa7f006, type: 3}
       propertyPath: m_TagString
       value: Monster
       objectReference: {fileID: 0}
@@ -2917,7 +2925,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2673527118393339069, guid: 79e34f1343a368041bb66b4399e77bdf, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3982539768576559466, guid: 79e34f1343a368041bb66b4399e77bdf, type: 3}
       propertyPath: player
