@@ -120,25 +120,12 @@ public class EnemyBase : MonoBehaviour
 
         foreach (var hit in hits)
         {
-            // 🔥 숨었으면 Player 무시
-            if (IsPlayerHidden() && hit.collider.CompareTag("Player"))
-                continue;
-
-            // 🔥 문 처리
-            if (hit.collider.CompareTag("Door"))
-            {
-                if (currentState != State.Chase)
-                    return false;
-
-                continue;
-            }
-
-            // 🔥 플레이어 감지
             if (hit.collider.CompareTag("Player"))
             {
                 if (IsPlayerHidden())
                 {
-                    if (Time.time - lastSeenTime < chaseMemoryTime)
+                    if (currentState == State.Chase &&
+                        Time.time - lastSeenTime < chaseMemoryTime)
                         return true;
 
                     return false;
@@ -147,7 +134,14 @@ public class EnemyBase : MonoBehaviour
                 return true;
             }
 
-            // 장애물
+            if (hit.collider.CompareTag("Door"))
+            {
+                if (currentState != State.Chase)
+                    return false;
+
+                continue;
+            }
+
             if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
                 return false;
         }
@@ -176,7 +170,6 @@ public class EnemyBase : MonoBehaviour
             }
         }
 
-        // 🔥 문 공격 (추격 상태에서만)
         Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
 
         foreach (var hit in hits)
