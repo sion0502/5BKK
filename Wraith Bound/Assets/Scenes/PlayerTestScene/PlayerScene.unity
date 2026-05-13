@@ -162,6 +162,7 @@ GameObject:
   - component: {fileID: 436471480}
   - component: {fileID: 436471479}
   - component: {fileID: 436471478}
+  - component: {fileID: 436471482}
   m_Layer: 0
   m_Name: Obstacle
   m_TagString: Untagged
@@ -184,7 +185,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -262,6 +263,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &436471482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436471477}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d480d64a46db43eda96a203bd0c6937, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Obstacle
+  obstacleData: {fileID: 11400000, guid: 2b18bcdc5ee524d00a36c4e121743423, type: 2}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -898,7 +912,7 @@ GameObject:
   - component: {fileID: 1430141534}
   - component: {fileID: 1430141533}
   - component: {fileID: 1430141532}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1280,8 +1294,9 @@ MonoBehaviour:
   moveSpeed: 6
   runSpeed: 12
   staminaDrainRate: 0
-  gravity: -3
+  gravity: -10
   isRun: 0
+  grounded: 1
   crouchSpeed: 3
   normalHeight: 2
   crouchHeight: 1
@@ -1290,7 +1305,10 @@ MonoBehaviour:
   cameraTransform: {fileID: 963194228}
   ceilingCheckLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 1024
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 1024
 --- !u!114 &2124620071
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1322,7 +1340,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerConditions
   maxHealth: 100
   maxStamina: 100
-  staminaRegenRate: 0
+  currentHealth: 100
+  currentStamina: 100
+  dead: 0
 --- !u!114 &2124620073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1337,6 +1357,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InventroyManager
   capacity: 3
   slots: []
+  selectedSlotIndex: 0
+  currentHeldItem: {fileID: 0}
+  holdPos: {fileID: 0}
 --- !u!143 &2124620074
 CharacterController:
   m_ObjectHideFlags: 0
