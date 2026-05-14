@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6907476746997997189}
   - component: {fileID: 194370876650002736}
   - component: {fileID: 7839151617736678390}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Compass Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -99,7 +99,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2215885268058574828}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Needle_Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -133,9 +133,10 @@ GameObject:
   - component: {fileID: 2322055753330265105}
   - component: {fileID: 4052742657702941154}
   - component: {fileID: 7127671995645332514}
-  - component: {fileID: 3916040224820145470}
   - component: {fileID: 2902597199917613169}
-  m_Layer: 7
+  - component: {fileID: 8216858372194055773}
+  - component: {fileID: 9101733393098569861}
+  m_Layer: 3
   m_Name: Compass 2
   m_TagString: Equip
   m_Icon: {fileID: 0}
@@ -216,20 +217,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &3916040224820145470
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6213137570750032285}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 52c0b752d33731a44866452add60c0fd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CompassLogic
-  needle: {fileID: 2215885268058574828}
-  rotationSpeed: 8
 --- !u!114 &2902597199917613169
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -243,6 +230,42 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemObject
   itemData: {fileID: 11400000, guid: 1ebbfa241fa13c84daec404d839fcb15, type: 2}
+--- !u!114 &8216858372194055773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6213137570750032285}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08226f01dc8a744c5911a526a7e29219, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractableItem
+  item: {fileID: 11400000, guid: 1ebbfa241fa13c84daec404d839fcb15, type: 2}
+  amount: 1
+--- !u!64 &9101733393098569861
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6213137570750032285}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 1579552462366518147, guid: 4ca7c5fb9f1990848b07fbb7e31d9336, type: 3}
 --- !u!1 &8727521211982030456
 GameObject:
   m_ObjectHideFlags: 0
@@ -254,7 +277,7 @@ GameObject:
   - component: {fileID: 6053681784390632065}
   - component: {fileID: 6871734907761483784}
   - component: {fileID: 6087568848813030617}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Needle
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -9,14 +9,14 @@ public class RadarDot : MonoBehaviour
     void Awake()
     {
         img = GetComponent<Image>();
-        // Ã³À½¿¡´Â ¾È º¸ÀÌ°Ô ¼³Á¤ (Alpha = 0)
+        // ì²˜ìŒì—ëŠ” ì•ˆ ë³´ì´ê²Œ ì„¤ì • (Alpha = 0)
         img.color = new Color(img.color.r, img.color.g, img.color.b, 0);
     }
 
-    // ½ºÄµ ¶óÀÎÀÌ ÀÌ À§Ä¡¸¦ Áö³¯ ¶§ RadarSystemÀÌ È£ÃâÇØÁÙ ÇÔ¼ö
+    // ìŠ¤ìº” ë¼ì¸ì´ ì´ ìœ„ì¹˜ë¥¼ ì§€ë‚  ë•Œ RadarSystemì´ í˜¸ì¶œí•´ì¤„ í•¨ìˆ˜
     public void ShowDot()
     {
-        timer = 1.2f; // 1.2ÃÊ µ¿¾È ºÒÀÌ µé¾î¿Ô´Ù »ç¶óÁü
+        timer = 1.2f; // 1.2ì´ˆ ë™ì•ˆ ë¶ˆì´ ë“¤ì–´ì™”ë‹¤ ì‚¬ë¼ì§
     }
 
     void Update()
@@ -24,7 +24,7 @@ public class RadarDot : MonoBehaviour
         if (timer > 0)
         {
             timer -= Time.deltaTime;
-            // Å¸ÀÌ¸Ó¿¡ µû¶ó ¼­¼­È÷ Åõ¸íÇØÁö°Ô ¼³Á¤
+            // íƒ€ì´ë¨¸ì— ë”°ë¼ ì„œì„œížˆ íˆ¬ëª…í•´ì§€ê²Œ ì„¤ì •
             img.color = new Color(img.color.r, img.color.g, img.color.b, timer);
         }
         else if (img.color.a > 0)
