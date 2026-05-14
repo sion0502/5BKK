@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
-using System.Collections.Generic;
 
 public class EnemyBase : MonoBehaviour
 {
@@ -22,16 +21,14 @@ public class EnemyBase : MonoBehaviour
     float runSpeed;
     float walkSpeed;
 
-    float investigateTimer;
     float patrolTimer;
-
-    Vector3 lastKnownPos;
-
-    Queue<Vector3> pathQueue = new Queue<Vector3>();
+    float investigateTimer;
 
     float lastSeenTime = -999f;
 
-    [SerializeField] float chaseMemoryTime = 2.0f;
+    Vector3 lastKnownPos;
+
+    [SerializeField] float chaseMemoryTime = 2f;
 
     void Awake()
     {
@@ -43,6 +40,7 @@ public class EnemyBase : MonoBehaviour
     {
         runSpeed = data.moveSpeed;
         walkSpeed = data.moveSpeed * 0.35f;
+
         currentState = State.Patrol;
     }
 
@@ -53,22 +51,19 @@ public class EnemyBase : MonoBehaviour
         if (visible)
         {
             lastSeenTime = Time.time;
+
             currentState = State.Chase;
 
-            Vector3 pos = Player.position;
-
-            if (pathQueue.Count == 0 || Vector3.Distance(lastKnownPos, pos) > 1f)
-            {
-                pathQueue.Enqueue(pos);
-                lastKnownPos = pos;
-
-                if (pathQueue.Count > 30)
-                    pathQueue.Dequeue();
-            }
+            SaveLastKnownPosition();
         }
         else if (currentState == State.Chase)
         {
-            if (Time.time - lastSeenTime > chaseMemoryTime && pathQueue.Count == 0)
+            bool reachedLastPoint =
+                !Agent.pathPending &&
+                Agent.remainingDistance < 1f;
+
+            if (Time.time - lastSeenTime > chaseMemoryTime &&
+                reachedLastPoint)
             {
                 currentState = State.Investigate;
                 investigateTimer = 8f;
@@ -97,53 +92,89 @@ public class EnemyBase : MonoBehaviour
         DebugState();
     }
 
+    void SaveLastKnownPosition()
+    {
+        if (NavMesh.SamplePosition(
+            Player.position,
+            out NavMeshHit hit,
+            2f,
+            NavMesh.AllAreas))
+        {
+            lastKnownPos = hit.position;
+        }
+    }
+
     bool IsPlayerHidden()
     {
-        var cc = Player.GetComponent<CharacterController>();
-        if (cc == null) return false;
+        CharacterController cc =
+            Player.GetComponent<CharacterController>();
+
+        if (cc == null)
+            return false;
 
         return cc.enabled == false;
     }
 
     bool CheckVision()
     {
-        if (Player == null) return false;
+        if (Player == null)
+            return false;
 
-        Vector3 origin = eyePoint != null ? eyePoint.position : transform.position + Vector3.up * 1.3f;
-        Vector3 dir = (Player.position - origin).normalized;
-        float dist = Vector3.Distance(origin, Player.position);
+        Vector3 origin =
+            eyePoint != null ?
+            eyePoint.position :
+            transform.position + Vector3.up * 1.3f;
 
-        if (dist > Data.detectRange) return false;
+        Vector3 dir =
+            (Player.position - origin).normalized;
 
-        RaycastHit[] hits = Physics.RaycastAll(origin, dir, dist);
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        float dist =
+            Vector3.Distance(origin, Player.position);
 
-        foreach (var hit in hits)
+        if (dist > Data.detectRange)
+            return false;
+
+        if (!Physics.Raycast(
+            origin,
+            dir,
+            out RaycastHit hit,
+            dist))
         {
-            if (hit.collider.CompareTag("Player"))
-            {
-                if (IsPlayerHidden())
-                {
-                    if (currentState == State.Chase &&
-                        Time.time - lastSeenTime < chaseMemoryTime)
-                        return true;
+            return false;
+        }
 
-                    return false;
+        if (hit.collider.CompareTag("Door"))
+        {
+            if (currentState != State.Chase)
+                return false;
+
+            return true;
+        }
+
+        if (((1 << hit.collider.gameObject.layer) &
+            Data.obstacleLayer) != 0)
+        {
+            return false;
+        }
+
+        if (hit.collider.CompareTag("Player"))
+        {
+            if (IsPlayerHidden())
+            {
+                bool recentlySaw =
+                    currentState == State.Chase &&
+                    Time.time - lastSeenTime < chaseMemoryTime;
+
+                if (recentlySaw)
+                {
+                    SaveLastKnownPosition();
+                    return true;
                 }
 
-                return true;
-            }
-
-            if (hit.collider.CompareTag("Door"))
-            {
-                if (currentState != State.Chase)
-                    return false;
-
-                continue;
-            }
-
-            if (((1 << hit.collider.gameObject.layer) & Data.obstacleLayer) != 0)
                 return false;
+            }
+
+            return true;
         }
 
         return false;
@@ -156,32 +187,30 @@ public class EnemyBase : MonoBehaviour
         if (visible)
         {
             Agent.SetDestination(Player.position);
-            pathQueue.Clear();
         }
         else
         {
-            if (pathQueue.Count > 0)
-            {
-                Vector3 target = pathQueue.Peek();
-                Agent.SetDestination(target);
-
-                if (Agent.remainingDistance < 1f)
-                    pathQueue.Dequeue();
-            }
+            Agent.SetDestination(lastKnownPos);
         }
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
+        Collider[] hits =
+            Physics.OverlapSphere(transform.position, 2f);
 
         foreach (var hit in hits)
         {
-            if (!hit.CompareTag("Door")) continue;
+            if (!hit.CompareTag("Door"))
+                continue;
 
-            DoorController door = hit.GetComponentInParent<DoorController>();
+            DoorController door =
+                hit.GetComponentInParent<DoorController>();
 
-            if (door != null && !door.IsBroken())
+            if (door != null &&
+                !door.IsBroken())
             {
                 Agent.isStopped = true;
+
                 HandleDoor(door);
+
                 return;
             }
         }
@@ -193,13 +222,22 @@ public class EnemyBase : MonoBehaviour
     {
         investigateTimer -= Time.deltaTime;
 
-        if (Agent.remainingDistance < 1.5f)
+        if (Agent.remainingDistance < 1f)
         {
-            Vector3 rand = lastKnownPos + Random.insideUnitSphere * 4f;
+            Vector3 rand =
+                lastKnownPos +
+                Random.insideUnitSphere * 4f;
+
             rand.y = 0;
 
-            if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+            if (NavMesh.SamplePosition(
+                rand,
+                out NavMeshHit hit,
+                4f,
+                NavMesh.AllAreas))
+            {
                 Agent.SetDestination(hit.position);
+            }
         }
 
         if (investigateTimer <= 0f)
@@ -212,18 +250,33 @@ public class EnemyBase : MonoBehaviour
     {
         patrolTimer -= Time.deltaTime;
 
-        if (patrolTimer > 0f) return;
+        if (patrolTimer > 0f)
+            return;
 
-        patrolTimer = Random.Range(2f, 4f);
+        patrolTimer =
+            Random.Range(2f, 4f);
 
-        Vector3 rand = transform.position + Random.insideUnitSphere * 25f;
+        Vector3 rand =
+            transform.position +
+            Random.insideUnitSphere * 25f;
+
         rand.y = 0;
 
-        if (NavMesh.SamplePosition(rand, out NavMeshHit hit, 25f, NavMesh.AllAreas))
+        if (NavMesh.SamplePosition(
+            rand,
+            out NavMeshHit hit,
+            25f,
+            NavMesh.AllAreas))
+        {
             Agent.SetDestination(hit.position);
+        }
     }
 
-    protected virtual void HandleDoor(DoorController door) { }
+    protected virtual void HandleDoor(
+        DoorController door
+    )
+    {
+    }
 
     void UpdateAnimation()
     {
