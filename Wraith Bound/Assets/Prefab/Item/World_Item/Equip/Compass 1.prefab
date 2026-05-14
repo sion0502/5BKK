@@ -16,7 +16,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1778218350196855862
 Transform:
@@ -104,7 +104,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &2589925268232457401
 Transform:
@@ -138,7 +138,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &5116963556394013285
 Transform:
@@ -226,12 +226,13 @@ GameObject:
   - component: {fileID: 4699098546429827451}
   - component: {fileID: 7462271082703184970}
   - component: {fileID: 4295140892604496683}
+  - component: {fileID: 5754776387894602762}
   m_Layer: 0
   m_Name: Compass 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &9137325309129268100
 Transform:
@@ -241,7 +242,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2908746084505869552}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.48550835, y: -0, z: -0, w: 0.874232}
+  m_LocalRotation: {x: -0.48551175, y: 0, z: 0, w: 0.87423015}
   m_LocalPosition: {x: -0.236, y: 3.063, z: 0.407}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -359,6 +360,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CompassLogic
   needle: {fileID: 2589925268232457401}
   rotationSpeed: 8
+--- !u!114 &5754776387894602762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2908746084505869552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08226f01dc8a744c5911a526a7e29219, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractableItem
+  item: {fileID: 11400000, guid: 1ebbfa241fa13c84daec404d839fcb15, type: 2}
+  amount: 1
 --- !u!1 &3228251906490143580
 GameObject:
   m_ObjectHideFlags: 0
@@ -375,7 +390,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &7678720183235639997
 Transform:
@@ -467,7 +482,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &4163797386906215456
 Transform:
@@ -579,7 +594,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4294967295
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &6307921087237892404
 Transform:

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2940480894597469438}
   - component: {fileID: 8059840554329771973}
   - component: {fileID: 1445823198038901500}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Compass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1487228473471908792}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.03824866, y: 0.8466497, z: -0.52720827, w: 0.061423946}
+  m_LocalRotation: {x: -0.5285939, y: 0, z: 0, w: 0.84887487}
   m_LocalPosition: {x: -0.74, y: 3.075, z: 0.394}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -39,7 +39,7 @@ Transform:
   - {fileID: 1935837464722225373}
   - {fileID: 4671043867400187320}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 63.821, y: 171.701, z: 0}
+  m_LocalEulerAnglesHint: {x: -63.821, y: 0, z: 0}
 --- !u!33 &8613667154674806673
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -131,7 +131,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2580db0e7fb8c548a162005c6803ad5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemObject
-  itemData: {fileID: 0}
+  itemData: {fileID: 11400000, guid: 1ebbfa241fa13c84daec404d839fcb15, type: 2}
 --- !u!1 &2933613351585803174
 GameObject:
   m_ObjectHideFlags: 0
@@ -143,7 +143,7 @@ GameObject:
   - component: {fileID: 4671043867400187320}
   - component: {fileID: 3802579092890449132}
   - component: {fileID: 7568278671683635119}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: SM_Compass_01_Glass_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -233,7 +233,7 @@ GameObject:
   - component: {fileID: 1935837464722225373}
   - component: {fileID: 5846657258386034105}
   - component: {fileID: 4678149621072103259}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: SM_Compass_01_Part_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -323,7 +323,7 @@ GameObject:
   - component: {fileID: 4948302876303928136}
   - component: {fileID: 8307754480310185639}
   - component: {fileID: 7171415635477295701}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Needle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -414,7 +414,7 @@ GameObject:
   - component: {fileID: 5986880406617044458}
   - component: {fileID: 2131966989253420107}
   - component: {fileID: 2685524838016913211}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: SM_Compass_01_Part_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -505,7 +505,7 @@ GameObject:
   - component: {fileID: 3148030789756102119}
   - component: {fileID: 772252788642207783}
   - component: {fileID: 8945148435285362661}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: SM_Compass_01_Part_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}

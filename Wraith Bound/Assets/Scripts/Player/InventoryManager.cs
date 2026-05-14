@@ -268,20 +268,6 @@ public class InventoryManager : MonoBehaviour
     void Update()
     {
         HandleSlotInput();
-
-        // 임시 테스트 코드입니다. 가방 아이템 제작 후 제거 예정입니다.
-        if (Input.GetKeyDown(KeyCode.F5))
-        {
-            AddCapacityBonus(2);
-            DebugPrintCapacity();
-        }
-
-        // 임시 테스트 코드입니다. 가방 아이템 제작 후 제거 예정입니다.
-        if (Input.GetKeyDown(KeyCode.F6))
-        {
-            RemoveCapacityBonus(2);
-            DebugPrintCapacity();
-        }
     }
 
     private void HandleSlotInput()
