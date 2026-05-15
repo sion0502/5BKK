@@ -30,6 +30,8 @@ public class EnemyBase : MonoBehaviour
 
     [SerializeField] float chaseMemoryTime = 2f;
 
+    bool sawPlayerAtHideMoment = false;
+
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -54,6 +56,8 @@ public class EnemyBase : MonoBehaviour
 
             currentState = State.Chase;
 
+            sawPlayerAtHideMoment = false;
+
             SaveLastKnownPosition();
         }
         else if (currentState == State.Chase)
@@ -62,11 +66,25 @@ public class EnemyBase : MonoBehaviour
                 !Agent.pathPending &&
                 Agent.remainingDistance < 1f;
 
-            if (Time.time - lastSeenTime > chaseMemoryTime &&
-                reachedLastPoint)
+            bool playerHidden =
+                IsPlayerHidden();
+
+            bool sawRecently =
+                Time.time - lastSeenTime < 0.5f;
+
+            if (playerHidden && sawRecently)
             {
-                currentState = State.Investigate;
-                investigateTimer = 8f;
+                sawPlayerAtHideMoment = true;
+            }
+
+            if (!sawPlayerAtHideMoment)
+            {
+                if (Time.time - lastSeenTime > chaseMemoryTime &&
+                    reachedLastPoint)
+                {
+                    currentState = State.Investigate;
+                    investigateTimer = 8f;
+                }
             }
         }
 
@@ -148,31 +166,32 @@ public class EnemyBase : MonoBehaviour
             if (currentState != State.Chase)
                 return false;
 
-            return true;
-        }
+            Ray secondRay =
+                new Ray(
+                    hit.point + dir * 0.1f,
+                    dir);
 
-        if (((1 << hit.collider.gameObject.layer) &
-            Data.obstacleLayer) != 0)
-        {
+            if (Physics.Raycast(
+                secondRay,
+                out RaycastHit secondHit,
+                dist))
+            {
+                if (secondHit.collider.CompareTag("Player"))
+                {
+                    if (IsPlayerHidden())
+                        return false;
+
+                    return true;
+                }
+            }
+
             return false;
         }
 
         if (hit.collider.CompareTag("Player"))
         {
             if (IsPlayerHidden())
-            {
-                bool recentlySaw =
-                    currentState == State.Chase &&
-                    Time.time - lastSeenTime < chaseMemoryTime;
-
-                if (recentlySaw)
-                {
-                    SaveLastKnownPosition();
-                    return true;
-                }
-
                 return false;
-            }
 
             return true;
         }
@@ -184,17 +203,24 @@ public class EnemyBase : MonoBehaviour
     {
         bool visible = CheckVision();
 
-        if (visible)
+        bool playerHidden =
+            IsPlayerHidden();
+
+        if (visible || sawPlayerAtHideMoment)
         {
-            Agent.SetDestination(Player.position);
+            Agent.SetDestination(
+                Player.position);
         }
         else
         {
-            Agent.SetDestination(lastKnownPos);
+            Agent.SetDestination(
+                lastKnownPos);
         }
 
         Collider[] hits =
-            Physics.OverlapSphere(transform.position, 2f);
+            Physics.OverlapSphere(
+                transform.position,
+                2f);
 
         foreach (var hit in hits)
         {
@@ -236,12 +262,15 @@ public class EnemyBase : MonoBehaviour
                 4f,
                 NavMesh.AllAreas))
             {
-                Agent.SetDestination(hit.position);
+                Agent.SetDestination(
+                    hit.position);
             }
         }
 
         if (investigateTimer <= 0f)
         {
+            sawPlayerAtHideMoment = false;
+
             currentState = State.Patrol;
         }
     }
@@ -268,13 +297,13 @@ public class EnemyBase : MonoBehaviour
             25f,
             NavMesh.AllAreas))
         {
-            Agent.SetDestination(hit.position);
+            Agent.SetDestination(
+                hit.position);
         }
     }
 
     protected virtual void HandleDoor(
-        DoorController door
-    )
+        DoorController door)
     {
     }
 
