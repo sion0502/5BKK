@@ -8,12 +8,15 @@ public class DoorController : MonoBehaviour
     NavMeshObstacle obstacle;
     Collider doorCollider;
 
-    bool isBroken = false;
+    bool isBroken;
 
     void Awake()
     {
-        obstacle = GetComponent<NavMeshObstacle>();
-        doorCollider = GetComponent<Collider>();
+        obstacle =
+            GetComponent<NavMeshObstacle>();
+
+        doorCollider =
+            GetComponent<Collider>();
     }
 
     void Start()
@@ -23,16 +26,21 @@ public class DoorController : MonoBehaviour
 
     void IgnorePlayerCollision()
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        GameObject player =
+            GameObject.FindGameObjectWithTag(
+                "Player");
 
-        if (player != null)
+        if (player == null)
+            return;
+
+        Collider[] playerCols =
+            player.GetComponentsInChildren<Collider>();
+
+        foreach (Collider col in playerCols)
         {
-            Collider[] playerCols = player.GetComponentsInChildren<Collider>();
-
-            foreach (Collider col in playerCols)
-            {
-                Physics.IgnoreCollision(col, doorCollider);
-            }
+            Physics.IgnoreCollision(
+                col,
+                doorCollider);
         }
     }
 
@@ -41,9 +49,36 @@ public class DoorController : MonoBehaviour
         return isBroken;
     }
 
-    public void TakeDamage(int damage)
+    // Ghost가 추격 중 문 통과할 때
+    public void OpenPath()
     {
-        if (isBroken) return;
+        if (isBroken)
+            return;
+
+        if (obstacle != null)
+        {
+            obstacle.enabled = false;
+        }
+    }
+
+    // Ghost 추격 종료 시 다시 장애물 복구
+    public void ClosePath()
+    {
+        if (isBroken)
+            return;
+
+        if (obstacle != null)
+        {
+            obstacle.enabled = true;
+        }
+    }
+
+    // Monster가 문 부술 때
+    public void TakeDamage(
+        int damage)
+    {
+        if (isBroken)
+            return;
 
         Break();
     }
@@ -54,44 +89,32 @@ public class DoorController : MonoBehaviour
 
         if (brokenDoor != null)
         {
-            RaycastHit hit;
-            Vector3 startPos = transform.position + Vector3.up * 2f;
+            brokenDoor.transform.position =
+                transform.position;
 
-            if (Physics.Raycast(startPos, Vector3.down, out hit, 5f))
-            {
-                Collider col = brokenDoor.GetComponent<Collider>();
-
-                float height = 0.5f;
-
-                if (col != null)
-                    height = col.bounds.extents.y;
-
-                // 🔥 바닥보다 살짝 위에서 시작 (핵심)
-                Vector3 spawnPos = hit.point + Vector3.up * (height + 0.05f);
-
-                brokenDoor.transform.position = spawnPos;
-                brokenDoor.transform.rotation = transform.rotation;
-            }
-            else
-            {
-                brokenDoor.transform.position = transform.position + Vector3.up;
-                brokenDoor.transform.rotation = transform.rotation;
-            }
+            brokenDoor.transform.rotation =
+                transform.rotation;
 
             brokenDoor.SetActive(true);
 
-            // 🔥 물리 초기 안정화 (중요)
-            Rigidbody rb = brokenDoor.GetComponent<Rigidbody>();
+            Rigidbody rb =
+                brokenDoor.GetComponent<Rigidbody>();
+
             if (rb != null)
             {
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
+                rb.linearVelocity =
+                    Vector3.zero;
+
+                rb.angularVelocity =
+                    Vector3.zero;
             }
         }
 
-        gameObject.SetActive(false);
-
         if (obstacle != null)
+        {
             obstacle.enabled = false;
+        }
+
+        gameObject.SetActive(false);
     }
 }

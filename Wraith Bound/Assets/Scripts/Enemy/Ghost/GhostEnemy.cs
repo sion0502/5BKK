@@ -2,7 +2,7 @@
 
 public class GhostEnemy : EnemyBase
 {
-    bool isPassingDoor = false;
+    DoorController currentDoor;
 
     protected override void HandleDoor(
         DoorController door)
@@ -10,73 +10,36 @@ public class GhostEnemy : EnemyBase
         if (currentState != State.Chase)
             return;
 
+        if (door == null)
+            return;
+
+        // 같은 문 중복 처리 방지
+        if (currentDoor == door)
+            return;
+
+        currentDoor = door;
+
+        // 문을 길로 변경
+        currentDoor.OpenPath();
+
+        // 기존 경로 초기화 후 다시 추격
+        Agent.ResetPath();
+
         Agent.SetDestination(
             Player.position);
     }
 
-    void Update()
+    void LateUpdate()
     {
-        if (currentState != State.Chase)
-        {
-            ExitDoorPassMode();
-            return;
-        }
-
-        Vector3 center =
-            transform.position + Vector3.up;
-
-        Collider[] hits =
-            Physics.OverlapSphere(
-                center,
-                1.5f);
-
-        bool foundDoor = false;
-
-        foreach (var hit in hits)
-        {
-            if (!hit.CompareTag("Door"))
-                continue;
-
-            foundDoor = true;
-            break;
-        }
-
-        if (foundDoor)
-        {
-            EnterDoorPassMode();
-
-            Vector3 dir =
-                (Player.position -
-                transform.position).normalized;
-
-            dir.y = 0;
-
-            transform.position +=
-                dir * 4f * Time.deltaTime;
-        }
-        else
-        {
-            ExitDoorPassMode();
-        }
-    }
-
-    void EnterDoorPassMode()
-    {
-        if (isPassingDoor)
+        // 추격 끝났으면 문 다시 막기
+        if (currentState == State.Chase)
             return;
 
-        Agent.enabled = false;
-
-        isPassingDoor = true;
-    }
-
-    void ExitDoorPassMode()
-    {
-        if (!isPassingDoor)
+        if (currentDoor == null)
             return;
 
-        Agent.enabled = true;
+        currentDoor.ClosePath();
 
-        isPassingDoor = false;
+        currentDoor = null;
     }
 }

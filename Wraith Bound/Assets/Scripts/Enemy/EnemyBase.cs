@@ -3,7 +3,13 @@ using UnityEngine.AI;
 
 public class EnemyBase : MonoBehaviour
 {
-    public enum State { Patrol, Investigate, Chase }
+    public enum State
+    {
+        Patrol,
+        Investigate,
+        Chase
+    }
+
     public State currentState;
 
     [SerializeField] private Monsters data;
@@ -27,10 +33,13 @@ public class EnemyBase : MonoBehaviour
     float lastSeenTime = -999f;
 
     Vector3 lastKnownPos;
+    Vector3 lastSeenMoveDir;
 
-    [SerializeField] float chaseMemoryTime = 2f;
+    [SerializeField]
+    float chaseMemoryTime = 2f;
 
     bool sawPlayerAtHideMoment = false;
+    bool mustUseDoorPath = false;
 
     void Awake()
     {
@@ -56,9 +65,11 @@ public class EnemyBase : MonoBehaviour
 
             currentState = State.Chase;
 
-            sawPlayerAtHideMoment = false;
-
             SaveLastKnownPosition();
+
+            SavePlayerMoveDirection();
+
+            sawPlayerAtHideMoment = false;
         }
         else if (currentState == State.Chase)
         {
@@ -77,14 +88,19 @@ public class EnemyBase : MonoBehaviour
                 sawPlayerAtHideMoment = true;
             }
 
-            if (!sawPlayerAtHideMoment)
+            if (sawPlayerAtHideMoment)
             {
-                if (Time.time - lastSeenTime > chaseMemoryTime &&
-                    reachedLastPoint)
-                {
-                    currentState = State.Investigate;
-                    investigateTimer = 8f;
-                }
+                return;
+            }
+
+            if (Time.time - lastSeenTime > chaseMemoryTime &&
+                reachedLastPoint)
+            {
+                mustUseDoorPath = false;
+
+                currentState = State.Investigate;
+
+                investigateTimer = 8f;
             }
         }
 
@@ -110,6 +126,34 @@ public class EnemyBase : MonoBehaviour
         DebugState();
     }
 
+    bool IsPlayerHidden()
+    {
+        CharacterController cc =
+            Player.GetComponent<CharacterController>();
+
+        if (cc == null)
+            return false;
+
+        return cc.enabled == false;
+    }
+
+    void SavePlayerMoveDirection()
+    {
+        CharacterController cc =
+            Player.GetComponent<CharacterController>();
+
+        if (cc == null)
+            return;
+
+        Vector3 moveDir =
+            cc.velocity.normalized;
+
+        if (moveDir.magnitude > 0.1f)
+        {
+            lastSeenMoveDir = moveDir;
+        }
+    }
+
     void SaveLastKnownPosition()
     {
         if (NavMesh.SamplePosition(
@@ -120,17 +164,6 @@ public class EnemyBase : MonoBehaviour
         {
             lastKnownPos = hit.position;
         }
-    }
-
-    bool IsPlayerHidden()
-    {
-        CharacterController cc =
-            Player.GetComponent<CharacterController>();
-
-        if (cc == null)
-            return false;
-
-        return cc.enabled == false;
     }
 
     bool CheckVision()
@@ -147,10 +180,17 @@ public class EnemyBase : MonoBehaviour
             (Player.position - origin).normalized;
 
         float dist =
-            Vector3.Distance(origin, Player.position);
+            Vector3.Distance(
+                origin,
+                Player.position);
 
         if (dist > Data.detectRange)
             return false;
+
+        Debug.DrawRay(
+            origin,
+            dir * dist,
+            Color.red);
 
         if (!Physics.Raycast(
             origin,
@@ -161,39 +201,18 @@ public class EnemyBase : MonoBehaviour
             return false;
         }
 
-        if (hit.collider.CompareTag("Door"))
-        {
-            if (currentState != State.Chase)
-                return false;
-
-            Ray secondRay =
-                new Ray(
-                    hit.point + dir * 0.1f,
-                    dir);
-
-            if (Physics.Raycast(
-                secondRay,
-                out RaycastHit secondHit,
-                dist))
-            {
-                if (secondHit.collider.CompareTag("Player"))
-                {
-                    if (IsPlayerHidden())
-                        return false;
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        Debug.Log(
+            "맞은 오브젝트 : " +
+            hit.collider.name);
 
         if (hit.collider.CompareTag("Player"))
         {
-            if (IsPlayerHidden())
-                return false;
-
             return true;
+        }
+
+        if (hit.collider.CompareTag("Door"))
+        {
+            mustUseDoorPath = true;
         }
 
         return false;
@@ -201,15 +220,27 @@ public class EnemyBase : MonoBehaviour
 
     void UpdateChase()
     {
-        bool visible = CheckVision();
-
-        bool playerHidden =
-            IsPlayerHidden();
+        bool visible =
+            CheckVision();
 
         if (visible || sawPlayerAtHideMoment)
         {
+            mustUseDoorPath = false;
+
             Agent.SetDestination(
                 Player.position);
+
+            return;
+        }
+
+        if (mustUseDoorPath)
+        {
+            Vector3 nextDoorPathPos =
+                lastKnownPos +
+                (lastSeenMoveDir * 3f);
+
+            Agent.SetDestination(
+                nextDoorPathPos);
         }
         else
         {
@@ -310,18 +341,32 @@ public class EnemyBase : MonoBehaviour
     void UpdateAnimation()
     {
         if (currentState == State.Chase)
-            Anim.SetFloat("Speed", 1f);
+        {
+            Anim.SetFloat(
+                "Speed",
+                1f);
+        }
         else
-            Anim.SetFloat("Speed", 0.3f);
+        {
+            Anim.SetFloat(
+                "Speed",
+                0.3f);
+        }
     }
 
     void DebugState()
     {
         if (currentState == State.Patrol)
+        {
             Debug.Log("🟢 순찰중");
+        }
         else if (currentState == State.Chase)
+        {
             Debug.Log("🔴 추격중");
+        }
         else if (currentState == State.Investigate)
+        {
             Debug.Log("🟡 수색중");
+        }
     }
 }

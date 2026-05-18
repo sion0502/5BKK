@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bf3ebb2997c99047ad61262a3027084, type: 3}
   m_Name: TalChum
   m_EditorClassIdentifier: Assembly-CSharp::Monsters
-  id: 0
+  id: 2
   monsterType: 1
   description: 
-  hp: 2000
-  moveSpeed: 12
-  detectRange: 0
-  viewAngle: 0
+  hp: 2500
+  moveSpeed: 13
+  detectRange: 60
+  viewAngle: 180
   checkInterval: 0
   obstacleLayer:
     serializedVersion: 2
