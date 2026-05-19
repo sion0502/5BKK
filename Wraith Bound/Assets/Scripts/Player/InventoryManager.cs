@@ -338,6 +338,7 @@ public class InventoryManager : MonoBehaviour
                 currentHeldItem.transform.localRotation = Quaternion.identity;
 
                 SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
+                EnsureHeldItemSway(currentHeldItem);
             }
         }
     }
@@ -391,6 +392,14 @@ public class InventoryManager : MonoBehaviour
         {
             string itemName = slots[i].item != null ? slots[i].item.itemName : "NULL";
             Debug.Log($"{i}: {itemName} x{slots[i].amount}");
+        }
+    }
+
+    private void EnsureHeldItemSway(GameObject itemObject)
+    {
+        if (itemObject != null && itemObject.GetComponent<HeldItemSway>() == null)
+        {
+            itemObject.AddComponent<HeldItemSway>();
         }
     }
 
