@@ -49,7 +49,6 @@ public class DoorController : MonoBehaviour
         return isBroken;
     }
 
-    // Ghost가 추격 중 문 통과할 때
     public void OpenPath()
     {
         if (isBroken)
@@ -61,7 +60,6 @@ public class DoorController : MonoBehaviour
         }
     }
 
-    // Ghost 추격 종료 시 다시 장애물 복구
     public void ClosePath()
     {
         if (isBroken)
@@ -73,7 +71,6 @@ public class DoorController : MonoBehaviour
         }
     }
 
-    // Monster가 문 부술 때
     public void TakeDamage(
         int damage)
     {
