@@ -1,13 +1,15 @@
 using System.Collections;
-using UnityEditor.Rendering.Universal;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class PlayerHidingController : MonoBehaviour
 {
+    // 숨기 들어간 순간 체크
+    public static bool JustEnteredHiding;
+
     public Transform playerCamera;
-    private PlayerController playerController;
-    private MonoBehaviour mouseLook;
+
+    PlayerController playerController;
+    MonoBehaviour mouseLook;
 
     public float interactionDistance = 2.5f;
     public LayerMask interactableLayer;
@@ -17,25 +19,31 @@ public class PlayerHidingController : MonoBehaviour
 
     public float maxFrontAngle = 45f;
 
-    private CharacterController characterController;
-    private HidingSpot currentSpot;
+    CharacterController characterController;
+    HidingSpot currentSpot;
 
-    private bool isHiding = false;
-    private bool isTransitioning = false;
+    bool isHiding = false;
+    bool isTransitioning = false;
 
-    private float currentYaw = 0f;
-    private float currentPitch = 0f;
+    float currentYaw = 0f;
+    float currentPitch = 0f;
 
-    private void Awake()
+    void Awake()
     {
-        characterController = GetComponent<CharacterController>();
-        playerController = GetComponent<PlayerController>();
-        mouseLook = playerCamera.GetComponent<MouseLook>();
+        characterController =
+            GetComponent<CharacterController>();
+
+        playerController =
+            GetComponent<PlayerController>();
+
+        mouseLook =
+            playerCamera.GetComponent<MouseLook>();
     }
 
-    private void Update()
+    void Update()
     {
-        if (isTransitioning) return;
+        if (isTransitioning)
+            return;
 
         if (!isHiding)
         {
@@ -46,33 +54,52 @@ public class PlayerHidingController : MonoBehaviour
         {
             if (isHiding)
             {
-                StartCoroutine(ExitHidingRoutine());
+                StartCoroutine(
+                    ExitHidingRoutine());
             }
             else if (currentSpot != null)
             {
-                playerController.isCrouching = false;
-                playerController.isRun = false;
-                StartCoroutine(EnterHidingRoutine());
+                playerController.isCrouching =
+                    false;
+
+                playerController.isRun =
+                    false;
+
+                StartCoroutine(
+                    EnterHidingRoutine());
             }
         }
 
-        if (isHiding && !isTransitioning)
+        if (isHiding &&
+            !isTransitioning)
         {
             HandleRestrictedLook();
         }
     }
 
-    private void DetectHidingSpot()
+    void DetectHidingSpot()
     {
-        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-        RaycastHit hit;
+        Ray ray =
+            new Ray(
+                playerCamera.position,
+                playerCamera.forward);
 
-        if (Physics.Raycast(ray, out hit, interactionDistance, interactableLayer))
+        if (Physics.Raycast(
+            ray,
+            out RaycastHit hit,
+            interactionDistance,
+            interactableLayer,
+            QueryTriggerInteraction.Ignore))
         {
-            HidingSpot spot = hit.collider.GetComponent<HidingSpot>();
+            HidingSpot spot =
+                hit.collider.GetComponent<HidingSpot>();
+
             if (spot != null)
             {
-                float hitAngle = Vector3.Angle(hit.normal, spot.transform.forward);
+                float hitAngle =
+                    Vector3.Angle(
+                        hit.normal,
+                        spot.transform.forward);
 
                 if (hitAngle <= maxFrontAngle)
                 {
@@ -85,40 +112,83 @@ public class PlayerHidingController : MonoBehaviour
         currentSpot = null;
     }
 
-    private IEnumerator EnterHidingRoutine()
+    IEnumerator EnterHidingRoutine()
     {
         isTransitioning = true;
+
+        // 숨기 들어간 순간
+        JustEnteredHiding = true;
+
         isHiding = true;
 
-        characterController.enabled = false;
-        if (playerController != null) playerController.enabled = false;
-        if (mouseLook != null) mouseLook.enabled = false;
+        characterController.enabled =
+            false;
 
-        Vector3 startPos = transform.position;
-        Quaternion startRot = transform.rotation;
-        Quaternion startCamRot = playerCamera.rotation;
+        if (playerController != null)
+            playerController.enabled = false;
 
-        Vector3 targetPos = currentSpot.hideCameraPosition.position - (playerCamera.position - transform.position);
-        Quaternion targetRot = currentSpot.hideCameraPosition.rotation;
+        if (mouseLook != null)
+            mouseLook.enabled = false;
+
+        Vector3 startPos =
+            transform.position;
+
+        Quaternion startRot =
+            transform.rotation;
+
+        Quaternion startCamRot =
+            playerCamera.rotation;
+
+        Vector3 targetPos =
+            currentSpot.hideCameraPosition.position -
+            (playerCamera.position - transform.position);
+
+        Quaternion targetRot =
+            currentSpot.hideCameraPosition.rotation;
 
         float elapsedTime = 0f;
 
         while (elapsedTime < transitionDuration)
         {
-            float t = elapsedTime / transitionDuration;
-            t = t * t * (3f - 2f * t);
+            float t =
+                elapsedTime /
+                transitionDuration;
 
-            transform.position = Vector3.Lerp(startPos, targetPos, t);
-            transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
-            playerCamera.rotation = Quaternion.Slerp(startCamRot, targetRot, t);
+            t =
+                t * t * (3f - 2f * t);
 
-            elapsedTime += Time.deltaTime;
+            transform.position =
+                Vector3.Lerp(
+                    startPos,
+                    targetPos,
+                    t);
+
+            transform.rotation =
+                Quaternion.Slerp(
+                    startRot,
+                    targetRot,
+                    t);
+
+            playerCamera.rotation =
+                Quaternion.Slerp(
+                    startCamRot,
+                    targetRot,
+                    t);
+
+            elapsedTime +=
+                Time.deltaTime;
+
             yield return null;
         }
 
-        transform.position = targetPos;
-        transform.rotation = targetRot;
-        playerCamera.rotation = targetRot;
+        transform.position =
+            targetPos;
+
+        transform.rotation =
+            targetRot;
+
+        playerCamera.rotation =
+            targetRot;
 
         currentYaw = 0f;
         currentPitch = 0f;
@@ -126,60 +196,106 @@ public class PlayerHidingController : MonoBehaviour
         isTransitioning = false;
     }
 
-    private IEnumerator ExitHidingRoutine()
+    IEnumerator ExitHidingRoutine()
     {
         isTransitioning = true;
 
-        Vector3 startPos = transform.position;
-        Quaternion startCamRot = playerCamera.rotation;
+        Vector3 startPos =
+            transform.position;
 
-        Vector3 targetPos = currentSpot.exitPosition.position;
-        Quaternion targetRot = currentSpot.exitPosition.rotation;
+        Quaternion startCamRot =
+            playerCamera.rotation;
+
+        Vector3 targetPos =
+            currentSpot.exitPosition.position;
+
+        Quaternion targetRot =
+            currentSpot.exitPosition.rotation;
 
         float elapsedTime = 0f;
 
         while (elapsedTime < transitionDuration)
         {
-            float t = elapsedTime / transitionDuration;
-            t = t * t * (3f - 2f * t);
+            float t =
+                elapsedTime /
+                transitionDuration;
 
-            transform.position = Vector3.Lerp(startPos, targetPos, t);
-            playerCamera.rotation = Quaternion.Slerp(startCamRot, targetRot, t);
+            t =
+                t * t * (3f - 2f * t);
 
-            elapsedTime += Time.deltaTime;
+            transform.position =
+                Vector3.Lerp(
+                    startPos,
+                    targetPos,
+                    t);
+
+            playerCamera.rotation =
+                Quaternion.Slerp(
+                    startCamRot,
+                    targetRot,
+                    t);
+
+            elapsedTime +=
+                Time.deltaTime;
+
             yield return null;
         }
 
-        transform.position = targetPos;
-        playerCamera.localRotation = Quaternion.identity;
-        transform.rotation = targetRot;
+        transform.position =
+            targetPos;
 
-        characterController.enabled = true;
-        if (playerController != null) playerController.enabled = true;
-        if (mouseLook != null) mouseLook.enabled = true;
+        playerCamera.localRotation =
+            Quaternion.identity;
+
+        transform.rotation =
+            targetRot;
+
+        characterController.enabled =
+            true;
+
+        if (playerController != null)
+            playerController.enabled = true;
+
+        if (mouseLook != null)
+            mouseLook.enabled = true;
 
         isHiding = false;
         isTransitioning = false;
     }
 
-    private void HandleRestrictedLook()
+    void HandleRestrictedLook()
     {
-        try
-        {
-            float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
-            float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
+        float mouseX =
+            Input.GetAxisRaw("Mouse X") *
+            mouseSensitivity;
 
-            currentYaw += mouseX;
-            currentPitch -= mouseY;
+        float mouseY =
+            Input.GetAxisRaw("Mouse Y") *
+            mouseSensitivity;
 
-            currentYaw = Mathf.Clamp(currentYaw, -currentSpot.lookLimitX, currentSpot.lookLimitX);
-            currentPitch = Mathf.Clamp(currentPitch, -currentSpot.lookLimitY, currentSpot.lookLimitY);
+        currentYaw += mouseX;
+        currentPitch -= mouseY;
 
-            Quaternion localRotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
-            playerCamera.rotation = currentSpot.hideCameraPosition.rotation * localRotation;
-        }
-        catch (System.Exception)
-        {
-        }
+        currentYaw =
+            Mathf.Clamp(
+                currentYaw,
+                -currentSpot.lookLimitX,
+                currentSpot.lookLimitX);
+
+        currentPitch =
+            Mathf.Clamp(
+                currentPitch,
+                -currentSpot.lookLimitY,
+                currentSpot.lookLimitY);
+
+        Quaternion localRotation =
+            Quaternion.Euler(
+                currentPitch,
+                currentYaw,
+                0f);
+
+        playerCamera.rotation =
+            currentSpot.hideCameraPosition.rotation *
+            localRotation;
     }
 }

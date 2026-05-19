@@ -21,8 +21,6 @@ public class EnemyBase : MonoBehaviour
 
     protected NavMeshAgent Agent => agent;
     protected Animator Anim => animator;
-    protected Transform Player => player;
-    protected Monsters Data => data;
 
     float runSpeed;
     float walkSpeed;
@@ -39,6 +37,8 @@ public class EnemyBase : MonoBehaviour
     float chaseMemoryTime = 2f;
 
     bool keepChasingAfterHide;
+
+    bool sawPlayerLastFrame;
 
     void Awake()
     {
@@ -65,13 +65,13 @@ public class EnemyBase : MonoBehaviour
 
     void Update()
     {
-        bool visible =
-            CheckVision();
-
         bool hidden =
             IsPlayerHidden();
 
-        // 플레이어를 실제로 봄
+        bool visible =
+            CheckVision();
+
+        // 실제 감지
         if (visible)
         {
             lastSeenTime =
@@ -83,34 +83,55 @@ public class EnemyBase : MonoBehaviour
             SavePlayerMoveDirection();
 
             SaveLastKnownPosition();
-
-            // 아직 안 숨었음
-            if (!hidden)
-            {
-                keepChasingAfterHide =
-                    false;
-            }
         }
 
-        // 눈앞에서 숨음
-        if (visible && hidden)
+        // 눈앞에서 숨은 경우
+        if (PlayerHidingController.JustEnteredHiding &&
+            sawPlayerLastFrame)
         {
             keepChasingAfterHide =
                 true;
+
+            PlayerHidingController
+                .JustEnteredHiding =
+                false;
         }
 
         // 추격 상태
         if (currentState == State.Chase)
         {
-            // 대놓고 본 상태에서 숨었으면
-            // 절대 수색으로 안 감
+            // 눈앞에서 숨음
             if (keepChasingAfterHide)
             {
+                agent.speed =
+                    runSpeed;
+
                 agent.SetDestination(
-                    player.position);
+                    lastKnownPos);
+
+                bool chaseReachedPoint =
+                    !agent.pathPending &&
+                    agent.remainingDistance < 1.5f;
+
+                // 마지막 위치 도착
+                if (chaseReachedPoint)
+                {
+                    keepChasingAfterHide =
+                        false;
+
+                    currentState =
+                        State.Investigate;
+
+                    investigateTimer =
+                        8f;
+                }
 
                 UpdateAnimation();
                 DebugState();
+
+                sawPlayerLastFrame =
+                    visible;
+
                 return;
             }
 
@@ -120,6 +141,7 @@ public class EnemyBase : MonoBehaviour
 
             // 못 본 틈에 숨음
             if (!visible &&
+                !hidden &&
                 Time.time - lastSeenTime >
                 chaseMemoryTime &&
                 reachedPoint)
@@ -135,29 +157,38 @@ public class EnemyBase : MonoBehaviour
         switch (currentState)
         {
             case State.Patrol:
-                agent.speed = walkSpeed;
+                agent.speed =
+                    walkSpeed;
+
                 UpdatePatrol();
                 break;
 
             case State.Chase:
-                agent.speed = runSpeed;
+                agent.speed =
+                    runSpeed;
+
                 UpdateChase();
                 break;
 
             case State.Investigate:
-                agent.speed = walkSpeed;
+                agent.speed =
+                    walkSpeed;
+
                 UpdateInvestigate();
                 break;
         }
 
         UpdateAnimation();
         DebugState();
+
+        sawPlayerLastFrame =
+            visible;
     }
 
     bool IsPlayerHidden()
     {
         CharacterController cc =
-            Player.GetComponent<CharacterController>();
+            player.GetComponent<CharacterController>();
 
         if (cc == null)
             return false;
@@ -168,7 +199,7 @@ public class EnemyBase : MonoBehaviour
     void SavePlayerMoveDirection()
     {
         CharacterController cc =
-            Player.GetComponent<CharacterController>();
+            player.GetComponent<CharacterController>();
 
         if (cc == null)
             return;
@@ -185,9 +216,8 @@ public class EnemyBase : MonoBehaviour
 
     void SaveLastKnownPosition()
     {
-        // 마지막 이동 방향까지 예측
         Vector3 predictedPos =
-            Player.position +
+            player.position +
             lastMoveDir * 4f;
 
         if (NavMesh.SamplePosition(
@@ -203,7 +233,7 @@ public class EnemyBase : MonoBehaviour
 
     bool CheckVision()
     {
-        if (Player == null)
+        if (player == null)
             return false;
 
         if (IsPlayerHidden())
@@ -212,39 +242,39 @@ public class EnemyBase : MonoBehaviour
         Vector3 origin =
             eyePoint != null ?
             eyePoint.position :
-            transform.position + Vector3.up * 1.5f;
+            transform.position + Vector3.up * 1.6f;
 
         Vector3 target =
-            Player.position + Vector3.up * 1f;
+            player.position + Vector3.up * 1.2f;
 
         Vector3 dir =
-            (target - origin).normalized;
+            target - origin;
 
         float dist =
-            Vector3.Distance(
-                origin,
-                target);
+            dir.magnitude;
 
         if (dist > data.detectRange)
             return false;
+
+        dir.Normalize();
 
         Debug.DrawRay(
             origin,
             dir * dist,
             Color.red);
 
-        if (!Physics.Raycast(
+        if (Physics.Raycast(
             origin,
             dir,
             out RaycastHit hit,
-            dist))
+            dist,
+            ~0,
+            QueryTriggerInteraction.Ignore))
         {
-            return false;
-        }
-
-        if (hit.collider.CompareTag("Player"))
-        {
-            return true;
+            if (hit.collider.CompareTag("Player"))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -252,7 +282,6 @@ public class EnemyBase : MonoBehaviour
 
     void UpdateChase()
     {
-        // 문 부수고도 계속 앞으로 감
         agent.SetDestination(
             lastKnownPos);
 
@@ -261,13 +290,14 @@ public class EnemyBase : MonoBehaviour
                 transform.position,
                 2f);
 
-        foreach (Collider hit in hits)
+        for (int i = 0; i < hits.Length; i++)
         {
-            if (!hit.CompareTag("Door"))
+            if (!hits[i].CompareTag("Door"))
                 continue;
 
             DoorController door =
-                hit.GetComponentInParent<DoorController>();
+                hits[i]
+                .GetComponentInParent<DoorController>();
 
             if (door == null)
                 continue;
@@ -282,7 +312,8 @@ public class EnemyBase : MonoBehaviour
 
     void UpdateInvestigate()
     {
-        investigateTimer -= Time.deltaTime;
+        investigateTimer -=
+            Time.deltaTime;
 
         if (!agent.pathPending &&
             agent.remainingDistance < 1f)
@@ -316,7 +347,8 @@ public class EnemyBase : MonoBehaviour
 
     void UpdatePatrol()
     {
-        patrolTimer -= Time.deltaTime;
+        patrolTimer -=
+            Time.deltaTime;
 
         if (patrolTimer > 0f)
             return;
@@ -348,33 +380,13 @@ public class EnemyBase : MonoBehaviour
 
     void UpdateAnimation()
     {
-        if (currentState == State.Chase)
-        {
-            animator.SetFloat(
-                "Speed",
-                1f);
-        }
-        else
-        {
-            animator.SetFloat(
-                "Speed",
-                0.3f);
-        }
+        animator.SetFloat(
+            "Speed",
+            currentState == State.Chase ? 1f : 0.3f);
     }
 
     void DebugState()
     {
-        if (currentState == State.Patrol)
-        {
-            Debug.Log("🟢 순찰중");
-        }
-        else if (currentState == State.Chase)
-        {
-            Debug.Log("🔴 추격중");
-        }
-        else
-        {
-            Debug.Log("🟡 수색중");
-        }
+        Debug.Log(currentState);
     }
 }
