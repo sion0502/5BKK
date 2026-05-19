@@ -57,11 +57,6 @@ public class SelectedItemUseController : MonoBehaviour
             return;
         }
 
-        if (equipmentView != null)
-        {
-            equipmentView.ToggleEquipment(equipment);
-        }
-
         equipment.Use(player);
     }
 

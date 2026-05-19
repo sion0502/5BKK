@@ -120,8 +120,7 @@ public class InventoryUI : MonoBehaviour
     // 슬롯 클릭 시 실행될 함수
     private void OnSlotClicked(int index)
     {
-        invManager.selectedSlotIndex = index; // 매니저의 인덱스 변경
-        invManager.UpdateHeldItem();          // 실제 손에 든 모델링 변경
+        invManager.SetSelectedSlot(index);    // 실제 손에 든 모델링까지 함께 변경
         UpdateQuickSlotUI();                  // 퀵슬롯 UI 즉시 갱신
         Debug.Log(index + "번 슬롯 아이템 선택됨");
     }

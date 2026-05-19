@@ -265,6 +265,15 @@ public class InventoryManager : MonoBehaviour
     public GameObject currentHeldItem;
     public Transform holdPos;
 
+    private EquipmentViewController equipmentView;
+    private SmartPhoneHolderToggle smartPhoneToggle;
+
+    void Awake()
+    {
+        equipmentView = GetComponent<EquipmentViewController>();
+        smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
+    }
+
     void Update()
     {
         HandleSlotInput();
@@ -304,10 +313,10 @@ public class InventoryManager : MonoBehaviour
             selectedSlotIndex = 0;
         }
 
-        DebugPrintSelectedSlot();
+        OnSelectedSlotChanged();
     }
 
-    private void SetSelectedSlot(int index)
+    public void SetSelectedSlot(int index)
     {
         if (index < 0 || index >= capacity)
         {
@@ -315,7 +324,13 @@ public class InventoryManager : MonoBehaviour
         }
 
         selectedSlotIndex = index;
+        OnSelectedSlotChanged();
+    }
+
+    private void OnSelectedSlotChanged()
+    {
         DebugPrintSelectedSlot();
+        UpdateHeldItem();
     }
 
     public void UpdateHeldItem()
@@ -325,21 +340,55 @@ public class InventoryManager : MonoBehaviour
             Destroy(currentHeldItem);
         }
 
-        if (selectedSlotIndex < slots.Count && slots[selectedSlotIndex].item != null)
+        Items item = GetSelectedItem();
+        if (item == null)
         {
-            Items item = slots[selectedSlotIndex].item;
-
-            // showInHand가 켜진 장비 아이템만 손 위치에 프리팹을 생성합니다.
-            if (item.showInHand && item.itemPrefab != null)
+            if (equipmentView != null)
             {
-                currentHeldItem = Instantiate(item.itemPrefab, holdPos);
-
-                currentHeldItem.transform.localPosition = Vector3.zero;
-                currentHeldItem.transform.localRotation = Quaternion.identity;
-
-                SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
-                EnsureHeldItemSway(currentHeldItem);
+                equipmentView.HideCurrent();
             }
+            return;
+        }
+
+        if (item is Equipment equipment)
+        {
+            if (smartPhoneToggle != null && smartPhoneToggle.IsSmartPhoneItem(equipment))
+            {
+                if (equipmentView != null)
+                {
+                    equipmentView.HideCurrent();
+                }
+                return;
+            }
+
+            if (equipmentView != null)
+            {
+                equipmentView.ShowEquipment(equipment);
+            }
+            return;
+        }
+
+        if (equipmentView != null)
+        {
+            equipmentView.HideCurrent();
+        }
+
+        // 장비가 아닌 아이템만 기존 holdPos 표시 경로를 사용합니다.
+        if (item.showInHand && item.itemPrefab != null)
+        {
+            if (holdPos == null)
+            {
+                Debug.LogWarning("[Inventory] holdPos가 비어 있어 손 아이템을 표시할 수 없습니다.");
+                return;
+            }
+
+            currentHeldItem = Instantiate(item.itemPrefab, holdPos);
+
+            currentHeldItem.transform.localPosition = Vector3.zero;
+            currentHeldItem.transform.localRotation = Quaternion.identity;
+
+            SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
+            EnsureHeldItemSway(currentHeldItem);
         }
     }
 

@@ -47,6 +47,23 @@ public class EquipmentViewController : MonoBehaviour
             return true;
         }
 
+        return ShowEquipment(equipment);
+    }
+
+    public bool ShowEquipment(Equipment equipment)
+    {
+        if (equipment == null || equipment.itemPrefab == null || itemViewAnchor == null)
+        {
+            HideCurrent();
+            return false;
+        }
+
+        if (currentEquipment == equipment && TryGetView(equipment, out GameObject currentView) && currentView.activeSelf)
+        {
+            SetCameraActive(true);
+            return true;
+        }
+
         HideCurrent();
 
         GameObject view = GetOrCreateView(equipment);
