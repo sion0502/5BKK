@@ -57,7 +57,34 @@ public class SelectedItemUseController : MonoBehaviour
             return;
         }
 
+        if (equipment.useMode == EquipmentUseMode.PassiveOnSelect)
+        {
+            return;
+        }
+
+        if (equipment.useMode == EquipmentUseMode.ToggleOnClick && TryToggleEquipmentLight(equipment))
+        {
+            return;
+        }
+
         equipment.Use(player);
+    }
+
+    private bool TryToggleEquipmentLight(Equipment equipment)
+    {
+        if (equipmentView == null || !equipmentView.TryGetCurrentView(equipment, out GameObject currentView))
+        {
+            return false;
+        }
+
+        Light light = currentView.GetComponentInChildren<Light>(true);
+        if (light == null)
+        {
+            return false;
+        }
+
+        light.enabled = !light.enabled;
+        return true;
     }
 
     private void HandleActiveItemHoldUse()

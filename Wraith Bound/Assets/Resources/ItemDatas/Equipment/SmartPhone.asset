@@ -22,8 +22,9 @@ MonoBehaviour:
   destroyOnUse: 0
   breakageChance: 0
   itemPrefab: {fileID: 4301573585630352321, guid: 8e7c87c98a2076242b4dabfe99926aea, type: 3}
-  showInHand: 1
+  showInHand: 0
   spawnedInstance: {fileID: 0}
+  useMode: 2
   maxEnergy: 100
   consumeRate: 0.2
   range: 30

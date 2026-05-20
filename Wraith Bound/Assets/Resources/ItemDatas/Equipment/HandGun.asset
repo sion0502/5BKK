@@ -20,6 +20,12 @@ MonoBehaviour:
     \uB179\uC774\uC2AC\uC5B4 \uBD84\uB9AC\uD560\uC218 \uC5C6\uB2E4.\n"
   icon: {fileID: 0}
   maxCount: 1
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
+  useMode: 1
   maxEnergy: 7
   consumeRate: 1
   range: 50

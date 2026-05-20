@@ -89,6 +89,17 @@ public class EquipmentViewController : MonoBehaviour
         SetCameraActive(false);
     }
 
+    public bool TryGetCurrentView(Equipment equipment, out GameObject view)
+    {
+        if (equipment != null && currentEquipment == equipment && TryGetView(equipment, out view) && view.activeSelf)
+        {
+            return true;
+        }
+
+        view = null;
+        return false;
+    }
+
     private GameObject GetOrCreateView(Equipment equipment)
     {
         if (TryGetView(equipment, out GameObject existingView))
