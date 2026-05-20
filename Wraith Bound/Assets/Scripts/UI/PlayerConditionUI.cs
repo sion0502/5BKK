@@ -8,12 +8,12 @@ public class PlayerConditionUI : MonoBehaviour
     [Header("Data Reference")]
     public PlayerConditions conditions;
 
-    [Header("Type A: Numeric (¼öÄ¡Çü)")]
+    [Header("Type A: Numeric (ìˆ˜ì¹˜í˜•)")]
     public GameObject numericPanel;
     public Image hpBar;
     public Image staminaBar;
 
-    [Header("Type B: Immersive (¸ôÀÔÇü)")]
+    [Header("Type B: Immersive (ëª°ì…í˜•)")]
     public GameObject immersivePanel;
     public Image bloodOverlay;
     public Volume postProcessVolume;
@@ -31,35 +31,35 @@ public class PlayerConditionUI : MonoBehaviour
     {
         if (conditions == null) return;
 
-        // --- ¼öÁ¤ Æ÷ÀÎÆ®: ÆÀ¿øºĞÀÇ ÇÔ¼ö¿Í º¯¼ö¸í¿¡ Á¤È®È÷ ÀÏÄ¡½ÃÅ´ ---
+        // --- ìˆ˜ì • í¬ì¸íŠ¸: íŒ€ì›ë¶„ì˜ í•¨ìˆ˜ì™€ ë³€ìˆ˜ëª…ì— ì •í™•íˆ ì¼ì¹˜ì‹œí‚´ ---
 
-        // 1. Ã¼·Â: GetCurrentHealth() ÇÔ¼ö »ç¿ë / maxHealth´Â public º¯¼ö »ç¿ë
+        // 1. ì²´ë ¥: GetCurrentHealth() í•¨ìˆ˜ ì‚¬ìš© / maxHealthëŠ” public ë³€ìˆ˜ ì‚¬ìš©
         float curHP = conditions.GetCurrentHealth();
         float maxHP = conditions.maxHealth;
         float hpRatio = curHP / maxHP;
 
-        // 2. ½ºÅÂ¹Ì³ª: GetCurrentStamina() ÇÔ¼ö »ç¿ë / maxStamina´Â public º¯¼ö »ç¿ë
+        // 2. ìŠ¤íƒœë¯¸ë‚˜: GetCurrentStamina() í•¨ìˆ˜ ì‚¬ìš© / maxStaminaëŠ” public ë³€ìˆ˜ ì‚¬ìš©
         float curST = conditions.GetCurrentStamina();
         float maxST = conditions.maxStamina;
         float stRatio = curST / maxST;
 
-        // 3. ¼öÄ¡Çü UI ¾÷µ¥ÀÌÆ®
+        // 3. ìˆ˜ì¹˜í˜• UI ì—…ë°ì´íŠ¸
         if (numericPanel != null && numericPanel.activeSelf)
         {
             hpBar.fillAmount = hpRatio;
             staminaBar.fillAmount = stRatio;
         }
 
-        // 4. ¸ôÀÔÇü UI ¿¬Ãâ
+        // 4. ëª°ì…í˜• UI ì—°ì¶œ
         if (immersivePanel != null && immersivePanel.activeSelf)
         {
-            // ÇÇ ¹¯À½ È¿°ú
+            // í”¼ ë¬»ìŒ íš¨ê³¼
             float bloodAlpha = Mathf.Clamp01((0.7f - hpRatio) * 1.5f);
             Color c = bloodOverlay.color;
             c.a = bloodAlpha;
             bloodOverlay.color = c;
 
-            // È¸»ö È­¸é È¿°ú
+            // íšŒìƒ‰ í™”ë©´ íš¨ê³¼
             if (colorAdjustments != null)
             {
                 float targetSat = Mathf.Lerp(-100f, 0f, hpRatio / 0.4f);
