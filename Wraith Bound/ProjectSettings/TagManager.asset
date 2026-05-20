@@ -10,6 +10,7 @@ TagManager:
   - Lobby
   - Door
   - Monster
+  - Cabinet
   layers:
   - Default
   - TransparentFX
@@ -21,7 +22,7 @@ TagManager:
   - PickupItem
   - Player
   - Enemy
-  - 
+  - Floor
   - 
   - 
   - 
@@ -39,11 +40,6 @@ TagManager:
   - Lobby
   - Door
   - Obstacle
-  - 
-  - 
-  - 
-  - 
-  - 
   - 
   - 
   - 

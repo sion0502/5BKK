@@ -2,52 +2,35 @@
 
 public class GhostEnemy : EnemyBase
 {
-    [SerializeField] private LayerMask doorLayer;
+    DoorController currentDoor;
 
-    bool isPassing = false;
-
-    protected override void HandleDoor(DoorController door)
-    {
-        Agent.SetDestination(Player.position);
-    }
-
-    void Update()
+    protected override void HandleDoor(
+        DoorController door)
     {
         if (currentState != State.Chase)
-        {
-            if (isPassing)
-            {
-                Agent.enabled = true;
-                isPassing = false;
-            }
             return;
-        }
 
-        Vector3 center = transform.position + Vector3.up;
+        if (door == null)
+            return;
 
-        Collider[] doors = Physics.OverlapSphere(center, 1.5f, doorLayer);
+        if (currentDoor == door)
+            return;
 
-        if (doors.Length > 0)
-        {
-            if (!isPassing)
-            {
-                Agent.enabled = false; // 🔥 핵심
-                isPassing = true;
-            }
+        currentDoor = door;
 
-            // 🔥 플레이어 방향으로 이동 (문 통과)
-            Vector3 dir = (Player.position - transform.position).normalized;
-            dir.y = 0;
+        currentDoor.OpenPath();
+    }
 
-            transform.position += dir * 4f * Time.deltaTime;
-        }
-        else
-        {
-            if (isPassing)
-            {
-                Agent.enabled = true;
-                isPassing = false;
-            }
-        }
+    void LateUpdate()
+    {
+        if (currentState == State.Chase)
+            return;
+
+        if (currentDoor == null)
+            return;
+
+        currentDoor.ClosePath();
+
+        currentDoor = null;
     }
 }
