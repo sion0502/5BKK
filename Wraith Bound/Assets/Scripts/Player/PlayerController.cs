@@ -21,15 +21,16 @@ public class PlayerController : MonoBehaviour
     public bool grounded = true; // 지면에 있는 지
     
     [Header("Falling Settings")]
-    public float damagePerMeter = 5f; // 1미터 당 5 데미지
-    public float minFallHeight = 2f; // 이 이하는 데미지 없음
+    public float damagePerMeter = 3f; // 1미터 당 3 데미지
+    public float minFallHeight = 20f; // 20m 미만은 데미지 없음
+    public int baseFallingDamage = 20; // 기본 낙하 데미지 20
     public float minDamageVelocity = -10f; // 짧은 낙하 제거
 
     private float fallStartY; // 낙하 시작 지점
     private float verticalVelocity; // 수직 낙하 속도
     private float minVelocityReached; // 낙하 판정 필터링
 
-    private bool wasGrounded; 
+    private bool wasGrounded; // 지상인 지
     private bool isFalling; // 낙하 중인 지
 
     [Header("Crouch Settings")]
@@ -75,10 +76,11 @@ public class PlayerController : MonoBehaviour
         HandleGrounded();
         HandleMovement();
         HandleGravity();
-        HandleFallingDamage();
 
         Vector3 finalMovement = horizontalVelocity + velocity;
         controller.Move(finalMovement * Time.deltaTime);
+
+        HandleFallingDamage();
     }
 
     private void HandleGrounded()
@@ -105,6 +107,11 @@ public class PlayerController : MonoBehaviour
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
 
+        if (isRun && z < 0f)
+        {
+            z = 0f;
+        }
+        
         Vector3 move = transform.right * x + transform.forward * z;
 
         if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false)
@@ -265,20 +272,66 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    private float highestY;
+
     private void HandleFallingDamage()
     {
-        // 낙하 시작
-        if (!grounded && wasGrounded)
+        // 정확한 낙하 높이 구하기
+        // 기존에는 Character Controller의 center를 기준으로 구해서 오차가 있었음
+        bool GetGroundY(out float groundY, float rayLength = 100f)
         {
-            fallStartY = transform.position.y;
-            minVelocityReached = 0f;
-            isFalling = true;
+            Vector3 origin = transform.position + Vector3.up * (controller.height * 0.5f);
+
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, rayLength, groundMask, QueryTriggerInteraction.Ignore);
+
+            if (hits.Length == 0)
+            {
+                groundY = 0f;
+                return false;
+            }
+
+            float bestY = float.MinValue;
+
+            foreach (var hit in hits)
+            {
+                if (hit.collider == controller) continue;
+
+                if (hit.point.y > transform.position.y) continue;
+
+                if (hit.point.y > bestY)
+                {
+                    bestY = hit.point.y;
+                }
+            }
+
+            if (bestY == float.MinValue)
+            {
+                groundY = 0f;
+                return false;
+            }
+
+            groundY = bestY;
+            return true;
         }
+
+        float footY = transform.position.y - (controller.height * 0.5f);
 
         // 공중 상태
         if (!grounded)
         {
-            verticalVelocity += Physics.gravity.y * Time.deltaTime;
+            if (!isFalling)
+            {
+                isFalling = true;
+                highestY = footY;
+                minVelocityReached = 0f;
+            }
+
+            if (footY > highestY)
+            {
+                highestY = footY;
+            }
+
+            verticalVelocity = velocity.y;
 
             if (verticalVelocity < minVelocityReached)
                 minVelocityReached = verticalVelocity;
@@ -286,22 +339,30 @@ public class PlayerController : MonoBehaviour
         else
         {
             // 착지 순간
-            if (!wasGrounded && isFalling)
+            if (grounded && isFalling)
             {
-                float fallHeight = fallStartY - transform.position.y;
-
-                if (fallHeight > minFallHeight && minVelocityReached < minDamageVelocity)
+                if (GetGroundY(out float groundY))
                 {
-                    // 낙하 데미지 = 낙하한 높이 * 미터 당 데미지
-                    int damage = (int)(fallHeight * damagePerMeter);
-                    Debug.Log($"낙하한 높이: {fallHeight}, 낙하 데미지: {(int)damage}");
+                   float fallHeight = highestY - groundY; // 낙하한 높이
+
+                // 최소 낙하 높이(20미터)를 충족하고 낙하 데미지를 받기 위한 최소 낙하 속도를 만족했다면
+                if (fallHeight >= minFallHeight && minVelocityReached < minDamageVelocity) 
+                {
+                    // 초과한 낙하 높이만큼의 추가 데미지
+                    float extra = fallHeight - minFallHeight;
+                    // 낙하 데미지 = 기본 낙하 데미지(20) + (낙하한 높이 * 초과된 미터 당 데미지)
+                    int damage = baseFallingDamage + (int)(extra * damagePerMeter);
+                    Debug.Log($"낙하한 높이: {fallHeight}, 낙하 데미지: {damage}");
                     // 낙하 데미지를 줌
                     conditions.onDamage(damage);
+                    
+                }
                 }
             }
 
             // grounded 상태 리셋
             verticalVelocity = -2f;
+            // isFalling을 false로 전환
             isFalling = false;
         }
         // 초기화
