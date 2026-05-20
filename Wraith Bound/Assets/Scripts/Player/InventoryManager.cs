@@ -126,10 +126,65 @@ public class InventoryManager : MonoBehaviour
         Debug.Log($"[Inventory] 패시브 슬롯: {passiveSlot.itemName}");
     }
 
+    private bool RevertPassiveEffects(PassiveItem passiveItem)
+    {
+        if (passiveItem == null)
+        {
+            return true;
+        }
+
+        if (passiveItem.extraSlots > 0)
+        {
+            return RemoveCapacityBonus(passiveItem.extraSlots);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 패시브 슬롯이 이미 차 있을 때만: 기존 패시브와 새 패시브를 교환합니다. 일반 슬롯과는 섞지 않습니다.
+    /// </summary>
+    private bool TrySwapPassiveWithIncoming(PassiveItem newPassive, out Items droppedFromInventory, out int droppedAmount)
+    {
+        droppedFromInventory = null;
+        droppedAmount = 0;
+
+        PassiveItem oldPassive = passiveSlot;
+        if (oldPassive == null)
+        {
+            return AddPassiveItem(newPassive);
+        }
+
+        if (!RevertPassiveEffects(oldPassive))
+        {
+            Debug.LogWarning("[Inventory] 패시브 교체 불가: 기존 패시브의 인벤 확장을 되돌릴 수 없습니다(슬롯이 너무 많이 찼습니다).");
+            return false;
+        }
+
+        passiveSlot = newPassive;
+        ApplyPassiveEffect(newPassive);
+
+        droppedFromInventory = oldPassive;
+        droppedAmount = 1;
+
+        Debug.Log($"[Inventory] 패시브 교체: {oldPassive.itemName} -> {newPassive.itemName}");
+        DebugPrintPassiveSlot();
+
+        return true;
+    }
+
     public List<InventorySlot> slots = new List<InventorySlot>();
 
     public bool TryAcquireItem(Items itemToAcquire, int amount = 1)
     {
+        return TryAcquireItem(itemToAcquire, amount, out _, out _);
+    }
+
+    public bool TryAcquireItem(Items itemToAcquire, int amount, out Items droppedFromInventory, out int droppedInventoryAmount)
+    {
+        droppedFromInventory = null;
+        droppedInventoryAmount = 0;
+
         if (itemToAcquire == null)
         {
             Debug.LogWarning("[Inventory] 획득하려는 아이템이 null입니다.");
@@ -145,7 +200,12 @@ public class InventoryManager : MonoBehaviour
         // PassiveItem은 일반 인벤토리 slots를 사용하지 않고 passiveSlot으로만 들어갑니다.
         if (itemToAcquire is PassiveItem passiveItem)
         {
-            return AddPassiveItem(passiveItem);
+            if (passiveSlot == null)
+            {
+                return AddPassiveItem(passiveItem);
+            }
+
+            return TrySwapPassiveWithIncoming(passiveItem, out droppedFromInventory, out droppedInventoryAmount);
         }
 
         // item.type이 Passive로 설정되어 있는데 실제 클래스가 PassiveItem이 아니면 잘못된 데이터로 보고 실패시킵니다.
@@ -158,13 +218,13 @@ public class InventoryManager : MonoBehaviour
         // ActiveItem과 Equipment만 일반 인벤토리 slots에 들어갈 수 있습니다.
         if (itemToAcquire is ActiveItem || itemToAcquire is Equipment)
         {
-            return AddItem(itemToAcquire, amount);
+            return AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
         }
 
         // 클래스 판별이 애매한 경우에도 ItemType이 Active 또는 Equip이면 기존 흐름을 유지하기 위해 일반 아이템으로 처리합니다.
         if (itemToAcquire.type == ItemType.Active || itemToAcquire.type == ItemType.Equip)
         {
-            return AddItem(itemToAcquire, amount);
+            return AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
         }
 
         Debug.LogWarning($"[Inventory] 획득할 수 없는 아이템 타입입니다: {itemToAcquire.itemName}");
@@ -173,6 +233,14 @@ public class InventoryManager : MonoBehaviour
 
     public bool AddItem(Items itemToAdd, int amount = 1)
     {
+        return AddItem(itemToAdd, amount, out _, out _);
+    }
+
+    public bool AddItem(Items itemToAdd, int amount, out Items droppedItem, out int droppedAmount)
+    {
+        droppedItem = null;
+        droppedAmount = 0;
+
         if (itemToAdd == null)
         {
             Debug.LogWarning("[Inventory] 추가하려는 아이템이 null입니다.");
@@ -224,10 +292,15 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        // 새 슬롯을 만들어야 하는 경우 capacity를 넘지 않는지 확인합니다.
+        // 새 슬롯이 필요할 때 가득 찼으면, 현재 선택 슬롯과 교체합니다(같은 종류 스택 여유는 위에서 이미 처리됨).
         if (slots.Count >= capacity)
         {
-            Debug.LogWarning("[Inventory] 인벤토리 슬롯이 가득 찼습니다.");
+            if (TrySwapWithSelectedSlot(itemToAdd, amount, out droppedItem, out droppedAmount))
+            {
+                return true;
+            }
+
+            Debug.LogWarning("[Inventory] 인벤토리 슬롯이 가득 찼고, 선택 슬롯과 교체할 수 없습니다.");
             return false;
         }
 
@@ -238,6 +311,45 @@ public class InventoryManager : MonoBehaviour
         }
 
         slots.Add(new InventorySlot(itemToAdd, amount));
+        return true;
+    }
+
+    /// <summary>
+    /// 인벤이 가득 찼을 때, 현재 선택된 슬롯 내용을 바닥으로 보내고 새 아이템으로 덮어씁니다.
+    /// </summary>
+    private bool TrySwapWithSelectedSlot(Items newItem, int newAmount, out Items droppedItem, out int droppedAmount)
+    {
+        droppedItem = null;
+        droppedAmount = 0;
+
+        if (selectedSlotIndex < 0 || selectedSlotIndex >= slots.Count)
+        {
+            return false;
+        }
+
+        InventorySlot slot = slots[selectedSlotIndex];
+        if (slot == null || slot.item == null || slot.amount < 1)
+        {
+            return false;
+        }
+
+        int maxNew = Mathf.Max(1, newItem.maxCount);
+        if (newAmount > maxNew)
+        {
+            return false;
+        }
+
+        // 같은 아이템인데 스택 여유가 있었다면 위 루프에서 이미 처리됨. 여기까지 오면 교체만 가능.
+        droppedItem = slot.item;
+        droppedAmount = slot.amount;
+
+        slot.item = newItem;
+        slot.amount = newAmount;
+
+        OnSelectedSlotChanged();
+
+        Debug.Log($"[Inventory] 선택 슬롯 {selectedSlotIndex} 교체: {droppedItem.itemName} x{droppedAmount} -> {newItem.itemName} x{newAmount}");
+
         return true;
     }
 

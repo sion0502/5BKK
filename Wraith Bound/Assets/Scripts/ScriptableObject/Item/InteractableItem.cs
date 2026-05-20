@@ -5,6 +5,19 @@ public class InteractableItem : MonoBehaviour, IInteractable
     [SerializeField] private Items item;
     [SerializeField] private int amount = 1;
 
+    public bool TryGetItemData(out Items itemData)
+    {
+        itemData = item;
+        return itemData != null;
+    }
+
+    /// <summary>인벤토리 교체 등으로 월드에 다시 놓일 때 데이터를 설정합니다.</summary>
+    public void SetDroppedItem(Items items, int pickupAmount)
+    {
+        item = items;
+        amount = Mathf.Max(1, pickupAmount);
+    }
+
     public void Interact(GameObject interactor)
     {
         if (item == null)
@@ -23,12 +36,21 @@ public class InteractableItem : MonoBehaviour, IInteractable
 
         // 아이템 획득은 InventoryManager의 통합 함수로 처리합니다.
         // ActiveItem과 Equipment는 일반 인벤토리로, PassiveItem은 패시브 슬롯으로 분기됩니다.
-        bool added = inventory.TryAcquireItem(item, amount);
+        bool added = inventory.TryAcquireItem(item, amount, out Items droppedFromInv, out int droppedAmt);
 
         if (!added)
         {
             Debug.LogWarning($"[Item Pickup] 인벤토리에 추가하지 못해서 {item.itemName}을(를) 획득하지 못했습니다.");
             return;
+        }
+
+        if (droppedFromInv != null && droppedAmt > 0)
+        {
+            WorldItemSpawnHelper.SpawnDroppedItem(
+                droppedFromInv,
+                droppedAmt,
+                interactor.transform.position,
+                interactor.transform.forward);
         }
 
         Debug.Log($"[Item Pickup] {item.itemName} x{amount} 획득");

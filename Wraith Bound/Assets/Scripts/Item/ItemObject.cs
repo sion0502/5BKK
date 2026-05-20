@@ -13,8 +13,17 @@ public class ItemObject : MonoBehaviour, IInteractable
 
         if (inv != null)
         {
-            if (inv.TryAcquireItem(itemData, 1))
+            if (inv.TryAcquireItem(itemData, 1, out Items droppedFromInv, out int droppedAmt))
             {
+                if (droppedFromInv != null && droppedAmt > 0)
+                {
+                    WorldItemSpawnHelper.SpawnDroppedItem(
+                        droppedFromInv,
+                        droppedAmt,
+                        interactor.transform.position,
+                        interactor.transform.forward);
+                }
+
                 // 아이템을 인벤토리에 넣은 후, 기존에 만드셨던 로그/효과 로직 실행
                 OnPickedUp();
             }
