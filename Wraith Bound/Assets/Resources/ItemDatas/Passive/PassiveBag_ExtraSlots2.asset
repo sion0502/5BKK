@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d58998031af378645b463d3ddd06fbce, type: 3}
+  m_Name: PassiveBag_ExtraSlots2
+  m_EditorClassIdentifier: Assembly-CSharp::PassiveItem
+  id: 3001
+  itemName: "\uAC00\uBC29"
+  type: 2
+  description: "\uC778\uBCA4\uD1A0\uB9AC\uB97C 2\uCE78 \uB298\uB824 \uC90D\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxCount: 1
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
+  statModifier: 0
+  extraSlots: 2

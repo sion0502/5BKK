@@ -4,6 +4,6 @@ public class SonarRotation : MonoBehaviour
 {
     void Update()
     {
-        transform.Rotate(0, 0, -150f * Time.deltaTime); // -°ªÀÌ ½Ã°è¹æÇâ
+        transform.Rotate(0, 0, -150f * Time.deltaTime); // -ê°’ì´ ì‹œê³„ë°©í–¥
     }
 }

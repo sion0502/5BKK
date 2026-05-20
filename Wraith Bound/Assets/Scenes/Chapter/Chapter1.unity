@@ -3592,7 +3592,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!114 &1587935684
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3607,6 +3607,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InventroyManager
   capacity: 3
   slots: []
+  selectedSlotIndex: 0
+  currentHeldItem: {fileID: 0}
+  holdPos: {fileID: 0}
 --- !u!114 &1587935685
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3674,7 +3677,7 @@ Transform:
   m_GameObject: {fileID: 1587935681}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 595.6, y: 1, z: -252.2}
+  m_LocalPosition: {x: 595.6, y: 0, z: -252.2}
   m_LocalScale: {x: 1, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

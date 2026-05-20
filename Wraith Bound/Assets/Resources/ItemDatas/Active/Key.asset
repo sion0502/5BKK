@@ -18,7 +18,12 @@ MonoBehaviour:
   description: "\uC7A0\uAE34 \uBB38\uC744 \uC5F4\uC218\uC788\uB2E4"
   icon: {fileID: 0}
   maxCount: 3
+  destroyOnUse: 1
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
   value: 0
   duration: 0
   isInstantUse: 0
-  prefab: {fileID: 0}
+  deployPrefab: {fileID: 0}
