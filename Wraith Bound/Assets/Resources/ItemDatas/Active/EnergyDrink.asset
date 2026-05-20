@@ -18,7 +18,12 @@ MonoBehaviour:
   description: "\uC2A4\uD14C\uBBF8\uB108\uB97C 50 \uD68C\uBCF5\uD55C\uB2E4"
   icon: {fileID: 0}
   maxCount: 2
+  destroyOnUse: 1
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
   value: 50
   duration: 0
   isInstantUse: 0
-  prefab: {fileID: 0}
+  deployPrefab: {fileID: 0}

@@ -42,7 +42,7 @@ public abstract class Items : ScriptableObject // 추상 클래스
         }
 
         // 2. [수정] 팀원분의 인벤토리 매니저 가져오기
-        var inv = player.GetComponent<InventroyManager>();
+        var inv = player.GetComponent<InventoryManager>();
         if (inv == null) return;
 
         // 3. 확률적 파괴 체크
