@@ -8,19 +8,19 @@ using UnityEngine.UI;
 public class PlayerConditions : MonoBehaviour
 {
     [SerializeField]
-    public float maxHealth;
+    public float maxHealth; // 최대 체력
 
     [SerializeField]
-    public float maxStamina;
+    public float maxStamina; // 최대 스태미나
 
     [SerializeField]
-    private float staminaRegenRate;
-    private float regenDelay = 1.5f;
+    private Coroutine regenCoroutine; // 스태미나 재생 코루틴
+    private float staminaRegenRate; // 스태미나 재생량
+    private float regenDelay = 1.5f; // 스태미나 재생까지의 딜레이
 
-
-    private float currentStamina;
-    private Coroutine regenCoroutine;
-    private float currentHealth;
+    public float currentHealth; // 현재 체력
+    public float currentStamina; // 현재 스태미나
+    public Boolean dead = false; // 사망상태(기본값은 false)
 
     public float maxHealthPublic => maxHealth; // 읽기 전용 프로퍼티
     public float maxStaminaPublic => maxStamina;
@@ -28,7 +28,6 @@ public class PlayerConditions : MonoBehaviour
 
     PlayerController playerController;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         currentHealth = maxHealth;
@@ -37,24 +36,29 @@ public class PlayerConditions : MonoBehaviour
         playerController = GetComponent<PlayerController>();
     }
 
-    // Update is called once per frame
-    void Update()
+    public void onDamage(int damage) // 데미지를 받는 메서드
     {
-        if(currentHealth == 0.0f)
+        // damage만큼 현재 체력을 깎음
+        currentHealth -= damage;
+        // 데미지를 받을 때 체력 하한선(0)을 넘지 않도록 조정
+        currentHealth = Mathf.Max(currentHealth - damage, 0);
+        // 현재 체력이 0 이하라면
+        if (currentHealth <= 0)
         {
+            // Die 메서드 호출
             Die();
         }
     }
 
     public void RecoverHealth(int amount)
     {
-        // 아이템을 통해 체력을 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값을 현재 Value로 변경
+        // 아이템을 통해 체력을 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값으로 조정
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
     }
 
     public void RecoverStamina(int amount)
     {
-        // 아이템을 통해 스태미나를 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값을 현재 Value로 변경
+        // 아이템을 통해 스태미나를 회복할 때 회복한 현재 값이 최대값을 넘지 않도록, 최대값보다 클 경우 최대값으로 조정
         currentStamina = Mathf.Min(currentStamina + amount, maxStamina);
     }
 
@@ -102,6 +106,8 @@ public class PlayerConditions : MonoBehaviour
 
     public void Die()
     {
+        // 사망상태를 true로 설정
+        dead = true;
         Debug.Log("플레이어 사망");
     }
 }
