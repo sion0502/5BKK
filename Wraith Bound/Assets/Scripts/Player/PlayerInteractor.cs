@@ -7,12 +7,21 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] public float interactRange = 3f;
     [SerializeField] private LayerMask interactableLayer;
+    [SerializeField] private InteractionCrosshairUI interactionUI;
 
     private IInteractable currentTarget;
 
-    void Start()
+    void Awake()
     {
-        
+        if (interactionUI == null)
+        {
+            interactionUI = GetComponent<InteractionCrosshairUI>();
+        }
+
+        if (interactionUI == null)
+        {
+            interactionUI = gameObject.AddComponent<InteractionCrosshairUI>();
+        }
     }
 
     void Update()
@@ -36,12 +45,20 @@ public class PlayerInteractor : MonoBehaviour
 
             if (interactable != null)
             {
-                //Debug.Log("상호작용 가능한 오브젝트 감지됨!");
-                if (currentTarget != interactable)
+                currentTarget = interactable;
+
+                if (interactionUI != null)
                 {
-                    currentTarget = interactable;
-                    // TODO: UI 매니저를 호출하여 currentTarget.GetInteractPrompt() 텍스트를 화면 중앙에 표시
+                    if (InteractableItemNameUtility.TryGetItemName(hit.collider, out string itemName))
+                    {
+                        interactionUI.SetItemName(itemName);
+                    }
+                    else
+                    {
+                        interactionUI.SetItemName(null);
+                    }
                 }
+
                 return;
             }
             else
@@ -53,7 +70,11 @@ public class PlayerInteractor : MonoBehaviour
         if (currentTarget != null)
         {
             currentTarget = null;
-            // TODO: UI 텍스트 숨김 처리
+        }
+
+        if (interactionUI != null)
+        {
+            interactionUI.SetItemName(null);
         }
     }
 

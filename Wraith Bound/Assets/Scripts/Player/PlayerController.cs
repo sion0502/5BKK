@@ -8,6 +8,7 @@ using System.Net.NetworkInformation;
 using UnityEngine.InputSystem;
 using NUnit.Framework;
 using System;
+using JetBrains.Annotations;
 
 public class PlayerController : MonoBehaviour
 {
@@ -15,8 +16,22 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed; // 걷기 속도
     public float runSpeed; // 달리기 속도
     public float staminaDrainRate; // 달리기 시 소비할 스태미나
-    public float gravity = -3.0f; // 중력
+    public float gravity = -10.0f; // 중력
     public bool isRun = false; // 달리기 상태
+    public bool grounded = true; // 지면에 있는 지
+    
+    [Header("Falling Settings")]
+    public float damagePerMeter = 3f; // 1미터 당 3 데미지
+    public float minFallHeight = 20f; // 20m 미만은 데미지 없음
+    public int baseFallingDamage = 20; // 기본 낙하 데미지 20
+    public float minDamageVelocity = -10f; // 짧은 낙하 제거
+
+    private float fallStartY; // 낙하 시작 지점
+    private float verticalVelocity; // 수직 낙하 속도
+    private float minVelocityReached; // 낙하 판정 필터링
+
+    private bool wasGrounded; // 지상인 지
+    private bool isFalling; // 낙하 중인 지
 
     [Header("Crouch Settings")]
     public float crouchSpeed; // 웅크리기 속도
@@ -25,10 +40,14 @@ public class PlayerController : MonoBehaviour
     private float normalCameraHeight; // 캐릭터 중심 기준 카메라 로컬 Y 위치
     private float crouchCameraHeight;
     public float crouchTransitionSpeed = 10f; // 웅크리기 전환 속도
-
     public bool isCrouching = false; // 웅크리기 상태
+
+    // 숨기 관련 변수
     private float targetHeight;
     private float targetCameraHeight;
+
+    // 지면 검사
+    private float groundCheckDistance = 0.1f; // CharacterController는 항상 지면에 딱 붙어있지 않기 때문에 이를 보정할 변수 생성
 
     [Header("References")]
     private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
@@ -36,9 +55,8 @@ public class PlayerController : MonoBehaviour
     public Transform cameraTransform; // 1인칭 카메라 할당
     private Vector3 velocity;
     private Vector3 horizontalVelocity;
-
-    [Tooltip("천장 충돌을 체크할 레이어 (예: Ground, Obstacle)")]
-    public LayerMask ceilingCheckLayer;
+    public LayerMask ceilingCheckLayer; // 천장 충돌을 체크할 레이어
+    public LayerMask groundMask; // 지면 검사를 체크할 레이어
 
     void Start()
     {
@@ -61,11 +79,19 @@ public class PlayerController : MonoBehaviour
 
         Vector3 finalMovement = horizontalVelocity + velocity;
         controller.Move(finalMovement * Time.deltaTime);
+
+        HandleFallingDamage();
     }
 
     private void HandleGrounded()
     {
-        if (controller.isGrounded)
+        Vector3 origin = transform.position + controller.center;
+        origin.y -= controller.height / 2 - controller.radius;
+        float radius = controller.radius;
+
+        grounded = Physics.SphereCast(origin, radius, Vector3.down, out RaycastHit hit, controller.height / 2 - radius + groundCheckDistance, groundMask);
+
+        if (grounded)
         {
             controller.stepOffset = 0.3f; // 지상에서는 기본 stepOffset 값으로 적용함
         }
@@ -81,12 +107,20 @@ public class PlayerController : MonoBehaviour
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
 
+        if (isRun && z < 0f)
+        {
+            z = 0f;
+        }
+        
         Vector3 move = transform.right * x + transform.forward * z;
 
         if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false)
         {
-            isRun = true;
-            conditions.ConsumeStamina(staminaDrainRate);
+            if (grounded)
+            {
+                isRun = true;
+                conditions.ConsumeStamina(staminaDrainRate);
+            }
         }
 
         else if (Input.GetKeyUp(KeyCode.LeftShift) || conditions.GetCurrentStamina() <= 0f)
@@ -96,13 +130,16 @@ public class PlayerController : MonoBehaviour
             /*디버그 로그(Debug.Log)로 매 프레임마다 깎이는 스태미나 수치를 확인 중이시라면, 0.01씩 깎이는 것이 정상일 수 있습니다.
             원리: 초당 10을 소비한다는 것은 1초에 걸쳐 총 10이 깎인다는 의미입니다. 만약 게임이 1000프레임(FPS)으로 돌아가고 있다면, 1프레임당 10 / 1000 = 0.01씩 깎이게 됩니다.
             확인 방법: 디버그 로그가 0.01씩 찍히더라도, 스태미나 바 UI가 10초에 걸쳐 서서히 0(최대치 100 기준)으로 줄어든다면 정상적으로 작동하고 있는 것입니다. */
-            Debug.Log("현재 스태미나: " + conditions.GetCurrentStamina());
+            // Debug.Log("현재 스태미나: " + conditions.GetCurrentStamina());
         }
 
         // 웅크리기 키 (예: 좌측 컨트롤 키)
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
-            isCrouching = true;
+            if (grounded)
+            {
+                isCrouching = true;
+            }
         }
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
@@ -116,7 +153,7 @@ public class PlayerController : MonoBehaviour
 
         // 만약 키를 뗐는데 머리 위에 장애물이 있어서 못 일어난 상태라면,
         // 장애물이 없어졌을 때 자동으로 일어서도록 처리 (Toggle 방식이 아닌 Hold 방식일 때)
-        if (!isCrouching && !Input.GetKey(KeyCode.LeftControl))
+        if (isCrouching && !Input.GetKey(KeyCode.LeftControl))
         {
             if (CanStandUp())
             {
@@ -128,14 +165,17 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-
         if (isCrouching)
         {
+            if (grounded) {
             Crouch(move);
+            }
         }
         else if (isRun)
         {
+            if (grounded) {
             Run(move);
+            }
         }
         else
         {
@@ -219,15 +259,113 @@ public class PlayerController : MonoBehaviour
     // 머리 위에 장애물이 있는지 확인하여 일어설 수 있는지 체크
     private bool CanStandUp()
     {
-        // 현재 캐릭터 위치에서 위쪽으로 Ray를 쏴서 체크
-        // radius는 캐릭터의 반경, distance는 일어섰을 때의 높이 차이만큼
-        float radius = controller.radius;
-        Vector3 origin = transform.position + Vector3.up * controller.height;
-        float distance = normalHeight - controller.height;
-
-        // 레이어 마스크를 추가하여 특정 레이어(예: Ground, Obstacle)만 체크하는 것이 좋습니다.
-        bool hitCeiling = Physics.SphereCast(origin, radius, Vector3.up, out RaycastHit hit, distance, ceilingCheckLayer);
-
+        // 벽면 긁힘 등 미세한 오차로 인해 못 일어나는 버그를 방지하기 위해 반경을 90%로 줄임
+        float checkRadius = controller.radius * 0.9f;
+        // 일어섰을 때 캡슐의 하단 구체 중심 (발바닥에서 반경만큼 위)
+        Vector3 bottom = transform.position + (Vector3.up * controller.radius);
+        // 일어섰을 때 캡슐의 상단 구체 중심 (원래 키에서 반경만큼 아래)
+        Vector3 top = transform.position + (Vector3.up * (normalHeight - controller.radius));
+        // Physics.CheckCapsule은 해당 영역에 지정된 레이어의 콜라이더가 겹치면 true를 반환
+        bool hitCeiling = Physics.CheckCapsule(bottom, top, checkRadius, ceilingCheckLayer);
         return !hitCeiling;
+
+
+    }
+
+    private float highestY;
+
+    private void HandleFallingDamage()
+    {
+        // 정확한 낙하 높이 구하기
+        // 기존에는 Character Controller의 center를 기준으로 구해서 오차가 있었음
+        bool GetGroundY(out float groundY, float rayLength = 100f)
+        {
+            Vector3 origin = transform.position + Vector3.up * (controller.height * 0.5f);
+
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, rayLength, groundMask, QueryTriggerInteraction.Ignore);
+
+            if (hits.Length == 0)
+            {
+                groundY = 0f;
+                return false;
+            }
+
+            float bestY = float.MinValue;
+
+            foreach (var hit in hits)
+            {
+                if (hit.collider == controller) continue;
+
+                if (hit.point.y > transform.position.y) continue;
+
+                if (hit.point.y > bestY)
+                {
+                    bestY = hit.point.y;
+                }
+            }
+
+            if (bestY == float.MinValue)
+            {
+                groundY = 0f;
+                return false;
+            }
+
+            groundY = bestY;
+            return true;
+        }
+
+        float footY = transform.position.y - (controller.height * 0.5f);
+
+        // 공중 상태
+        if (!grounded)
+        {
+            if (!isFalling)
+            {
+                isFalling = true;
+                highestY = footY;
+                minVelocityReached = 0f;
+            }
+
+            if (footY > highestY)
+            {
+                highestY = footY;
+            }
+
+            verticalVelocity = velocity.y;
+
+            if (verticalVelocity < minVelocityReached)
+                minVelocityReached = verticalVelocity;
+        }
+        else
+        {
+            // 착지 순간
+            if (grounded && isFalling)
+            {
+                if (GetGroundY(out float groundY))
+                {
+                   float fallHeight = highestY - groundY; // 낙하한 높이
+
+                // 최소 낙하 높이(20미터)를 충족하고 낙하 데미지를 받기 위한 최소 낙하 속도를 만족했다면
+                if (fallHeight >= minFallHeight && minVelocityReached < minDamageVelocity) 
+                {
+                    // 초과한 낙하 높이만큼의 추가 데미지
+                    float extra = fallHeight - minFallHeight;
+                    // 낙하 데미지 = 기본 낙하 데미지(20) + (낙하한 높이 * 초과된 미터 당 데미지)
+                    int damage = baseFallingDamage + (int)(extra * damagePerMeter);
+                    Debug.Log($"낙하한 높이: {fallHeight}, 낙하 데미지: {damage}");
+                    // 낙하 데미지를 줌
+                    conditions.onDamage(damage);
+                    
+                }
+                }
+            }
+
+            // grounded 상태 리셋
+            verticalVelocity = -2f;
+            // isFalling을 false로 전환
+            isFalling = false;
+        }
+        // 초기화
+        wasGrounded = grounded;
     }
 }
