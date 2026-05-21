@@ -353,6 +353,41 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
+    public int CountItem(Items item)
+    {
+        if (item == null)
+        {
+            return 0;
+        }
+
+        int total = 0;
+        foreach (InventorySlot slot in slots)
+        {
+            if (slot.item == item)
+            {
+                total += slot.amount;
+            }
+        }
+
+        return total;
+    }
+
+    public bool TryConsumeItem(Items item, int amount = 1)
+    {
+        if (item == null || amount <= 0)
+        {
+            return false;
+        }
+
+        if (CountItem(item) < amount)
+        {
+            return false;
+        }
+
+        RemoveItem(item, amount);
+        return true;
+    }
+
     public void RemoveItem(Items itemToRemove, int amount = 1)
     {
         for (int i = 0; i < slots.Count; i++)

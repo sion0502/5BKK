@@ -100,6 +100,19 @@ public class EquipmentViewController : MonoBehaviour
         return false;
     }
 
+    public bool TryGetEquipmentLight(Equipment equipment, out Light light)
+    {
+        light = null;
+
+        if (equipment == null || !TryGetView(equipment, out GameObject view) || view == null || !view.activeSelf)
+        {
+            return false;
+        }
+
+        light = view.GetComponentInChildren<Light>(true);
+        return light != null;
+    }
+
     private GameObject GetOrCreateView(Equipment equipment)
     {
         if (TryGetView(equipment, out GameObject existingView))

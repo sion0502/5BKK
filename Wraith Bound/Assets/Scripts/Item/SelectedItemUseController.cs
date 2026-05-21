@@ -10,6 +10,7 @@ public class SelectedItemUseController : MonoBehaviour
     private PlayerController player;
     private SmartPhoneHolderToggle smartPhoneToggle;
     private EquipmentViewController equipmentView;
+    private FlashlightEnergyController flashlightEnergy;
     private ActiveItem holdingActiveItem;
     private float holdTimer;
 
@@ -19,6 +20,12 @@ public class SelectedItemUseController : MonoBehaviour
         player = GetComponent<PlayerController>();
         smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
         equipmentView = GetComponent<EquipmentViewController>();
+        flashlightEnergy = GetComponent<FlashlightEnergyController>();
+
+        if (flashlightEnergy == null)
+        {
+            flashlightEnergy = gameObject.AddComponent<FlashlightEnergyController>();
+        }
     }
 
     void Update()
@@ -29,8 +36,19 @@ public class SelectedItemUseController : MonoBehaviour
             return;
         }
 
+        HandleFlashlightBatteryRecharge();
         HandleEquipmentUse();
         HandleActiveItemHoldUse();
+    }
+
+    private void HandleFlashlightBatteryRecharge()
+    {
+        if (!Input.GetKeyDown(KeyCode.R) || flashlightEnergy == null)
+        {
+            return;
+        }
+
+        flashlightEnergy.TryRechargeFromInventoryBattery();
     }
 
     private void HandleEquipmentUse()
@@ -83,7 +101,18 @@ public class SelectedItemUseController : MonoBehaviour
             return false;
         }
 
-        light.enabled = !light.enabled;
+        bool turningOn = !light.enabled;
+
+        if (turningOn
+            && flashlightEnergy != null
+            && flashlightEnergy.IsFlashlightEquipment(equipment)
+            && !flashlightEnergy.CanTurnLightOn)
+        {
+            Debug.LogWarning("[Flashlight] 배터리가 없어 켤 수 없습니다. 건전지로 R키 충전.");
+            return true;
+        }
+
+        light.enabled = turningOn;
         return true;
     }
 
