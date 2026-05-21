@@ -15,8 +15,12 @@ public class PlayerConditions : MonoBehaviour
 
     [SerializeField]
     private Coroutine regenCoroutine; // 스태미나 재생 코루틴
-    private float staminaRegenRate; // 스태미나 재생량
-    private float regenDelay = 1.5f; // 스태미나 재생까지의 딜레이
+
+    [SerializeField]
+    private float staminaRegenRate = 20f; // 초당 스태미나 회복량
+
+    [SerializeField]
+    private float regenDelay = 1.5f; // 스태미나 재생 시작까지 대기(초)
 
     public float currentHealth; // 현재 체력
     public float currentStamina; // 현재 스태미나
@@ -36,11 +40,18 @@ public class PlayerConditions : MonoBehaviour
         playerController = GetComponent<PlayerController>();
     }
 
+    void Update()
+    {
+        // [임시] 체력 UI·색상 테스트용
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            onDamage(10);
+            Debug.Log($"[Debug] F5 테스트 데미지 -10, 현재 체력: {currentHealth}");
+        }
+    }
+
     public void onDamage(int damage) // 데미지를 받는 메서드
     {
-        // damage만큼 현재 체력을 깎음
-        currentHealth -= damage;
-        // 데미지를 받을 때 체력 하한선(0)을 넘지 않도록 조정
         currentHealth = Mathf.Max(currentHealth - damage, 0);
         // 현재 체력이 0 이하라면
         if (currentHealth <= 0)
@@ -63,7 +74,8 @@ public class PlayerConditions : MonoBehaviour
     }
 
 
-    public void ConsumeStamina(float deltaTime)
+    /// <param name="drainRatePerSecond">PlayerController에서 staminaDrainRate를 넘깁니다.</param>
+    public void ConsumeStamina(float drainRatePerSecond)
     {
         if (regenCoroutine != null)
         {
@@ -71,7 +83,7 @@ public class PlayerConditions : MonoBehaviour
             regenCoroutine = null;
         }
 
-        currentStamina -= playerController.staminaDrainRate * deltaTime;
+        currentStamina -= drainRatePerSecond * Time.deltaTime;
         currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
     }
 
@@ -103,6 +115,8 @@ public class PlayerConditions : MonoBehaviour
         // 현재 스태미나 수치를 리턴
         return currentStamina;
     }
+
+    public bool IsRegeneratingStamina => regenCoroutine != null;
 
     public void Die()
     {
