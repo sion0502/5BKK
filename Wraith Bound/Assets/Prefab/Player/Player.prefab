@@ -362,6 +362,7 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 8
+  interactionUI: {fileID: 0}
 --- !u!114 &3770686457871977965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -374,7 +375,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0605fb2b8f494cf89ecab523c596b48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventroyManager
-  capacity: 3
+  baseCapacity: 3
+  maxCapacity: 7
+  bonusCapacity: 0
+  passiveSlot: {fileID: 0}
   slots: []
   selectedSlotIndex: 0
   currentHeldItem: {fileID: 0}
