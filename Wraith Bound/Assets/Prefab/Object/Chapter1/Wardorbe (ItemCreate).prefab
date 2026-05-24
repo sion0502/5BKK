@@ -193,6 +193,7 @@ GameObject:
   - component: {fileID: 7193323446821822270}
   - component: {fileID: 7076828678030864944}
   - component: {fileID: 3062194021492296843}
+  - component: {fileID: 3781522651572411006}
   m_Layer: 0
   m_Name: Wardrobe_02_Door_LOD0
   m_TagString: Untagged
@@ -293,8 +294,33 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.032357752, y: 2.0410013, z: 0.89042085}
+  m_Size: {x: 0.19, y: 2.06, z: 1.07}
   m_Center: {x: -0.010265559, y: 1.0205007, z: -0.4312758}
+--- !u!114 &3781522651572411006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2283930110165815019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29357b22edfa9424aa4e5389c09f611b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoorClick
+  smooth: 3
+  DoorOpenAngle: -150
+  isSlidingDoor: 0
+  slideOffset: {x: 1, y: 0, z: 0}
+  interactDistance: 2
+  openMessage: 
+  closeMessage: 
+  messageFont: {fileID: 0}
+  fontSize: 24
+  fontColor: {r: 1, g: 1, b: 1, a: 1}
+  messagePosition: {x: 0.5, y: 0.5}
+  openSound: {fileID: 0}
+  closeSound: {fileID: 0}
 --- !u!1 &3274800703315352810
 GameObject:
   m_ObjectHideFlags: 0
@@ -341,9 +367,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 095a540e4465473438908747ee637284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WardrobeDoorInteract
-  doorMesh: {fileID: 6679454027046901740}
   openAngle: -90
-  speed: 3
   interactDistance: 5
 --- !u!65 &5549272380243825797
 BoxCollider:
