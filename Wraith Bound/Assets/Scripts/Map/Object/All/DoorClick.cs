@@ -19,6 +19,9 @@ public class DoorClick : MonoBehaviour
     public bool isSlidingDoor = false;
     public Vector3 slideOffset = new Vector3(1, 0, 0);
 
+    [Header("Swing Door Settings")]
+    public bool autoDirection = true;
+
     [Header("Interaction Settings")]
     public float interactDistance = 3f;
 
@@ -96,6 +99,11 @@ public class DoorClick : MonoBehaviour
                 {
                     if (hit.transform == transform)
                     {
+                        if (!open)
+                        {
+                            SetDoorDirection();
+                        }
+
                         open = !open;
                         isMousePressed = true;
 
@@ -190,5 +198,30 @@ public class DoorClick : MonoBehaviour
                 audioSource.Play();
             }
         }
+    }
+
+    private void SetDoorDirection()
+    {
+        if (!autoDirection)
+            return;
+
+        Vector3 playerDir =
+            cam.transform.position - transform.position;
+
+        float dot = Vector3.Dot(
+            transform.right,
+            playerDir
+        );
+
+        float angle =
+            dot > 0
+            ? DoorOpenAngle
+            : -DoorOpenAngle;
+
+        openRot = Quaternion.Euler(
+            transform.eulerAngles.x,
+            transform.eulerAngles.y + angle,
+            transform.eulerAngles.z
+        );
     }
 }

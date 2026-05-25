@@ -312,6 +312,7 @@ MonoBehaviour:
   DoorOpenAngle: -150
   isSlidingDoor: 0
   slideOffset: {x: 1, y: 0, z: 0}
+  autoDirection: 0
   interactDistance: 2
   openMessage: 
   closeMessage: 
