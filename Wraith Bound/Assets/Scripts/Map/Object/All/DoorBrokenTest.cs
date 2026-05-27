@@ -27,7 +27,7 @@ public class DoorBrokenTest : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.Y))
         {
             HitDoor();
         }
@@ -39,7 +39,7 @@ public class DoorBrokenTest : MonoBehaviour
 
         currentHits++;
 
-        Debug.Log($"Å¸°Ý È½¼ö : {currentHits}");
+        Debug.Log($"Å¸ï¿½ï¿½ È½ï¿½ï¿½ : {currentHits}");
 
         if (currentHits >= hitsToBreak)
         {
@@ -63,10 +63,10 @@ public class DoorBrokenTest : MonoBehaviour
             col.size = new Vector3(1f, 1f, 0.3f);
         }
 
-        // ºÎ¸ð ºÐ¸®
+        // ï¿½Î¸ï¿½ ï¿½Ð¸ï¿½
         transform.SetParent(null);
 
-        // ¹°¸® È°¼ºÈ­
+        // ï¿½ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­
         rb.isKinematic = false;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
@@ -101,7 +101,7 @@ public class DoorBrokenTest : MonoBehaviour
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
 
-        // Transparent ¼³Á¤
+        // Transparent ï¿½ï¿½ï¿½ï¿½
         foreach (Renderer r in renderers)
         {
             foreach (Material mat in r.materials)

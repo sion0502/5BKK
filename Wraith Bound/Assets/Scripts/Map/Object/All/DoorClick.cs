@@ -3,7 +3,6 @@ using UnityEngine;
 public class DoorClick : MonoBehaviour
 {
     private bool open;
-    private bool isMousePressed;
 
     [Header("Door Settings")]
     public float smooth = 2.0f;
@@ -24,10 +23,11 @@ public class DoorClick : MonoBehaviour
 
     [Header("Interaction Settings")]
     public float interactDistance = 3f;
+    public KeyCode interactKey = KeyCode.E;
 
     [Header("GUI Settings")]
-    public string openMessage = "Open Mouse Left";
-    public string closeMessage = "Close Mouse Left";
+    public string openMessage = "Open [E]";
+    public string closeMessage = "Close [E]";
 
     public Font messageFont;
     public int fontSize = 24;
@@ -86,8 +86,8 @@ public class DoorClick : MonoBehaviour
             );
         }
 
-        // Mouse Left Click
-        if (Input.GetMouseButtonDown(0) && !isMousePressed)
+        // E Key Interaction
+        if (Input.GetKeyDown(interactKey))
         {
             if (cam != null)
             {
@@ -105,17 +105,11 @@ public class DoorClick : MonoBehaviour
                         }
 
                         open = !open;
-                        isMousePressed = true;
 
                         PlayDoorSound();
                     }
                 }
             }
-        }
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            isMousePressed = false;
         }
 
         // UI message

@@ -1098,7 +1098,7 @@ GameObject:
   - component: {fileID: 2757066195766684743}
   - component: {fileID: 919758944293522281}
   - component: {fileID: 4607061004417308989}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: LeftExitWall2 (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1114,8 +1114,8 @@ Transform:
   m_GameObject: {fileID: 5116807972855669062}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.13571, y: 0.35064, z: 2.13564}
-  m_LocalScale: {x: 1.5837611, y: 0.49872836, z: -2.3032799}
+  m_LocalPosition: {x: -4.13571, y: 0.37272, z: 2.13564}
+  m_LocalScale: {x: 1.5837611, y: 0.45456597, z: -2.3032799}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4660874335345244466}
@@ -2443,7 +2443,7 @@ GameObject:
   - component: {fileID: 728195375368593420}
   - component: {fileID: 142236365344101149}
   - component: {fileID: 3223856872646285349}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: LeftExit (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
