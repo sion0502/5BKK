@@ -11,10 +11,12 @@ public class EquipmentViewController : MonoBehaviour
     private readonly Dictionary<Equipment, GameObject> spawnedViews = new();
     private InventoryManager inventory;
     private Equipment currentEquipment;
+    private FlashlightEnergyController flashlightEnergy;
 
     void Awake()
     {
         inventory = GetComponent<InventoryManager>();
+        flashlightEnergy = GetComponent<FlashlightEnergyController>();
         SetCameraActive(false);
     }
 
@@ -128,6 +130,7 @@ public class EquipmentViewController : MonoBehaviour
         StripWorldOnlyComponents(view);
         SetLayerRecursively(view, LayerMask.NameToLayer(viewLayerName));
         EnsureHeldItemSway(view);
+        EnsureFlashlightClipPreventer(equipment, view);
         view.SetActive(false);
 
         spawnedViews[equipment] = view;
@@ -163,6 +166,19 @@ public class EquipmentViewController : MonoBehaviour
         {
             view.AddComponent<HeldItemSway>();
         }
+    }
+
+    private void EnsureFlashlightClipPreventer(Equipment equipment, GameObject view)
+    {
+        if (view == null)
+            return;
+
+        bool isFlashlight = flashlightEnergy != null && flashlightEnergy.IsFlashlightEquipment(equipment);
+        if (!isFlashlight)
+            return;
+
+        if (view.GetComponent<FlashlightClipPreventer>() == null)
+            view.AddComponent<FlashlightClipPreventer>();
     }
 
     private bool TryGetView(Equipment equipment, out GameObject view)
