@@ -19,6 +19,7 @@ public class SmartPhoneHolderToggle : MonoBehaviour
     [SerializeField] private float animationDuration = 0.45f;
 
     private InventoryManager _inventory;
+    private EquipmentViewController _equipmentView;
     private GameObject _holder;
     private RectTransform _animatedRect;
     private Vector2 shownAnchoredPosition;
@@ -31,6 +32,10 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         _inventory = GetComponent<InventoryManager>();
         if (_inventory == null)
             _inventory = GetComponentInParent<InventoryManager>();
+
+        _equipmentView = GetComponent<EquipmentViewController>();
+        if (_equipmentView == null)
+            _equipmentView = GetComponentInParent<EquipmentViewController>();
 
         ResolveHolder();
         CacheAnimatedTarget();
@@ -165,6 +170,7 @@ public class SmartPhoneHolderToggle : MonoBehaviour
 
         if (visible)
         {
+            _equipmentView?.SetSmartPhoneViewActive(true);
             _holder.SetActive(true);
             _animatedRect.anchoredPosition = hiddenAnchoredPosition;
         }
@@ -186,7 +192,10 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         _animatedRect.anchoredPosition = target;
 
         if (!visible)
+        {
             _holder.SetActive(false);
+            _equipmentView?.SetSmartPhoneViewActive(false);
+        }
 
         animationCoroutine = null;
     }
@@ -205,5 +214,6 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         isVisible = false;
         _animatedRect.anchoredPosition = hiddenAnchoredPosition;
         _holder.SetActive(false);
+        _equipmentView?.SetSmartPhoneViewActive(false);
     }
 }

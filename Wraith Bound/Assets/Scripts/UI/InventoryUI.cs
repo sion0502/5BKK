@@ -1,4 +1,4 @@
-using UnityEngine;
+/*using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
@@ -58,9 +58,9 @@ public class InventoryUI : MonoBehaviour
             Cursor.visible = false;
         }
     }
-
+*/
     // [중요] 상단 현재 아이템 UI를 갱신하는 로직
-    public void UpdateQuickSlotUI()
+/*    public void UpdateQuickSlotUI()
     {
         int idx = invManager.selectedSlotIndex;
 
@@ -79,8 +79,8 @@ public class InventoryUI : MonoBehaviour
             quickIcon.enabled = false;
             quickName.text = "No Item"; // 또는 공백 ""
         }
-    }
-
+    }*/
+/*
     public void RedrawInventory()
     {
         foreach (Transform child in slotContainer) Destroy(child.gameObject);
@@ -116,12 +116,12 @@ public class InventoryUI : MonoBehaviour
             }
         }
     }
-
+*/
     // 슬롯 클릭 시 실행될 함수
-    private void OnSlotClicked(int index)
+/*    private void OnSlotClicked(int index)
     {
         invManager.SetSelectedSlot(index);    // 실제 손에 든 모델링까지 함께 변경
         UpdateQuickSlotUI();                  // 퀵슬롯 UI 즉시 갱신
         Debug.Log(index + "번 슬롯 아이템 선택됨");
     }
-}
+}*/

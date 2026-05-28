@@ -12,6 +12,7 @@ public class EquipmentViewController : MonoBehaviour
     private InventoryManager inventory;
     private Equipment currentEquipment;
     private FlashlightEnergyController flashlightEnergy;
+    private bool smartPhoneViewActive;
 
     void Awake()
     {
@@ -88,7 +89,9 @@ public class EquipmentViewController : MonoBehaviour
         }
 
         currentEquipment = null;
-        SetCameraActive(false);
+
+        if (!smartPhoneViewActive)
+            SetCameraActive(false);
     }
 
     public bool TryGetCurrentView(Equipment equipment, out GameObject view)
@@ -190,6 +193,19 @@ public class EquipmentViewController : MonoBehaviour
 
         view = null;
         return false;
+    }
+
+    /// <summary>
+    /// SmartPhoneHolderToggle에서 스마트폰 표시/숨김 시 호출.
+    /// 다른 장비 뷰가 없을 때만 카메라를 끈다.
+    /// </summary>
+    public void SetSmartPhoneViewActive(bool active)
+    {
+        smartPhoneViewActive = active;
+        if (active)
+            SetCameraActive(true);
+        else if (currentEquipment == null)
+            SetCameraActive(false);
     }
 
     private void SetCameraActive(bool isActive)
