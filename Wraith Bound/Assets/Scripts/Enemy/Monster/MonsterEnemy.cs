@@ -2,25 +2,17 @@
 
 public class MonsterEnemy : EnemyBase
 {
-    bool isAttacking;
-    float timer;
+    bool attacking;
 
     protected override void HandleDoor(
         DoorController door)
     {
-        if (isAttacking)
+        if (attacking)
             return;
 
-        isAttacking = true;
-
-        timer = 1.2f;
+        attacking = true;
 
         Agent.isStopped = true;
-
-        Agent.velocity =
-            Vector3.zero;
-
-        Agent.ResetPath();
 
         Vector3 lookPos =
             door.transform.position;
@@ -28,33 +20,28 @@ public class MonsterEnemy : EnemyBase
         lookPos.y =
             transform.position.y;
 
-        transform.LookAt(
-            lookPos);
+        transform.LookAt(lookPos);
 
-        Anim.ResetTrigger(
-            "Attack");
+        Anim.SetTrigger("Attack");
 
-        Anim.SetTrigger(
-            "Attack");
+        DoorBrokenTest broken =
+            door.GetComponent<DoorBrokenTest>();
 
-        door.TakeDamage(999);
+        if (broken != null)
+        {
+            broken.SendMessage("HitDoor");
+        }
+
+        Invoke(
+            nameof(EndAttack),
+            1.2f
+        );
     }
 
-    void LateUpdate()
+    void EndAttack()
     {
-        if (!isAttacking)
-            return;
+        attacking = false;
 
-        timer -= Time.deltaTime;
-
-        Agent.velocity =
-            Vector3.zero;
-
-        if (timer <= 0f)
-        {
-            isAttacking = false;
-
-            Agent.isStopped = false;
-        }
+        Agent.isStopped = false;
     }
 }
