@@ -224,4 +224,10 @@ public class DoorClick : MonoBehaviour
             transform.eulerAngles.z
         );
     }
+
+    public bool IsOpen()
+    {
+        return open;
+    }
 }
+

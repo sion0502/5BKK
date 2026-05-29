@@ -33,7 +33,7 @@ public class DoorBrokenTest : MonoBehaviour
         }
     }
 
-    private void HitDoor()
+    public void HitDoor()
     {
         if (isBroken) return;
 
