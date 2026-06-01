@@ -3,15 +3,20 @@ using System.Collections;
 
 public class DoorBrokenTest : MonoBehaviour
 {
-    [SerializeField] private int hitsToBreak = 5;
-    [SerializeField] private float breakForce = 1500f;
-    [SerializeField] private float upwardForce = 3f;
+    [SerializeField] private int hitsToBreak = 1;
+    [SerializeField] private float breakForce = 1000f;
+    [SerializeField] private float upwardForce = 1.5f;
 
-    private int currentHits = 0;
-    private bool isBroken = false;
+    private int currentHits;
+    private bool isBroken;
 
     private Rigidbody rb;
     private DoorClick doorScript;
+
+    public bool IsBroken()
+    {
+        return isBroken;
+    }
 
     private void Start()
     {
@@ -25,34 +30,27 @@ public class DoorBrokenTest : MonoBehaviour
         }
     }
 
-    private void Update()
+    public void HitDoor(Vector3 attackerPosition)
     {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            HitDoor();
-        }
-    }
-
-    public void HitDoor()
-    {
-        if (isBroken) return;
+        if (isBroken)
+            return;
 
         currentHits++;
 
-        Debug.Log($"타격 횟수 : {currentHits}");
-
         if (currentHits >= hitsToBreak)
-        {
-            BreakDoor();
-        }
+            BreakDoor(attackerPosition);
     }
 
-    private void BreakDoor()
+    public void BreakDoor(Vector3 attackerPosition)
     {
+        if (isBroken)
+            return;
+
         isBroken = true;
 
         if (doorScript != null)
         {
+            doorScript.SetBroken();
             doorScript.enabled = false;
         }
 
@@ -60,34 +58,36 @@ public class DoorBrokenTest : MonoBehaviour
 
         if (col != null)
         {
+            col.enabled = true;
             col.size = new Vector3(1f, 1f, 0.3f);
         }
 
-        // 부모 분리
         transform.SetParent(null);
 
-        // 물리 활성화
-        rb.isKinematic = false;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-
-        if (player != null)
+        if (rb != null)
         {
-            Vector3 dir =
-                (transform.position - player.transform.position).normalized;
+            rb.isKinematic = false;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            Vector3 dir = transform.position - attackerPosition;
+            dir.y = 0f;
+
+            if (dir.sqrMagnitude < 0.01f)
+                dir = transform.forward;
+
+            dir.Normalize();
 
             rb.AddForce(
-                (dir + Vector3.up * 0.05f) * 100f,
+                (dir * breakForce) + (Vector3.up * upwardForce),
                 ForceMode.Impulse
             );
 
             rb.AddTorque(
-                Random.insideUnitSphere * 50f,
+                Random.insideUnitSphere * 40f,
                 ForceMode.Impulse
             );
         }
@@ -101,7 +101,6 @@ public class DoorBrokenTest : MonoBehaviour
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
 
-        // Transparent 설정
         foreach (Renderer r in renderers)
         {
             foreach (Material mat in r.materials)
