@@ -505,7 +505,7 @@ Transform:
   m_GameObject: {fileID: 438465542}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.97988355, z: -0, w: -0.19957018}
-  m_LocalPosition: {x: -0.105, y: 1.494, z: 0.343}
+  m_LocalPosition: {x: -0.105, y: 1.573, z: 0.343}
   m_LocalScale: {x: 0.5555556, y: 0.5, z: 0.5555556}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -648,10 +648,17 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: 613d967ead6cb6544afd90c5b2e28dc3, type: 2}
   player: {fileID: 721830868}
   eyePoint: {fileID: 438465543}
+  drawVisionDebug: 1
   patrolRadius: 20
+  patrolReachDistance: 0.5
+  lostChaseDuration: 15
   investigateRadius: 3
   investigateDuration: 10
+  investigateReachDistance: 0.6
   doorDetectDistance: 2
+  idleBeforeAttackTime: 0.5
+  doorHitDelay: 0.3
+  attackEndDelay: 1
 --- !u!136 &478896863
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -671,8 +678,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
+  m_Radius: 0.3
+  m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
 --- !u!195 &478896864
@@ -684,16 +691,16 @@ NavMeshAgent:
   m_GameObject: {fileID: 478896859}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
+  m_Radius: 0.3
   m_Speed: 3.5
   m_Acceleration: 8
   avoidancePriority: 50
   m_AngularSpeed: 120
   m_StoppingDistance: 0
   m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
+  m_AutoBraking: 0
   m_AutoRepath: 1
-  m_Height: 2
+  m_Height: 1.8
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
@@ -827,7 +834,7 @@ GameObject:
   - component: {fileID: 721830861}
   - component: {fileID: 721830860}
   - component: {fileID: 721830859}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -1022,7 +1029,7 @@ Transform:
   m_GameObject: {fileID: 721830858}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -43.01}
+  m_LocalPosition: {x: 15.55, y: 0, z: -6.14}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -1446,6 +1453,18 @@ MonoBehaviour:
   messagePosition: {x: 0.5, y: 0.5}
   openSound: {fileID: 8300000, guid: 7eae614257716554b8cb61086e92a4ae, type: 3}
   closeSound: {fileID: 8300000, guid: 41e1c0e1dd30a5144a430a2961d12824, type: 3}
+--- !u!114 &964519625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 964519615}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93b7676c6d8201e448e4013ff0921ecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoorNavMesh
 --- !u!1 &1026369859 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 304b3cb36400c9943a2de18f12a58be2, type: 3}
@@ -1510,10 +1529,17 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   player: {fileID: 0}
   eyePoint: {fileID: 1722278304}
+  drawVisionDebug: 1
   patrolRadius: 20
+  patrolReachDistance: 0.5
+  lostChaseDuration: 15
   investigateRadius: 3
   investigateDuration: 10
+  investigateReachDistance: 0.6
   doorDetectDistance: 2
+  idleBeforeAttackTime: 0.5
+  doorHitDelay: 0.3
+  attackEndDelay: 1
 --- !u!136 &1026369864
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1549,7 +1575,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f54740c608f9dbb4f80f02682e1236c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TheMimicController
-  data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
 --- !u!1 &1064768098
 GameObject:
   m_ObjectHideFlags: 0
@@ -1682,10 +1707,17 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   player: {fileID: 0}
   eyePoint: {fileID: 1722278304}
+  drawVisionDebug: 1
   patrolRadius: 20
+  patrolReachDistance: 0.5
+  lostChaseDuration: 15
   investigateRadius: 3
   investigateDuration: 10
+  investigateReachDistance: 0.6
   doorDetectDistance: 2
+  idleBeforeAttackTime: 0.5
+  doorHitDelay: 0.3
+  attackEndDelay: 1
 --- !u!114 &1305420019
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1698,7 +1730,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f54740c608f9dbb4f80f02682e1236c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TheMimicController
-  data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
 --- !u!195 &1305420020
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1810,7 +1841,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1.1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1639768561
 MeshRenderer:
@@ -1878,7 +1909,7 @@ Transform:
   m_GameObject: {fileID: 1639768559}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 24, y: 5, z: -2.58}
+  m_LocalPosition: {x: 23.54, y: 5, z: -2.58}
   m_LocalScale: {x: 45, y: 10, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2321,7 +2352,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1.07, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1907618086
 MeshRenderer:
@@ -2389,7 +2420,7 @@ Transform:
   m_GameObject: {fileID: 1907618084}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -29.13, y: 5, z: -2.58}
+  m_LocalPosition: {x: -28.83, y: 5, z: -2.58}
   m_LocalScale: {x: 45, y: 10, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2441,11 +2472,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4455110078360146340, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Layer
-      value: 26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5446905073405907234, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Layer
-      value: 26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5601614287119979559, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Name
@@ -2453,15 +2484,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5601614287119979559, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Layer
-      value: 26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8249979118052008017, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Layer
-      value: 26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8870640112263259670, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Layer
-      value: 26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9081302130938164030, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       propertyPath: m_Size.z
@@ -2531,6 +2562,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5601614287119979559, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2049144124}
+    - targetCorrespondingSourceObject: {fileID: 5601614287119979559, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2049144127}
     - targetCorrespondingSourceObject: {fileID: 2857418358850030583, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 964519619}
@@ -2540,6 +2574,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2857418358850030583, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 964519617}
+    - targetCorrespondingSourceObject: {fileID: 2857418358850030583, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 964519625}
   m_SourcePrefab: {fileID: 100100000, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
 --- !u!1001 &1978336020
 PrefabInstance:
@@ -3039,6 +3076,18 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 0
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &2049144127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049144121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93b7676c6d8201e448e4013ff0921ecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoorNavMesh
 --- !u!1 &2097383134
 GameObject:
   m_ObjectHideFlags: 0

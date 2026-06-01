@@ -3,15 +3,16 @@ using System.Collections;
 
 public class MonsterEnemy : EnemyBase
 {
-    [SerializeField]
-    float doorDetectDistance = 2f;
+    [Header("Door Attack")]
+    [SerializeField] private float doorDetectDistance = 2f;
+    [SerializeField] private float idleBeforeAttackTime = 0.5f;
+    [SerializeField] private float doorHitDelay = 0.3f;
+    [SerializeField] private float attackEndDelay = 1f;
 
-    bool attacking;
+    private bool attacking;
 
-    protected override void Update()
+    protected override void HandleChaseSpecial()
     {
-        base.Update();
-
         if (currentState != State.Chase)
             return;
 
@@ -21,20 +22,21 @@ public class MonsterEnemy : EnemyBase
         CheckDoor();
     }
 
-    void CheckDoor()
+    private void CheckDoor()
     {
+        if (eyePoint == null)
+            return;
+
         if (Physics.Raycast(
             eyePoint.position,
             transform.forward,
             out RaycastHit hit,
             doorDetectDistance))
         {
-            if (hit.collider.gameObject.layer !=
-                LayerMask.NameToLayer("Door"))
+            if (hit.collider.gameObject.layer != LayerMask.NameToLayer("Door"))
                 return;
 
-            DoorClick click =
-                hit.collider.GetComponentInParent<DoorClick>();
+            DoorClick click = hit.collider.GetComponentInParent<DoorClick>();
 
             if (click == null)
                 return;
@@ -42,58 +44,47 @@ public class MonsterEnemy : EnemyBase
             if (click.IsOpen())
                 return;
 
-            DoorBrokenTest door =
-                hit.collider.GetComponentInParent<DoorBrokenTest>();
+            DoorBrokenTest door = hit.collider.GetComponentInParent<DoorBrokenTest>();
 
             if (door == null)
                 return;
 
-            StartCoroutine(
-                AttackDoorRoutine(
-                    door));
+            StartCoroutine(AttackDoorRoutine(door));
         }
     }
 
-    IEnumerator AttackDoorRoutine(
-        DoorBrokenTest door)
+    private IEnumerator AttackDoorRoutine(DoorBrokenTest door)
     {
         attacking = true;
-
         isBusy = true;
+        lockAnimator = true;
 
         agent.isStopped = true;
+        agent.ResetPath();
 
-        anim.SetInteger(
-            "State",
-            0);
+        anim.SetInteger(AnimState, 0);
 
-        Vector3 lookPos =
-            door.transform.position;
+        Vector3 lookPos = door.transform.position;
+        lookPos.y = transform.position.y;
+        transform.LookAt(lookPos);
 
-        lookPos.y =
-            transform.position.y;
+        yield return new WaitForSeconds(idleBeforeAttackTime);
 
-        transform.LookAt(
-            lookPos);
+        anim.SetTrigger(AnimAttack);
 
-        yield return new WaitForSeconds(
-            0.5f);
+        yield return new WaitForSeconds(doorHitDelay);
 
-        anim.SetTrigger(
-            "Attack");
+        if (door != null)
+            door.HitDoor();
 
-        yield return new WaitForSeconds(
-            0.3f);
+        yield return new WaitForSeconds(attackEndDelay);
 
-        door.HitDoor();
-
-        yield return new WaitForSeconds(
-            1f);
+        anim.SetInteger(AnimState, 2);
 
         agent.isStopped = false;
 
+        lockAnimator = false;
         isBusy = false;
-
         attacking = false;
     }
 }

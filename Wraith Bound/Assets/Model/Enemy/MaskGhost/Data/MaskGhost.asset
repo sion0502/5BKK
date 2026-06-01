@@ -16,7 +16,7 @@ MonoBehaviour:
   monsterType: 0
   description: MaskGhost
   hp: 2000
-  moveSpeed: 3.5
+  moveSpeed: 4.5
   detectRange: 40
   viewAngle: 190
   checkInterval: 0
@@ -25,6 +25,6 @@ MonoBehaviour:
     m_Bits: 134217729
   playerLayer:
     serializedVersion: 2
-    m_Bits: 768
-  targetLostTIme: 0
-  hearingRange: 0
+    m_Bits: 256
+  targetLostTIme: 30
+  hearingRange: 40
