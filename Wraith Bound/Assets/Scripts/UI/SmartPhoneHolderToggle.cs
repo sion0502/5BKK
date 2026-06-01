@@ -97,6 +97,21 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         return item != null && item == smartPhoneItem;
     }
 
+    /// <summary>
+    /// 현재 선택 슬롯이 스마트폰이 아닐 때 즉시 UI를 숨깁니다.
+    /// UpdateHeldItem에서 슬롯 교체 직후 호출하여 Update() 폴링 타이밍 문제를 방지합니다.
+    /// </summary>
+    public void HideIfPhoneNotSelected()
+    {
+        Items current = _inventory != null ? _inventory.GetSelectedItem() : null;
+        bool phoneIsCurrentItem = IsSmartPhoneItem(current);
+
+        if (!phoneIsCurrentItem && _holder != null && _holder.activeSelf)
+        {
+            HideImmediate();
+        }
+    }
+
     bool HasSmartPhoneInInventory()
     {
         if (_inventory == null || smartPhoneItem == null)

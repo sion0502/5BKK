@@ -482,6 +482,12 @@ public class InventoryManager : MonoBehaviour
 
     public void UpdateHeldItem()
     {
+        // 현재 슬롯이 폰이 아니면 폰 UI를 즉시 강제 숨김 (Update() 타이밍 문제 방지)
+        if (smartPhoneToggle != null)
+        {
+            smartPhoneToggle.HideIfPhoneNotSelected();
+        }
+
         if (currentHeldItem != null)
         {
             Destroy(currentHeldItem);
