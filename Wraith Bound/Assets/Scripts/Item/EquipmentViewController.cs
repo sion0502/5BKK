@@ -8,6 +8,9 @@ public class EquipmentViewController : MonoBehaviour
     [SerializeField] private Transform itemViewAnchor;
     [SerializeField] private string viewLayerName = "PickupItem";
 
+    /// <summary>손에 든 아이템 렌더 카메라. 캠코더 등에서 사용 중 Orthographic Size 조절용.</summary>
+    public Camera ItemViewCamera => itemViewCamera;
+
     private readonly Dictionary<Equipment, GameObject> spawnedViews = new();
     private InventoryManager inventory;
     private Equipment currentEquipment;

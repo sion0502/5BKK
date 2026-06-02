@@ -75,6 +75,18 @@ public class SelectedItemUseController : MonoBehaviour
             return;
         }
 
+        // 캠코더: 손에 든 뷰의 CamcorderController가 있으면 펼치기/접기 토글 (Use()의 파괴 로직보다 먼저 가로챔)
+        if (equipmentView != null
+            && equipmentView.TryGetCurrentView(equipment, out GameObject camcorderView))
+        {
+            CamcorderController camcorder = camcorderView.GetComponentInChildren<CamcorderController>(true);
+            if (camcorder != null)
+            {
+                camcorder.ToggleRaise();
+                return;
+            }
+        }
+
         if (equipment.useMode == EquipmentUseMode.PassiveOnSelect)
         {
             return;

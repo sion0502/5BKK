@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccb272ddc3c21b546acf026c7b4e0eac, type: 3}
+  m_Name: Camcorder
+  m_EditorClassIdentifier: Assembly-CSharp::Equipment
+  id: 2003
+  itemName: "\uCEA0\uCF54\uB354"
+  type: 1
+  description: "\uC57C\uAC04\uD22C\uC2DC \uAE30\uB2A5\uC774 \uC788\uB294 \uCEA0\uCF54\uB354.\n\uC88C\uD074\uB9AD\uC73C\uB85C
+    \uBDF0\uD30C\uC778\uB354\uB97C \uD3BC\uCCD0 \uC5B4\uB460 \uC18D\uC744 \uBCFC
+    \uC218 \uC788\uB2E4."
+  icon: {fileID: 0}
+  maxCount: 1
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 7870485443953574502, guid: 7d9f42ad3dd9d8d4faeb2a65ae3d0f77, type: 3}
+  showInHand: 1
+  spawnedInstance: {fileID: 0}
+  useMode: 1
+  maxEnergy: 100
+  consumeRate: 0.2
+  range: 18
