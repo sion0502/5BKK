@@ -160,6 +160,8 @@ GameObject:
   - component: {fileID: 1773779409026077556}
   - component: {fileID: 431186962897270625}
   - component: {fileID: 191687328447784058}
+  - component: {fileID: 4994305023141925768}
+  - component: {fileID: 2709003052153144933}
   m_Layer: 0
   m_Name: HH_Cabinet_Door_02
   m_TagString: Untagged
@@ -288,6 +290,37 @@ MonoBehaviour:
   messagePosition: {x: 0.5, y: 0.5}
   openSound: {fileID: 0}
   closeSound: {fileID: 0}
+--- !u!114 &4994305023141925768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4308619567037092088}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Outline
+  outlineMode: 1
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 1
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []
+--- !u!114 &2709003052153144933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4308619567037092088}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ff59bd0fa76f3419e073815ffe3cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpotOutline
+  maxDistance: 2
 --- !u!1 &4734296056425570385
 GameObject:
   m_ObjectHideFlags: 0
@@ -361,6 +394,8 @@ GameObject:
   - component: {fileID: 1477354949958054801}
   - component: {fileID: 6371366072740235975}
   - component: {fileID: 956385372244492689}
+  - component: {fileID: 7051946435029628013}
+  - component: {fileID: 7468377977820295449}
   m_Layer: 0
   m_Name: HH_Cabinet_Door_01
   m_TagString: Untagged
@@ -489,6 +524,37 @@ MonoBehaviour:
   messagePosition: {x: 0.5, y: 0.5}
   openSound: {fileID: 0}
   closeSound: {fileID: 0}
+--- !u!114 &7051946435029628013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5175526563449787511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Outline
+  outlineMode: 1
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 1
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []
+--- !u!114 &7468377977820295449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5175526563449787511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ff59bd0fa76f3419e073815ffe3cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpotOutline
+  maxDistance: 2
 --- !u!1 &5485333676795282639
 GameObject:
   m_ObjectHideFlags: 0
