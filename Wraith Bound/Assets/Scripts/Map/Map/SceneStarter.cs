@@ -26,6 +26,8 @@ public class SceneStarter : MonoBehaviour
 
     IEnumerator StartSequence()
     {
+        fadeImage = ScreenFader.Prepare(fadeImage);
+
         // 1. 컴포넌트 참조 및 비활성화
         PlayerController pc = player.GetComponent<PlayerController>();
         CharacterController cc = player.GetComponent<CharacterController>();
