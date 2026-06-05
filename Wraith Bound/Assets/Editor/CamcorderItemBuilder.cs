@@ -10,10 +10,10 @@ using UnityEngine;
 public static class CamcorderItemBuilder
 {
     private const string ModelPrefabPath =
-        "Assets/Model/Item/Camcorder Video Camera/Prefabs/Camcorder_Black Dirty.prefab";
+        "Assets/Prefab/Item/Source/Camcorder/Camcorder_Black Dirty.prefab";
 
     private const string UiResourceDir =
-        "Assets/Model/Item/Camcorder Video Camera/Demo/Demo_Scenes/Render_Texture_Example/Display_UI_Resources";
+        "Assets/Sprites/Item/Camcorder/Viewfinder";
 
     private const string ViewPrefabPath = "Assets/Prefab/Item/View_Item/Equip/View_Camcorder.prefab";
     private const string WorldPrefabPath = "Assets/Prefab/Item/World_Item/Equip/World_Camcorder.prefab";
@@ -63,13 +63,23 @@ public static class CamcorderItemBuilder
         // private 직렬화 필드 연결
         Sprite frame = LoadSprite("Center_Frame.png");
         Sprite recDot = LoadSprite("Recording_Dot.png");
-        Sprite battery = LoadSprite("Battery_4.png");
+        Sprite batteryEmpty = LoadSprite("Battery_Empty.png");
+        Sprite[] batteryLevels =
+        {
+            LoadSprite("Battery_1.png"),
+            LoadSprite("Battery_2.png"),
+            LoadSprite("Battery_3.png"),
+            LoadSprite("Battery_4.png")
+        };
 
         SerializedObject so = new SerializedObject(controller);
         SetObjectRef(so, "raisePivot", raisePivot.transform);
         SetObjectRef(so, "frameSprite", frame);
         SetObjectRef(so, "recordingDotSprite", recDot);
-        SetObjectRef(so, "batterySprite", battery);
+        SetObjectRef(so, "batteryEmptySprite", batteryEmpty);
+        so.FindProperty("batteryLevelSprites").arraySize = batteryLevels.Length;
+        for (int i = 0; i < batteryLevels.Length; i++)
+            so.FindProperty("batteryLevelSprites").GetArrayElementAtIndex(i).objectReferenceValue = batteryLevels[i];
         so.ApplyModifiedPropertiesWithoutUndo();
 
         GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, ViewPrefabPath);
@@ -86,7 +96,7 @@ public static class CamcorderItemBuilder
             equipment = ScriptableObject.CreateInstance<Equipment>();
         }
 
-        equipment.id = 2003;
+        equipment.id = 2004;
         equipment.itemName = "캠코더";
         equipment.type = ItemType.Equip;
         equipment.description = "야간투시 기능이 있는 캠코더.\n좌클릭으로 뷰파인더를 펼쳐 어둠 속을 볼 수 있다.";
@@ -98,6 +108,7 @@ public static class CamcorderItemBuilder
         equipment.itemPrefab = viewPrefab;
         equipment.maxEnergy = 100f;
         equipment.consumeRate = 0.2f;
+        equipment.rechargeRate = 0.1f;
         equipment.range = 18f;
 
         if (isNew)
@@ -133,6 +144,7 @@ public static class CamcorderItemBuilder
 
     private static void EnsureFolders()
     {
+        EnsureFolder("Assets/Prefab/Item/Source/Camcorder");
         EnsureFolder("Assets/Prefab/Item/View_Item/Equip");
         EnsureFolder("Assets/Prefab/Item/World_Item/Equip");
         EnsureFolder("Assets/Resources/ItemDatas/Equipment");

@@ -31,7 +31,7 @@ public class EquipmentViewController : MonoBehaviour
             return;
         }
 
-        if (inventory.GetSelectedItem() != currentEquipment)
+        if (inventory.GetActiveHeldEquipment() != currentEquipment)
         {
             HideCurrent();
         }

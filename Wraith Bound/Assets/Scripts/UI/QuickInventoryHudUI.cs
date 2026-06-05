@@ -25,11 +25,13 @@ public class QuickInventoryHudUI : MonoBehaviour
     [SerializeField] private float slotSize = 100f;
     [SerializeField] private float passiveSlotSize = 48f;
     [SerializeField] private float slotSpacing = 8f;
+    [SerializeField] private float camcorderOffsetY = 14f;
     [SerializeField] private float passiveOffsetY = 14f;
     [SerializeField] private float labelPadding = 6f;
 
     [Header("Style")]
     [SerializeField] private Color borderColor = Color.white;
+    [SerializeField] private Color selectedSlotBackgroundColor = new Color(0.35f, 0.38f, 0.2f, 0.75f);
     [SerializeField] private Color backgroundColor = new Color(0f, 0f, 0f, 0.45f);
     [SerializeField] private float borderThickness = 2f;
     [SerializeField] private int slotNumberFontSize = 16;
@@ -47,6 +49,7 @@ public class QuickInventoryHudUI : MonoBehaviour
 
     private RectTransform rootRect;
     private RectTransform slotsContainer;
+    private SlotView camcorderView;
     private SlotView passiveView;
     private readonly List<SlotView> slotViews = new List<SlotView>();
     private int lastSelectedIndex = int.MinValue;
@@ -136,7 +139,8 @@ public class QuickInventoryHudUI : MonoBehaviour
         rootRect.anchorMax = new Vector2(0f, 1f);
         rootRect.pivot = new Vector2(0f, 1f);
         rootRect.anchoredPosition = rootAnchoredPosition;
-        rootRect.sizeDelta = new Vector2(slotSize, slotSize + passiveOffsetY + passiveSlotSize);
+        float rootHeight = slotSize + camcorderOffsetY + slotSize + passiveOffsetY + passiveSlotSize;
+        rootRect.sizeDelta = new Vector2(slotSize, rootHeight);
 
         // 슬롯 컨테이너 (가로 일렬 배치, 슬롯 전환 흔들기 대상)
         GameObject containerGo = new GameObject("SlotsContainer", typeof(RectTransform));
@@ -148,12 +152,30 @@ public class QuickInventoryHudUI : MonoBehaviour
         slotsContainer.anchoredPosition = Vector2.zero;
         slotsContainer.sizeDelta = new Vector2(slotSize, slotSize);
 
-        // 패시브 슬롯 (슬롯 0 좌측 하단)
+        // 캠코더 전용 슬롯 (퀵슬롯과 패시브 사이, 퀵슬롯과 동일 크기)
+        camcorderView = CreateSlot(rootPanel.transform, "CamcorderSlot", slotSize, withLabels: false);
+        camcorderView.rect.anchorMin = new Vector2(0f, 1f);
+        camcorderView.rect.anchorMax = new Vector2(0f, 1f);
+        camcorderView.rect.pivot = new Vector2(0f, 1f);
+        camcorderView.rect.anchoredPosition = new Vector2(0f, -(slotSize + camcorderOffsetY));
+
+        camcorderView.slotNumberLabel = CreateLabel(camcorderView.root.transform, "KeyLabel",
+            anchorMin: new Vector2(0f, 1f),
+            anchorMax: new Vector2(0f, 1f),
+            pivot: new Vector2(0f, 1f),
+            anchoredPos: new Vector2(labelPadding, -labelPadding),
+            width: slotSize * 0.35f,
+            height: slotNumberFontSize + 4f,
+            fontSize: slotNumberFontSize,
+            alignment: TextAlignmentOptions.TopLeft);
+        camcorderView.slotNumberLabel.text = "F";
+
+        // 패시브 슬롯 (캠코더 슬롯 아래)
         passiveView = CreateSlot(rootPanel.transform, "PassiveSlot", passiveSlotSize, withLabels: false);
         passiveView.rect.anchorMin = new Vector2(0f, 1f);
         passiveView.rect.anchorMax = new Vector2(0f, 1f);
         passiveView.rect.pivot = new Vector2(0f, 1f);
-        passiveView.rect.anchoredPosition = new Vector2(0f, -(slotSize + passiveOffsetY));
+        passiveView.rect.anchoredPosition = new Vector2(0f, -(slotSize + camcorderOffsetY + slotSize + passiveOffsetY));
     }
 
     private void EnsureSlotPool(int capacity)
@@ -400,6 +422,7 @@ public class QuickInventoryHudUI : MonoBehaviour
             {
                 ApplyToView(slotViews[i], -1, null);
             }
+            ApplyCamcorderSlot();
             ApplyPassive(null);
             return;
         }
@@ -418,7 +441,32 @@ public class QuickInventoryHudUI : MonoBehaviour
             ApplyToView(slotViews[i], logicalIndex, GetItemAtSlotIndex(logicalIndex));
         }
 
+        ApplyCamcorderSlot();
         ApplyPassive(inventory.GetPassiveItem());
+    }
+
+    private void ApplyCamcorderSlot()
+    {
+        if (camcorderView == null || inventory == null)
+        {
+            return;
+        }
+
+        Equipment camcorder = inventory.GetCamcorder();
+        bool hasCamcorder = inventory.HasCamcorder;
+        bool selected = inventory.IsCamcorderHeld();
+
+        if (camcorderView.icon != null)
+        {
+            bool hasIcon = hasCamcorder && camcorder != null && camcorder.icon != null;
+            camcorderView.icon.sprite = hasIcon ? camcorder.icon : null;
+            camcorderView.icon.enabled = hasIcon;
+        }
+
+        if (camcorderView.background != null)
+        {
+            camcorderView.background.color = selected ? selectedSlotBackgroundColor : backgroundColor;
+        }
     }
 
     private Items GetItemAtSlotIndex(int slotIndex)

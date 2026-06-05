@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccb272ddc3c21b546acf026c7b4e0eac, type: 3}
   m_Name: Camcorder
   m_EditorClassIdentifier: Assembly-CSharp::Equipment
-  id: 2003
+  id: 2004
   itemName: "\uCEA0\uCF54\uB354"
   type: 1
   description: "\uC57C\uAC04\uD22C\uC2DC \uAE30\uB2A5\uC774 \uC788\uB294 \uCEA0\uCF54\uB354.\n\uC88C\uD074\uB9AD\uC73C\uB85C
@@ -27,5 +27,6 @@ MonoBehaviour:
   spawnedInstance: {fileID: 0}
   useMode: 1
   maxEnergy: 100
-  consumeRate: 0.2
+  consumeRate: 4
+  rechargeRate: 2
   range: 18

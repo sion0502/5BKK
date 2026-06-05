@@ -11,6 +11,7 @@ public class SelectedItemUseController : MonoBehaviour
     private SmartPhoneHolderToggle smartPhoneToggle;
     private EquipmentViewController equipmentView;
     private FlashlightEnergyController flashlightEnergy;
+    private CamcorderEnergyController camcorderEnergy;
     private ActiveItem holdingActiveItem;
     private float holdTimer;
 
@@ -25,6 +26,12 @@ public class SelectedItemUseController : MonoBehaviour
         if (flashlightEnergy == null)
         {
             flashlightEnergy = gameObject.AddComponent<FlashlightEnergyController>();
+        }
+
+        camcorderEnergy = GetComponent<CamcorderEnergyController>();
+        if (camcorderEnergy == null)
+        {
+            camcorderEnergy = gameObject.AddComponent<CamcorderEnergyController>();
         }
     }
 
@@ -58,8 +65,37 @@ public class SelectedItemUseController : MonoBehaviour
             return;
         }
 
+        if (inventory != null && inventory.IsCamcorderHeld() && inventory.HasCamcorder)
+        {
+            Equipment camcorder = inventory.GetCamcorder();
+            if (equipmentView != null
+                && equipmentView.TryGetCurrentView(camcorder, out GameObject camcorderView))
+            {
+                CamcorderController camcorderController =
+                    camcorderView.GetComponentInChildren<CamcorderController>(true);
+                if (camcorderController != null)
+                {
+                    if (!camcorderController.IsViewfinderActive
+                        && camcorderEnergy != null
+                        && !camcorderEnergy.CanOpenViewfinder)
+                    {
+                        Debug.LogWarning("[Camcorder] 배터리가 방전되어 뷰파인더를 켤 수 없습니다.");
+                        return;
+                    }
+
+                    camcorderController.ToggleRaise();
+                    return;
+                }
+            }
+        }
+
         Items selectedItem = inventory != null ? inventory.GetSelectedItem() : null;
         if (selectedItem is not Equipment equipment)
+        {
+            return;
+        }
+
+        if (inventory != null && inventory.IsCamcorderItem(equipment))
         {
             return;
         }
@@ -73,18 +109,6 @@ public class SelectedItemUseController : MonoBehaviour
 
             smartPhoneToggle.ToggleSelectedSmartPhone();
             return;
-        }
-
-        // 캠코더: 손에 든 뷰의 CamcorderController가 있으면 펼치기/접기 토글 (Use()의 파괴 로직보다 먼저 가로챔)
-        if (equipmentView != null
-            && equipmentView.TryGetCurrentView(equipment, out GameObject camcorderView))
-        {
-            CamcorderController camcorder = camcorderView.GetComponentInChildren<CamcorderController>(true);
-            if (camcorder != null)
-            {
-                camcorder.ToggleRaise();
-                return;
-            }
         }
 
         if (equipment.useMode == EquipmentUseMode.PassiveOnSelect)

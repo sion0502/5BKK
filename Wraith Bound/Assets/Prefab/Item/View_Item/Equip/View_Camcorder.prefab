@@ -24,14 +24,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 537094329126964984}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0.06089989, y: -0.06962635, z: -0.004258535, w: 0.9957034}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6220623396319369469}
   m_Father: {fileID: 7653168108913491658}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -7, y: -8, z: 0}
 --- !u!1 &7870485443953574502
 GameObject:
   m_ObjectHideFlags: 0
@@ -82,6 +82,7 @@ MonoBehaviour:
   displayPanelName: Camcorder_Display
   unfoldEulerOffset: {x: 0, y: 90, z: 0}
   unfoldDuration: 0.4
+  useSerializedLoweredPose: 0
   loweredLocalPosition: {x: 0, y: -0.05, z: 0}
   loweredLocalEuler: {x: 0, y: 0, z: 0}
   raisedLocalPosition: {x: 0, y: 0, z: -0.18}
@@ -93,6 +94,13 @@ MonoBehaviour:
   anchorEyeLocalEuler: {x: -3, y: 0, z: 0}
   animateItemViewOrtho: 1
   itemViewEyeOrthographicSize: 0.062
+  preventMeshCameraPenetration: 1
+  meshClearanceBeyondNear: 0.04
+  itemViewCameraPullbackLocalZ: 0.06
+  useSoftRaisePivotDuringTransition: 1
+  transitionRaisedLocalPositionZ: -0.06
+  staggerOrthoDuringRaise: 1
+  orthoBlendStart: 0.45
   showDuration: 0.25
   screenLocalPosition: {x: 0.0124, y: 0.0021, z: -0.0759}
   screenLocalEuler: {x: 0, y: -90, z: 0}
@@ -102,8 +110,6 @@ MonoBehaviour:
   displayActiveLocalScale: {x: 1.968674, y: 1.968674, z: 1.968674}
   reduceDisplayBezelReflection: 1
   displayBezelSmoothness: 0.08
-  lensLocalPosition: {x: 0.0064, y: 0.0102, z: 0.0925}
-  lensLocalEuler: {x: 0, y: 0, z: 0}
   renderTextureWidth: 1024
   renderTextureHeight: 768
   defaultFov: 55
@@ -123,7 +129,12 @@ MonoBehaviour:
   irSpotAngle: 75
   frameSprite: {fileID: 21300000, guid: d3a627781aa82a64cbf85a450b797257, type: 3}
   recordingDotSprite: {fileID: 21300000, guid: 4d4dd9b73ae059546aa75afa9af690ad, type: 3}
-  batterySprite: {fileID: 21300000, guid: b6167ea54c53d764681909ec72adecb2, type: 3}
+  batteryEmptySprite: {fileID: 21300000, guid: 39c46cc9d6135e844b888eb5ef6ce7b0, type: 3}
+  batteryLevelSprites:
+  - {fileID: 21300000, guid: 9eebf5457b63bc2429b4c37808a8617c, type: 3}
+  - {fileID: 21300000, guid: 3987bd18aea73cf47911285c58c6b732, type: 3}
+  - {fileID: 21300000, guid: b1c12b8866170184dae0a492908f2b61, type: 3}
+  - {fileID: 21300000, guid: b6167ea54c53d764681909ec72adecb2, type: 3}
 --- !u!1001 &8237537056588940775
 PrefabInstance:
   m_ObjectHideFlags: 0

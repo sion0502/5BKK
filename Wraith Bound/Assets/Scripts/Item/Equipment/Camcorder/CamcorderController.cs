@@ -11,6 +11,8 @@ using UnityEngine.UI;
 ///   • RT 카메라: 플레이어 눈(Main Camera) 시야와 동기화 (+ NightVision Volume / IR)
 ///   • LCD 쿼드: Display 자식. Unlit + RT. HUD는 쿼드 위 World Space(ItemViewCamera)
 ///   • 들어올리기: ItemViewAnchor + RaisePivot + Ortho로 통째 이동·확대 (Display 경첩은 회전만)
+///   • RaisePivot 대기 자세: 프리팹 Transform 캐시(기본). 종료/비활성 후에도 인스펙터 튜닝 유지.
+///   • 들어올리기 전환: 카메라 pullback + bounds keep-out + soft RaisePivot Z (관통 클리핑 방지).
 ///   • 전환 애니: 통째 이동. 사용 중(피드 ON)에만 본체 숨김 + Display eye 레이아웃 스냅
 /// </summary>
 public class CamcorderController : MonoBehaviour
@@ -28,7 +30,9 @@ public class CamcorderController : MonoBehaviour
     [SerializeField] private float unfoldDuration = 0.4f;
 
     [Header("들어올리기 — RaisePivot (미세 자세)")]
-    [Tooltip("내린 상태(대기) RaisePivot 로컬 오프셋")]
+    [Tooltip("켜면 아래 Lowered 값을 대기 자세로 씁니다. 끄면 Start 시 RaisePivot Transform(프리팹)을 대기 자세로 캐시합니다.")]
+    [SerializeField] private bool useSerializedLoweredPose;
+    [Tooltip("useSerializedLoweredPose일 때만: 내린(대기) RaisePivot 로컬 오프셋")]
     [SerializeField] private Vector3 loweredLocalPosition = new Vector3(0f, -0.04f, 0.02f);
     [SerializeField] private Vector3 loweredLocalEuler = Vector3.zero;
     [Tooltip("들어올린 상태 RaisePivot 로컬 오프셋")]
@@ -50,6 +54,22 @@ public class CamcorderController : MonoBehaviour
     [SerializeField] private bool animateItemViewOrtho = true;
     [Tooltip("뷰파인더가 화면에 가득 찰 때 Orthographic Size (작을수록 큼)")]
     [SerializeField] private float itemViewEyeOrthographicSize = 0.062f;
+
+    [Header("들어올리기 — ItemView 카메라 관통(클리핑) 방지")]
+    [Tooltip("모델 bounds가 ItemViewCamera near 앞으로 들어오면 앵커를 뒤로 밀어 관통을 막습니다.")]
+    [SerializeField] private bool preventMeshCameraPenetration = true;
+    [Tooltip("카메라 local Z 기준, near + 이 여유보다 앞에 bounds가 오도록")]
+    [SerializeField] private float meshClearanceBeyondNear = 0.04f;
+    [Tooltip("들어올리기/내리기 중 ItemViewCamera를 local -Z로 뒤로 빼는 양")]
+    [SerializeField] private float itemViewCameraPullbackLocalZ = 0.06f;
+    [Tooltip("전환 중 RaisePivot Z는 완화, 애니 끝에만 Raised Local Position 적용")]
+    [SerializeField] private bool useSoftRaisePivotDuringTransition = true;
+    [Tooltip("전환 중 RaisePivot 목표 Z (최종 raised Z보다 카메라에서 덜 당김)")]
+    [SerializeField] private float transitionRaisedLocalPositionZ = -0.06f;
+    [Tooltip("Ortho 확대/축소를 raise 애니 후반에만 적용")]
+    [SerializeField] private bool staggerOrthoDuringRaise = true;
+    [Range(0f, 0.95f)]
+    [SerializeField] private float orthoBlendStart = 0.45f;
 
     [Header("화면 켜짐 페이드")]
     [SerializeField] private float showDuration = 0.25f;
@@ -107,7 +127,8 @@ public class CamcorderController : MonoBehaviour
     [Header("뷰파인더 UI 스프라이트 (선택)")]
     [SerializeField] private Sprite frameSprite;        // Center_Frame / Full_Frame
     [SerializeField] private Sprite recordingDotSprite; // Recording_Dot
-    [SerializeField] private Sprite batterySprite;      // Battery_4 등
+    [SerializeField] private Sprite batteryEmptySprite;
+    [SerializeField] private Sprite[] batteryLevelSprites = new Sprite[4]; // Battery_1 ~ 4
 
     private Camera eyeCamera;
     private Camera lensCamera;
@@ -127,6 +148,8 @@ public class CamcorderController : MonoBehaviour
     private MaterialPropertyBlock displayBezelPropertyBlock;
     private Canvas viewfinderCanvas;
     private Image recDot;
+    private Image batteryImage;
+    private CamcorderEnergyController camcorderEnergy;
 
     private Quaternion displayClosedRotation;
     private Quaternion displayOpenRotation;
@@ -135,13 +158,20 @@ public class CamcorderController : MonoBehaviour
     private Vector3 anchorRestLocalPosition;
     private Quaternion anchorRestLocalRotation;
     private Camera itemViewCamera;
+    private Vector3 itemViewCameraRestLocalPosition;
     private float itemViewRestOrthographicSize;
     private HeldItemSway heldItemSway;
     private Renderer[] bodyRenderers;
     private Renderer[] displayBackgroundRenderers;
 
+    private Vector3 loweredRestLocalPosition;
+    private Quaternion loweredRestLocalRotation = Quaternion.identity;
+
     private bool isHeldView;
     private bool active;
+
+    /// <summary>뷰파인더·야간투시가 켜진 상태(배터리 소모 중).</summary>
+    public bool IsViewfinderActive => isHeldView && active;
     private float targetFov;
     private float screenLevel; // 0 = 꺼짐(검정), 1 = 완전 표시
     private Coroutine sequenceRoutine;
@@ -162,6 +192,7 @@ public class CamcorderController : MonoBehaviour
         }
 
         ResolveReferences();
+        CacheRaisePivotRest();
         CacheDisplayRest();
         CacheItemViewAnchor();
         CacheItemViewCamera();
@@ -171,6 +202,7 @@ public class CamcorderController : MonoBehaviour
         BuildScreenQuad();
         CacheBodyRenderers();
         BuildViewfinderCanvas();
+        ResolveCamcorderEnergy();
         Camera.onPreCull += OnCameraPreCull;
         ApplyImmediate(false);
     }
@@ -211,17 +243,28 @@ public class CamcorderController : MonoBehaviour
         if (nightVisionProfile != null) Destroy(nightVisionProfile);
         if (screenMaterial != null) Destroy(screenMaterial);
         RestoreItemViewOrthographicSize();
+        RestoreItemViewCameraLocalPosition();
     }
 
     /// <summary>좌클릭 시 SelectedItemUseController가 호출. 펼치기/접기 토글.</summary>
     public void ToggleRaise()
     {
         if (!isHeldView) return;
+
+        if (!active && !CanOpenViewfinder())
+        {
+            Debug.LogWarning("[Camcorder] 배터리가 방전되어 뷰파인더를 켤 수 없습니다.");
+            return;
+        }
+
         SetActive(!active);
     }
 
     public void SetActive(bool value)
     {
+        if (value && !CanOpenViewfinder())
+            return;
+
         if (active == value) return;
         active = value;
 
@@ -241,8 +284,11 @@ public class CamcorderController : MonoBehaviour
             heldItemSway.enabled = true;
 
         RestoreItemViewOrthographicSize();
+        RestoreItemViewCameraLocalPosition();
         RestoreDisplayRest();
         SetBodyMeshesVisible(true);
+        if (!active)
+            SetViewfinderFeedActive(false);
     }
 
     private void OnCameraPreCull(Camera cam)
@@ -277,6 +323,8 @@ public class CamcorderController : MonoBehaviour
             c.a = a;
             recDot.color = c;
         }
+
+        RefreshBatteryHud();
     }
 
     private IEnumerator ActivateSequence()
@@ -293,14 +341,11 @@ public class CamcorderController : MonoBehaviour
 
         targetFov = eyeCamera != null ? eyeCamera.fieldOfView : defaultFov;
         if (lensCamera != null)
-        {
             lensCamera.fieldOfView = targetFov;
-            lensCamera.enabled = true;
+
+        SetViewfinderFeedActive(true);
+        if (lensCamera != null && eyeCamera != null)
             SyncLensCameraToEye();
-        }
-        if (irSpot != null) irSpot.enabled = true;
-        if (screenRenderer != null) screenRenderer.enabled = true;
-        SetViewfinderHudVisible(true);
 
         yield return AnimateScreen(0f, 1f, showDuration);
 
@@ -309,15 +354,11 @@ public class CamcorderController : MonoBehaviour
 
     private IEnumerator DeactivateSequence()
     {
+        // RT·HUD·IR 먼저 OFF — 내리기/접기 중 LCD에 피드가 붙어 움직이지 않게
+        SetViewfinderFeedActive(false);
+
         SetBodyMeshesVisible(true);
         RestoreDisplayRest();
-
-        yield return AnimateScreen(screenLevel, 0f, showDuration);
-
-        if (lensCamera != null) lensCamera.enabled = false;
-        if (irSpot != null) irSpot.enabled = false;
-        if (screenRenderer != null) screenRenderer.enabled = false;
-        SetViewfinderHudVisible(false);
 
         yield return AnimateBringToEye(false);
 
@@ -338,21 +379,24 @@ public class CamcorderController : MonoBehaviour
             t += Time.deltaTime;
             float k = Smooth(Mathf.Clamp01(t / d));
             displayPanel.localRotation = Quaternion.Slerp(from, to, k);
+            EnforceMeshClearanceInViewCameraSpace();
             yield return null;
         }
         displayPanel.localRotation = to;
+        EnforceMeshClearanceInViewCameraSpace();
     }
 
-    /// <summary>ItemViewAnchor(손 위치) + RaisePivot을 동시에 눈앞/대기 자세로 보간.</summary>
+    /// <summary>ItemViewAnchor + RaisePivot 보간. 카메라 관통 방지( pullback / bounds / soft pivot ).</summary>
     private IEnumerator AnimateBringToEye(bool toEye)
     {
         if (heldItemSway != null)
             heldItemSway.enabled = !toEye;
 
-        Vector3 pivotFromPos = raisePivot != null ? raisePivot.localPosition : loweredLocalPosition;
-        Quaternion pivotFromRot = raisePivot != null ? raisePivot.localRotation : Quaternion.Euler(loweredLocalEuler);
-        Vector3 pivotToPos = toEye ? raisedLocalPosition : loweredLocalPosition;
-        Quaternion pivotToRot = Quaternion.Euler(toEye ? raisedLocalEuler : loweredLocalEuler);
+        Vector3 pivotFromPos = raisePivot != null ? raisePivot.localPosition : GetLoweredLocalPosition();
+        Quaternion pivotFromRot = raisePivot != null ? raisePivot.localRotation : GetLoweredLocalRotation();
+        Vector3 pivotToPosTransition = GetRaisePivotTargetPosition(toEye, endPose: false);
+        Vector3 pivotToPosFinal = GetRaisePivotTargetPosition(toEye, endPose: true);
+        Quaternion pivotToRot = toEye ? Quaternion.Euler(raisedLocalEuler) : GetLoweredLocalRotation();
 
         Vector3 anchorFromPos = itemViewAnchor != null ? itemViewAnchor.localPosition : anchorRestLocalPosition;
         Quaternion anchorFromRot = itemViewAnchor != null ? itemViewAnchor.localRotation : anchorRestLocalRotation;
@@ -369,9 +413,11 @@ public class CamcorderController : MonoBehaviour
             t += Time.deltaTime;
             float k = Smooth(Mathf.Clamp01(t / d));
 
+            ApplyItemViewCameraPullback(toEye ? k : 1f - k);
+
             if (raisePivot != null)
             {
-                raisePivot.localPosition = Vector3.Lerp(pivotFromPos, pivotToPos, k);
+                raisePivot.localPosition = Vector3.Lerp(pivotFromPos, pivotToPosTransition, k);
                 raisePivot.localRotation = Quaternion.Slerp(pivotFromRot, pivotToRot, k);
             }
 
@@ -382,14 +428,20 @@ public class CamcorderController : MonoBehaviour
             }
 
             if (animateItemViewOrtho && itemViewCamera != null)
-                itemViewCamera.orthographicSize = Mathf.Lerp(orthoFrom, orthoTo, k);
+            {
+                float orthoK = staggerOrthoDuringRaise ? OrthoBlendT(k, orthoBlendStart) : k;
+                itemViewCamera.orthographicSize = Mathf.Lerp(orthoFrom, orthoTo, Smooth(orthoK));
+            }
 
+            EnforceMeshClearanceInViewCameraSpace();
             yield return null;
         }
 
+        RestoreItemViewCameraLocalPosition();
+
         if (raisePivot != null)
         {
-            raisePivot.localPosition = pivotToPos;
+            raisePivot.localPosition = pivotToPosFinal;
             raisePivot.localRotation = pivotToRot;
         }
 
@@ -401,6 +453,8 @@ public class CamcorderController : MonoBehaviour
 
         if (animateItemViewOrtho && itemViewCamera != null)
             itemViewCamera.orthographicSize = orthoTo;
+
+        EnforceMeshClearanceInViewCameraSpace();
 
         if (!toEye)
             RestoreDisplayRest();
@@ -436,6 +490,16 @@ public class CamcorderController : MonoBehaviour
 
     private static float Smooth(float t) => t * t * (3f - 2f * t);
 
+    /// <summary>0~blendStart 구간에서는 0, 이후 0~1로 진행 (Ortho를 앵커 이동 뒤에 맞춤).</summary>
+    private static float OrthoBlendT(float k, float blendStart)
+    {
+        blendStart = Mathf.Clamp(blendStart, 0f, 0.95f);
+        if (k <= blendStart)
+            return 0f;
+
+        return (k - blendStart) / (1f - blendStart);
+    }
+
     private void ApplyImmediate(bool value)
     {
         if (displayPanel != null)
@@ -445,8 +509,8 @@ public class CamcorderController : MonoBehaviour
 
         if (raisePivot != null)
         {
-            raisePivot.localPosition = value ? raisedLocalPosition : loweredLocalPosition;
-            raisePivot.localRotation = Quaternion.Euler(value ? raisedLocalEuler : loweredLocalEuler);
+            raisePivot.localPosition = value ? raisedLocalPosition : GetLoweredLocalPosition();
+            raisePivot.localRotation = value ? Quaternion.Euler(raisedLocalEuler) : GetLoweredLocalRotation();
         }
 
         if (animateItemAnchor && itemViewAnchor != null)
@@ -463,6 +527,10 @@ public class CamcorderController : MonoBehaviour
         if (animateItemViewOrtho && itemViewCamera != null)
             itemViewCamera.orthographicSize = value ? itemViewEyeOrthographicSize : itemViewRestOrthographicSize;
 
+        RestoreItemViewCameraLocalPosition();
+        if (value)
+            EnforceMeshClearanceInViewCameraSpace();
+
         SetBodyMeshesVisible(!value);
 
         if (value)
@@ -470,20 +538,85 @@ public class CamcorderController : MonoBehaviour
         else
             RestoreDisplayRest();
 
-        if (irSpot != null) irSpot.enabled = value;
-        if (lensCamera != null) lensCamera.enabled = value;
-        if (screenRenderer != null) screenRenderer.enabled = value;
-        SetViewfinderHudVisible(value);
-        SetScreenLevel(value ? 1f : 0f);
+        SetViewfinderFeedActive(value);
 
         if (value && lensCamera != null && eyeCamera != null)
             SyncLensCameraToEye();
+    }
+
+    /// <summary>RT 렌즈·IR·LCD·HUD 피드 일괄 ON/OFF.</summary>
+    private void SetViewfinderFeedActive(bool value)
+    {
+        if (irSpot != null)
+            irSpot.enabled = value;
+
+        if (lensCamera != null)
+            lensCamera.enabled = value;
+
+        if (screenRenderer != null)
+            screenRenderer.enabled = value;
+
+        SetViewfinderHudVisible(value);
+        SetScreenLevel(value ? 1f : 0f);
     }
 
     private void SetViewfinderHudVisible(bool visible)
     {
         if (viewfinderCanvas != null)
             viewfinderCanvas.gameObject.SetActive(visible);
+
+        // 켤 때(visible) 최신 배터리 반영, 끌 때는 Empty를 잠깐 표시한 뒤 캔버스 숨김
+        RefreshBatteryHud();
+    }
+
+    private void ResolveCamcorderEnergy()
+    {
+        EquipmentViewController viewController = GetComponentInParent<EquipmentViewController>();
+        if (viewController != null)
+            camcorderEnergy = viewController.GetComponent<CamcorderEnergyController>();
+
+        if (camcorderEnergy == null)
+            camcorderEnergy = FindFirstObjectByType<CamcorderEnergyController>();
+    }
+
+    private bool CanOpenViewfinder()
+    {
+        if (camcorderEnergy == null)
+            ResolveCamcorderEnergy();
+
+        return camcorderEnergy == null || camcorderEnergy.CanOpenViewfinder;
+    }
+
+    /// <summary>CamcorderEnergyController에서 소모 프레임마다 직접 호출해 HUD를 즉시 갱신합니다.</summary>
+    public void RequestBatteryHudRefresh() => RefreshBatteryHud();
+
+    private void RefreshBatteryHud()
+    {
+        if (batteryImage == null)
+            return;
+
+        if (camcorderEnergy == null)
+            ResolveCamcorderEnergy();
+
+        int level = camcorderEnergy != null ? camcorderEnergy.GetBatteryLevelIndex() : 4;
+        Sprite sprite = ResolveBatterySprite(level);
+        if (sprite == null)
+            return;
+
+        batteryImage.sprite = sprite;
+        batteryImage.enabled = true;
+    }
+
+    private Sprite ResolveBatterySprite(int levelIndex)
+    {
+        if (levelIndex <= 0)
+            return batteryEmptySprite;
+
+        if (batteryLevelSprites == null || batteryLevelSprites.Length == 0)
+            return null;
+
+        int idx = Mathf.Clamp(levelIndex, 1, batteryLevelSprites.Length) - 1;
+        return batteryLevelSprites[idx];
     }
 
     private void CacheDisplayRest()
@@ -576,6 +709,26 @@ public class CamcorderController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 대기(내린) RaisePivot 자세. 기본은 Start 직후 프리팹 Transform을 캐시(ApplyImmediate 전에 호출).
+    /// </summary>
+    private void CacheRaisePivotRest()
+    {
+        if (useSerializedLoweredPose || raisePivot == null)
+        {
+            loweredRestLocalPosition = loweredLocalPosition;
+            loweredRestLocalRotation = Quaternion.Euler(loweredLocalEuler);
+            return;
+        }
+
+        loweredRestLocalPosition = raisePivot.localPosition;
+        loweredRestLocalRotation = raisePivot.localRotation;
+    }
+
+    private Vector3 GetLoweredLocalPosition() => loweredRestLocalPosition;
+
+    private Quaternion GetLoweredLocalRotation() => loweredRestLocalRotation;
+
     private void CacheItemViewAnchor()
     {
         // EquipmentViewController가 Instantiate(..., itemViewAnchor) 하므로 부모가 앵커
@@ -601,13 +754,93 @@ public class CamcorderController : MonoBehaviour
         EquipmentViewController equipmentView = GetComponentInParent<EquipmentViewController>();
         itemViewCamera = equipmentView != null ? equipmentView.ItemViewCamera : null;
         if (itemViewCamera != null)
+        {
             itemViewRestOrthographicSize = itemViewCamera.orthographicSize;
+            itemViewCameraRestLocalPosition = itemViewCamera.transform.localPosition;
+        }
     }
 
     private void RestoreItemViewOrthographicSize()
     {
         if (itemViewCamera != null && itemViewRestOrthographicSize > 0f)
             itemViewCamera.orthographicSize = itemViewRestOrthographicSize;
+    }
+
+    private void RestoreItemViewCameraLocalPosition()
+    {
+        if (itemViewCamera != null)
+            itemViewCamera.transform.localPosition = itemViewCameraRestLocalPosition;
+    }
+
+    private void ApplyItemViewCameraPullback(float blend01)
+    {
+        if (itemViewCamera == null || itemViewCameraPullbackLocalZ <= 0f)
+            return;
+
+        float t = Mathf.Clamp01(blend01);
+        itemViewCamera.transform.localPosition = itemViewCameraRestLocalPosition
+            + new Vector3(0f, 0f, -itemViewCameraPullbackLocalZ * t);
+    }
+
+    private Vector3 GetRaisePivotTargetPosition(bool toEye, bool endPose)
+    {
+        if (!toEye)
+            return GetLoweredLocalPosition();
+
+        if (!useSoftRaisePivotDuringTransition || endPose)
+            return raisedLocalPosition;
+
+        return new Vector3(
+            raisedLocalPosition.x,
+            raisedLocalPosition.y,
+            transitionRaisedLocalPositionZ);
+    }
+
+    /// <summary>
+    /// 활성 Renderer bounds가 ItemViewCamera near 앞으로 들어오지 않게 앵커를 +Z(앞)으로 밉니다.
+    /// </summary>
+    private void EnforceMeshClearanceInViewCameraSpace()
+    {
+        if (!preventMeshCameraPenetration || itemViewCamera == null || itemViewAnchor == null)
+            return;
+
+        Transform cameraTransform = itemViewCamera.transform;
+        float requiredMinZ = itemViewCamera.nearClipPlane + meshClearanceBeyondNear;
+        float minBoundsZ = float.PositiveInfinity;
+
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                continue;
+
+            Bounds bounds = renderer.bounds;
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                for (int sy = -1; sy <= 1; sy += 2)
+                {
+                    for (int sz = -1; sz <= 1; sz += 2)
+                    {
+                        Vector3 corner = center + Vector3.Scale(extents, new Vector3(sx, sy, sz));
+                        float localZ = cameraTransform.InverseTransformPoint(corner).z;
+                        if (localZ < minBoundsZ)
+                            minBoundsZ = localZ;
+                    }
+                }
+            }
+        }
+
+        if (float.IsPositiveInfinity(minBoundsZ))
+            return;
+
+        float pushForward = requiredMinZ - minBoundsZ;
+        if (pushForward <= 0f)
+            return;
+
+        Vector3 localPos = itemViewAnchor.localPosition;
+        localPos.z += pushForward;
+        itemViewAnchor.localPosition = localPos;
     }
 
     private void CacheBodyRenderers()
@@ -957,13 +1190,13 @@ public class CamcorderController : MonoBehaviour
             recDot.raycastTarget = false;
         }
 
-        if (batterySprite != null)
+        if (batteryEmptySprite != null || HasAnyBatteryLevelSprite())
         {
-            Image battery = CreateAnchoredChild<Image>(canvasGo.transform, "Battery",
+            batteryImage = CreateAnchoredChild<Image>(canvasGo.transform, "Battery",
                 new Vector2(1f, 1f), new Vector2(-70f, -45f), new Vector2(80f, 36f));
-            battery.sprite = batterySprite;
-            battery.preserveAspect = true;
-            battery.raycastTarget = false;
+            batteryImage.preserveAspect = true;
+            batteryImage.raycastTarget = false;
+            RefreshBatteryHud();
         }
 
         canvasGo.SetActive(false);
@@ -1011,6 +1244,20 @@ public class CamcorderController : MonoBehaviour
                 return child;
         }
         return null;
+    }
+
+    private bool HasAnyBatteryLevelSprite()
+    {
+        if (batteryLevelSprites == null)
+            return false;
+
+        foreach (Sprite sprite in batteryLevelSprites)
+        {
+            if (sprite != null)
+                return true;
+        }
+
+        return false;
     }
 
     private static Transform FindChildContaining(Transform root, string token)
