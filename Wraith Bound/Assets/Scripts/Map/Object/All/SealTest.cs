@@ -14,6 +14,10 @@ public class SealTest : MonoBehaviour
     public float doorOpenAngle = 90f;
     public float doorOpenSpeed = 2f;
 
+    [Header("Open Sound")]
+    [SerializeField] private AudioClip doorOpenedSound;
+    [SerializeField] private float doorOpenedSoundVolume = 1f;
+
     private bool opened = false;
 
     private void Update()
@@ -21,6 +25,7 @@ public class SealTest : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.G) && !opened)
         {
             opened = true;
+            PlayDoorOpenedSound();
 
             // 봉인핵 전부 파괴
             foreach (var seal in seals)
@@ -59,5 +64,22 @@ public class SealTest : MonoBehaviour
 
             yield return null;
         }
+    }
+
+    private void PlayDoorOpenedSound()
+    {
+        if (doorOpenedSound == null)
+        {
+            return;
+        }
+
+        GameObject soundObject = new GameObject("DoorOpenedGlobalSound");
+        AudioSource audioSource = soundObject.AddComponent<AudioSource>();
+        audioSource.clip = doorOpenedSound;
+        audioSource.volume = doorOpenedSoundVolume;
+        audioSource.spatialBlend = 0f;
+        audioSource.Play();
+
+        Destroy(soundObject, doorOpenedSound.length + 0.1f);
     }
 }

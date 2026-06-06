@@ -11,23 +11,21 @@ public class ExitEventCube : MonoBehaviour
 
     [Header("Fade")]
     public Image fadeImage;
-    public float pauseBeforeFade = 0.35f;
-    public float fadeDuration = 2.8f;
-    public float blackHoldDuration = 0.55f;
+    public float walkSpeed = 3f;
+    public float walkDistance = 5f;
+    public float blackHoldDuration = 0.35f;
     public AnimationCurve fadeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
-    [Header("Camera 연출")]
-    public float cameraSink = 0.18f;
-    public float cameraTilt = 10f;
-    public float cameraRoll = 2.5f;
-    public float fovShrink = 10f;
+    [Header("Direction")]
+    public bool useNegativeForward = true;
 
     private bool isTransitioning;
+    private BoxCollider trigger;
 
     private void Awake()
     {
-        BoxCollider box = GetComponent<BoxCollider>();
-        box.isTrigger = true;
+        trigger = GetComponent<BoxCollider>();
+        trigger.isTrigger = true;
 
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null)
@@ -41,103 +39,114 @@ public class ExitEventCube : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (isTransitioning || !other.CompareTag("Player")) return;
+        if (isTransitioning || !other.CompareTag("Player"))
+        {
+            return;
+        }
 
         isTransitioning = true;
-        StartCoroutine(ExitSequence(other.gameObject));
+        StartCoroutine(ExitWalkFadeSequence(other.gameObject));
     }
 
-    private IEnumerator ExitSequence(GameObject player)
+    private IEnumerator ExitWalkFadeSequence(GameObject player)
     {
-        Transform cameraTransform = ResolveCameraTransform(player);
-        Camera camera = cameraTransform != null ? cameraTransform.GetComponent<Camera>() : null;
-        MonoBehaviour mouseLook = cameraTransform != null
-            ? cameraTransform.GetComponent("MouseLook") as MonoBehaviour
-            : null;
-
-        DisablePlayerControl(player, mouseLook);
-
-        Vector3 cameraStartLocalPos = cameraTransform != null ? cameraTransform.localPosition : Vector3.zero;
-        Quaternion cameraStartLocalRot = cameraTransform != null ? cameraTransform.localRotation : Quaternion.identity;
-        float cameraStartFov = camera != null ? camera.fieldOfView : 60f;
-
-        yield return new WaitForSeconds(pauseBeforeFade);
-
-        Image fade = ScreenFader.Prepare(fadeImage);
-        if (fade == null)
+        CharacterController controller = player.GetComponent<CharacterController>();
+        if (controller == null)
         {
-            SceneManager.LoadScene(targetSceneName);
+            LoadHubImmediate();
             yield break;
         }
 
-        float timer = 0f;
-        while (timer < fadeDuration)
+        Image fade = ScreenFader.Prepare(fadeImage);
+        ScreenFader.SetAlpha(fade, 0f);
+
+        MonoBehaviour mouseLook = player.GetComponentInChildren<Camera>(true)
+            ?.GetComponent("MouseLook") as MonoBehaviour;
+
+        SetPlayerScriptsEnabled(player, mouseLook, false);
+
+        Vector3 walkDirection = useNegativeForward ? -transform.forward : transform.forward;
+        walkDirection.y = 0f;
+        walkDirection.Normalize();
+
+        float gravity = -10f;
+        float verticalVelocity = 0f;
+        float walked = 0f;
+
+        while (walked < walkDistance)
         {
-            timer += Time.deltaTime;
-            float t = fadeDuration <= 0f ? 1f : Mathf.Clamp01(timer / fadeDuration);
-            float eased = fadeCurve.Evaluate(t);
+            float inputZ = Input.GetAxisRaw("Vertical");
+            float moveAmount = 0f;
 
-            Color color = new Color(0f, 0f, 0f, eased);
-            fade.color = color;
-
-            if (cameraTransform != null)
+            if (inputZ > 0.01f)
             {
-                cameraTransform.localPosition = Vector3.Lerp(
-                    cameraStartLocalPos,
-                    cameraStartLocalPos + Vector3.down * cameraSink,
-                    eased
-                );
+                moveAmount = walkSpeed * inputZ * Time.deltaTime;
+                Vector3 move = walkDirection * moveAmount;
 
-                Quaternion targetRot = cameraStartLocalRot * Quaternion.Euler(cameraTilt, 0f, cameraRoll);
-                cameraTransform.localRotation = Quaternion.Slerp(cameraStartLocalRot, targetRot, eased);
+                if (controller.isGrounded)
+                {
+                    verticalVelocity = -2f;
+                }
+                else
+                {
+                    verticalVelocity += gravity * Time.deltaTime;
+                }
+
+                move.y = verticalVelocity * Time.deltaTime;
+                controller.Move(move);
+                walked += moveAmount;
+            }
+            else if (controller.isGrounded)
+            {
+                verticalVelocity = -2f;
+            }
+            else
+            {
+                verticalVelocity += gravity * Time.deltaTime;
+                controller.Move(Vector3.up * verticalVelocity * Time.deltaTime);
             }
 
-            if (camera != null)
+            float progress = Mathf.Clamp01(walked / walkDistance);
+            float alpha = fadeCurve.Evaluate(progress);
+            ScreenFader.SetAlpha(fade, alpha);
+
+            if (progress >= 1f)
             {
-                camera.fieldOfView = Mathf.Lerp(cameraStartFov, cameraStartFov - fovShrink, eased);
+                break;
             }
 
             yield return null;
         }
 
-        fade.color = new Color(0f, 0f, 0f, 1f);
+        ScreenFader.SetAlpha(fade, 1f);
         yield return new WaitForSeconds(blackHoldDuration);
 
+        ScreenFader.ShouldWakeUpInHub = true;
+        ScreenFader.PersistBlack(fade);
         SceneManager.LoadScene(targetSceneName);
     }
 
-    private static Transform ResolveCameraTransform(GameObject player)
+    private void LoadHubImmediate()
     {
-        Camera mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
-            return mainCamera.transform;
-        }
-
-        Camera childCamera = player.GetComponentInChildren<Camera>(true);
-        return childCamera != null ? childCamera.transform : null;
+        ScreenFader.ShouldWakeUpInHub = true;
+        ScreenFader.PersistBlack(fadeImage);
+        SceneManager.LoadScene(targetSceneName);
     }
 
-    private static void DisablePlayerControl(GameObject player, MonoBehaviour mouseLook)
+    private static void SetPlayerScriptsEnabled(GameObject player, MonoBehaviour mouseLook, bool enabled)
     {
         MonoBehaviour[] scripts = player.GetComponents<MonoBehaviour>();
         foreach (MonoBehaviour script in scripts)
         {
             if (script != null)
             {
-                script.enabled = false;
+                script.enabled = enabled;
             }
         }
 
         if (mouseLook != null)
         {
-            mouseLook.enabled = false;
-        }
-
-        CharacterController cc = player.GetComponent<CharacterController>();
-        if (cc != null)
-        {
-            cc.enabled = false;
+            mouseLook.enabled = enabled;
         }
     }
 }

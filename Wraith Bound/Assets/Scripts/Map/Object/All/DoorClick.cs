@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class DoorClick : MonoBehaviour
 {
+    private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
+
     private bool open;
 
     [Header("Door Settings")]
@@ -22,6 +24,7 @@ public class DoorClick : MonoBehaviour
     public bool autoDirection = true;
 
     [Header("Interaction Settings")]
+    [SerializeField] private Camera viewCamera;
     public float interactDistance = 3f;
     public KeyCode interactKey = KeyCode.E;
 
@@ -39,10 +42,11 @@ public class DoorClick : MonoBehaviour
     [Header("Audio Settings")]
     public AudioClip openSound;
     public AudioClip closeSound;
+    [Tooltip("재생마다 랜덤 피치 범위 (낮을수록 굵고, 높을수록 가늘게 들림)")]
+    public float pitchMin = 0.88f;
+    public float pitchMax = 1.12f;
 
     private AudioSource audioSource;
-
-    private Camera cam;
 
     private void Start()
     {
@@ -59,12 +63,19 @@ public class DoorClick : MonoBehaviour
 
         audioSource = gameObject.AddComponent<AudioSource>();
 
-        cam = Camera.main;
+        if (viewCamera == null)
+        {
+            viewCamera = Camera.main;
+        }
     }
 
     private void Update()
     {
-        // Door movement
+        if (viewCamera == null)
+        {
+            viewCamera = Camera.main;
+        }
+
         if (isSlidingDoor)
         {
             Vector3 targetPos = open ? targetLocalSlidePos : defaultLocalPos;
@@ -86,55 +97,68 @@ public class DoorClick : MonoBehaviour
             );
         }
 
-        // E Key Interaction
-        if (Input.GetKeyDown(interactKey))
+        if (WasInteractPressed() && IsAimedAtDoor())
         {
-            if (cam != null)
+            if (!open)
             {
-                Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+                SetDoorDirection();
+            }
 
-                RaycastHit hit;
+            open = !open;
+            PlayDoorSound();
+        }
 
-                if (Physics.Raycast(ray, out hit, interactDistance))
-                {
-                    if (hit.transform == transform)
-                    {
-                        if (!open)
-                        {
-                            SetDoorDirection();
-                        }
+        UpdateDoorMessage();
+    }
 
-                        open = !open;
+    private bool WasInteractPressed()
+    {
+        return Input.GetButtonDown("Interact") || Input.GetKeyDown(interactKey);
+    }
 
-                        PlayDoorSound();
-                    }
-                }
+    private bool IsAimedAtDoor()
+    {
+        if (viewCamera == null)
+        {
+            return false;
+        }
+
+        Ray ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
+        int hitCount = Physics.RaycastNonAlloc(ray, HitBuffer, interactDistance);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (IsDoorCollider(HitBuffer[i].collider))
+            {
+                return true;
             }
         }
 
-        // UI message
-        UpdateDoorMessage();
+        return false;
+    }
+
+    private bool IsDoorCollider(Collider col)
+    {
+        if (col == null)
+        {
+            return false;
+        }
+
+        Transform hitTransform = col.transform;
+        if (hitTransform == transform)
+        {
+            return true;
+        }
+
+        return hitTransform.IsChildOf(transform) || transform.IsChildOf(hitTransform);
     }
 
     private void UpdateDoorMessage()
     {
-        if (cam == null)
+        if (IsAimedAtDoor())
         {
-            doorMessage = "";
+            doorMessage = open ? closeMessage : openMessage;
             return;
-        }
-
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, interactDistance))
-        {
-            if (hit.transform == transform)
-            {
-                doorMessage = open ? closeMessage : openMessage;
-                return;
-            }
         }
 
         doorMessage = "";
@@ -179,28 +203,33 @@ public class DoorClick : MonoBehaviour
 
     private void PlayDoorSound()
     {
-        if (audioSource != null)
+        if (audioSource == null)
         {
-            if (open && openSound != null)
-            {
-                audioSource.clip = openSound;
-                audioSource.Play();
-            }
-            else if (!open && closeSound != null)
-            {
-                audioSource.clip = closeSound;
-                audioSource.Play();
-            }
+            return;
         }
+
+        AudioClip clip = open ? openSound : closeSound;
+        if (clip == null)
+        {
+            return;
+        }
+
+        float minPitch = Mathf.Min(pitchMin, pitchMax);
+        float maxPitch = Mathf.Max(pitchMin, pitchMax);
+        audioSource.pitch = Random.Range(minPitch, maxPitch);
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 
     private void SetDoorDirection()
     {
-        if (!autoDirection)
+        if (!autoDirection || viewCamera == null)
+        {
             return;
+        }
 
         Vector3 playerDir =
-            cam.transform.position - transform.position;
+            viewCamera.transform.position - transform.position;
 
         float dot = Vector3.Dot(
             transform.right,
