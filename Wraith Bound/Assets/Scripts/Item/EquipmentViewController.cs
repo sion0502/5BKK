@@ -227,7 +227,8 @@ public class EquipmentViewController : MonoBehaviour
             return;
         }
 
-        obj.layer = layer;
+        Light light = obj.GetComponent<Light>();
+        obj.layer = light != null ? LayerMask.NameToLayer("Default") : layer;
 
         foreach (Transform child in obj.transform)
         {
