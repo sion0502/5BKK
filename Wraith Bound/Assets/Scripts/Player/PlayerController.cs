@@ -9,6 +9,7 @@ using UnityEngine.InputSystem;
 using NUnit.Framework;
 using System;
 using JetBrains.Annotations;
+using UnityEngine.Audio;
 
 public class PlayerController : MonoBehaviour
 {
@@ -25,18 +26,14 @@ public class PlayerController : MonoBehaviour
     public float minFallHeight = 20f; // 20m 미만은 데미지 없음
     public int baseFallingDamage = 20; // 기본 낙하 데미지 20
     public float minDamageVelocity = -10f; // 짧은 낙하 제거
-
-    private float fallStartY; // 낙하 시작 지점
     private float verticalVelocity; // 수직 낙하 속도
     private float minVelocityReached; // 낙하 판정 필터링
-
-    private bool wasGrounded; // 지상인 지
     private bool isFalling; // 낙하 중인 지
 
     [Header("Crouch Settings")]
     public float crouchSpeed; // 웅크리기 속도
-    public float normalHeight = 2.0f;
-    public float crouchHeight = 1.0f;
+    public float normalHeight = 1.8f;
+    public float crouchHeight = 0.9f;
     private float normalCameraHeight; // 캐릭터 중심 기준 카메라 로컬 Y 위치
     private float crouchCameraHeight;
     public float crouchTransitionSpeed = 10f; // 웅크리기 전환 속도
@@ -46,13 +43,18 @@ public class PlayerController : MonoBehaviour
     private float targetHeight;
     private float targetCameraHeight;
 
-    // 지면 검사
-    private float groundCheckDistance = 0.1f; // CharacterController는 항상 지면에 딱 붙어있지 않기 때문에 이를 보정할 변수 생성
+    // 지면 검사 거리
+    private float groundCheckRadius = 0.35f;
+    private float groundCheckDistance = 0.2f; // CharacterController는 항상 지면에 딱 붙어있지 않기 때문에 이를 보정할 변수 생성
+    private float groundCheckStartOffset = 0.1f;
+    private float maxGroundAngle = 45f;
+    private RaycastHit groundHit;
 
     [Header("References")]
     private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
     private CharacterController controller; // CharacterController 컴포넌트 가져오기
     public Transform cameraTransform; // 1인칭 카메라 할당
+    private AudioSource playerAudio;
     private Vector3 velocity;
     private Vector3 horizontalVelocity;
     public LayerMask ceilingCheckLayer; // 천장 충돌을 체크할 레이어
@@ -62,6 +64,7 @@ public class PlayerController : MonoBehaviour
     {
         conditions = GetComponent<PlayerConditions>();
         controller = GetComponent<CharacterController>();
+        playerAudio = GetComponent<AudioSource>();
 
         normalCameraHeight = cameraTransform.localPosition.y;
         // 웅크렸을 때의 카메라 높이는 기본 눈높이에서 일정 값(예: 1.0f)을 뺀 값으로 자동 설정
@@ -85,7 +88,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleGrounded()
     {
-        Vector3 origin = transform.position + controller.center;
+        /* Vector3 origin = transform.position + controller.center;
         origin.y -= controller.height / 2 - controller.radius;
         float radius = controller.radius;
 
@@ -98,7 +101,39 @@ public class PlayerController : MonoBehaviour
         else
         {
             controller.stepOffset = 0f; // 공중에서는 stepOffset을 0으로 설정하여 벽에 걸리는 것을 방지함
-        }
+        } */
+
+        Vector3 origin = transform.position + Vector3.up * groundCheckDistance;
+        float groundCheckRadius = controller.radius * 0.85f;
+
+        // SphereCast는 구체를 방향으로 쏘면서 충돌을 찾는데, '이미 접속 중인 지면'에 대한 검사에서 오류가 발생할 수 있음
+        // 따라서 CheckSphere를 사용함
+        grounded = Physics.CheckSphere(
+            origin,
+            groundCheckRadius,
+            groundMask,
+            QueryTriggerInteraction.Ignore
+        );
+
+        controller.stepOffset = grounded ? 0.3f : 0f; // 지상에서는 기본 stepOffset 값으로, 공중에서는 stepOffset 값을 0으로 설정하여 벽에 걸리는 것을 방지
+        
+
+        /* Vector3 origin = transform.position + Vector3.up * groundCheckStartOffset;
+        float distance = groundCheckStartOffset + groundCheckDistance;
+        float minGroundNormalY = Mathf.Cos(maxGroundAngle * Mathf.Deg2Rad);
+
+        grounded = Physics.SphereCast(
+            origin,
+            groundCheckRadius,
+            Vector3.down,
+            out groundHit,
+            distance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore
+        ) && groundHit.normal.y >= minGroundNormalY;
+
+        controller.stepOffset = grounded ? 0.3f : 0f; */
+
     }
 
     // 움직임 처리
@@ -106,15 +141,14 @@ public class PlayerController : MonoBehaviour
     {
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
-
-        if (isRun && z < 0f)
-        {
-            z = 0f;
-        }
         
         Vector3 move = transform.right * x + transform.forward * z;
 
-        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false)
+        // 수평 속도(X, Z 축)만 추출하여 실제 이동 속도 계산 (추락/상승 속도 제외)
+        Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0f, controller.velocity.z);
+        bool isActuallyMoving = horizontalVelocity.sqrMagnitude > 0.1f;
+
+        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false && z > 0.1f && isActuallyMoving)
         {
             if (grounded)
             {
@@ -123,7 +157,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        else if (Input.GetKeyUp(KeyCode.LeftShift) || conditions.GetCurrentStamina() <= 0f)
+        else if (Input.GetKeyUp(KeyCode.LeftShift) || conditions.GetCurrentStamina() <= 0f || (isRun && z < 0f))
         {
             isRun = false;
             conditions.StartStaminaRegen();
@@ -232,6 +266,7 @@ public class PlayerController : MonoBehaviour
     private void Run(Vector3 direction)
     {
         horizontalVelocity = direction * runSpeed;
+
     }
 
     // 웅크리기
@@ -261,15 +296,15 @@ public class PlayerController : MonoBehaviour
     {
         // 벽면 긁힘 등 미세한 오차로 인해 못 일어나는 버그를 방지하기 위해 반경을 90%로 줄임
         float checkRadius = controller.radius * 0.9f;
+        // 일어섰을 때 캡슐의 중심
+        Vector3 standCenter = transform.position + Vector3.up * (normalHeight * 0.5f);
         // 일어섰을 때 캡슐의 하단 구체 중심 (발바닥에서 반경만큼 위)
-        Vector3 bottom = transform.position + (Vector3.up * controller.radius);
+        Vector3 bottom = standCenter + Vector3.down * ((normalHeight * 0.5f) - controller.radius);
         // 일어섰을 때 캡슐의 상단 구체 중심 (원래 키에서 반경만큼 아래)
-        Vector3 top = transform.position + (Vector3.up * (normalHeight - controller.radius));
+        Vector3 top = standCenter + Vector3.up * ((normalHeight * 0.5f) - controller.radius);
         // Physics.CheckCapsule은 해당 영역에 지정된 레이어의 콜라이더가 겹치면 true를 반환
-        bool hitCeiling = Physics.CheckCapsule(bottom, top, checkRadius, ceilingCheckLayer);
+        bool hitCeiling = Physics.CheckCapsule(bottom, top, checkRadius, ceilingCheckLayer, QueryTriggerInteraction.Ignore);
         return !hitCeiling;
-
-
     }
 
     private float highestY;
@@ -365,7 +400,5 @@ public class PlayerController : MonoBehaviour
             // isFalling을 false로 전환
             isFalling = false;
         }
-        // 초기화
-        wasGrounded = grounded;
     }
 }

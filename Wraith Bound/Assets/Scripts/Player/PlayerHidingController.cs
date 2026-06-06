@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class PlayerHidingController : MonoBehaviour
 {
-    // ¼û±â µé¾î°£ ¼ø°£ Ã¼Å©
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½î°£ ï¿½ï¿½ï¿½ï¿½ Ã¼Å©
     public static bool JustEnteredHiding;
 
     public Transform playerCamera;
@@ -21,6 +21,7 @@ public class PlayerHidingController : MonoBehaviour
 
     CharacterController characterController;
     HidingSpot currentSpot;
+    [SerializeField]AudioSource hideAudio;
 
     bool isHiding = false;
     bool isTransitioning = false;
@@ -116,7 +117,7 @@ public class PlayerHidingController : MonoBehaviour
     {
         isTransitioning = true;
 
-        // ¼û±â µé¾î°£ ¼ø°£
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½î°£ ï¿½ï¿½ï¿½ï¿½
         JustEnteredHiding = true;
 
         isHiding = true;
