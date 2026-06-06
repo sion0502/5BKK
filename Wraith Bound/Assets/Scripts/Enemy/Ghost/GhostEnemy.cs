@@ -2,35 +2,38 @@
 
 public class GhostEnemy : EnemyBase
 {
-    DoorController currentDoor;
+    Collider[] myColliders;
 
-    protected override void HandleDoor(
-        DoorController door)
+    void Awake()
     {
-        if (currentState != State.Chase)
-            return;
-
-        if (door == null)
-            return;
-
-        if (currentDoor == door)
-            return;
-
-        currentDoor = door;
-
-        currentDoor.OpenPath();
+        myColliders =
+            GetComponentsInChildren<Collider>();
     }
 
-    void LateUpdate()
+    protected override void Start()
     {
-        if (currentState == State.Chase)
-            return;
+        base.Start();
 
-        if (currentDoor == null)
-            return;
+        GameObject[] doors =
+            GameObject.FindGameObjectsWithTag(
+                "Door");
 
-        currentDoor.ClosePath();
+        foreach (GameObject door in doors)
+        {
+            Collider[] doorCols =
+                door.GetComponentsInChildren<
+                    Collider>();
 
-        currentDoor = null;
+            foreach (Collider myCol in myColliders)
+            {
+                foreach (Collider doorCol in doorCols)
+                {
+                    Physics.IgnoreCollision(
+                        myCol,
+                        doorCol,
+                        true);
+                }
+            }
+        }
     }
 }
