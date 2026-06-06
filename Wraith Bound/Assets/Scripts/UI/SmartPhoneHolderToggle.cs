@@ -19,6 +19,7 @@ public class SmartPhoneHolderToggle : MonoBehaviour
     [SerializeField] private float animationDuration = 0.45f;
 
     private InventoryManager _inventory;
+    private EquipmentViewController _equipmentView;
     private GameObject _holder;
     private RectTransform _animatedRect;
     private Vector2 shownAnchoredPosition;
@@ -31,6 +32,10 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         _inventory = GetComponent<InventoryManager>();
         if (_inventory == null)
             _inventory = GetComponentInParent<InventoryManager>();
+
+        _equipmentView = GetComponent<EquipmentViewController>();
+        if (_equipmentView == null)
+            _equipmentView = GetComponentInParent<EquipmentViewController>();
 
         ResolveHolder();
         CacheAnimatedTarget();
@@ -90,6 +95,21 @@ public class SmartPhoneHolderToggle : MonoBehaviour
     public bool IsSmartPhoneItem(Items item)
     {
         return item != null && item == smartPhoneItem;
+    }
+
+    /// <summary>
+    /// 현재 선택 슬롯이 스마트폰이 아닐 때 즉시 UI를 숨깁니다.
+    /// UpdateHeldItem에서 슬롯 교체 직후 호출하여 Update() 폴링 타이밍 문제를 방지합니다.
+    /// </summary>
+    public void HideIfPhoneNotSelected()
+    {
+        Items current = _inventory != null ? _inventory.GetSelectedItem() : null;
+        bool phoneIsCurrentItem = IsSmartPhoneItem(current);
+
+        if (!phoneIsCurrentItem && _holder != null && _holder.activeSelf)
+        {
+            HideImmediate();
+        }
     }
 
     bool HasSmartPhoneInInventory()
@@ -165,6 +185,7 @@ public class SmartPhoneHolderToggle : MonoBehaviour
 
         if (visible)
         {
+            _equipmentView?.SetSmartPhoneViewActive(true);
             _holder.SetActive(true);
             _animatedRect.anchoredPosition = hiddenAnchoredPosition;
         }
@@ -186,7 +207,10 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         _animatedRect.anchoredPosition = target;
 
         if (!visible)
+        {
             _holder.SetActive(false);
+            _equipmentView?.SetSmartPhoneViewActive(false);
+        }
 
         animationCoroutine = null;
     }
@@ -205,5 +229,6 @@ public class SmartPhoneHolderToggle : MonoBehaviour
         isVisible = false;
         _animatedRect.anchoredPosition = hiddenAnchoredPosition;
         _holder.SetActive(false);
+        _equipmentView?.SetSmartPhoneViewActive(false);
     }
 }

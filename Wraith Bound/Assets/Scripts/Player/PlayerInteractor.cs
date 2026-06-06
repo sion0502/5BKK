@@ -1,4 +1,3 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerInteractor : MonoBehaviour
@@ -6,13 +5,31 @@ public class PlayerInteractor : MonoBehaviour
     [Header("Interaction Settings")]
     [SerializeField] private Camera playerCamera;
     [SerializeField] public float interactRange = 3f;
-    [SerializeField] private LayerMask interactableLayer;
     [SerializeField] private InteractionCrosshairUI interactionUI;
 
+    [Tooltip("상호작용 레이에서 무시할 레이어. 비어 있으면 기본값(PickupItem, Player, UI 등)을 사용합니다.")]
+    [SerializeField] private LayerMask raycastIgnoreLayers;
+
+    private LayerMask interactionRayMask;
     private IInteractable currentTarget;
 
     void Awake()
     {
+        if (raycastIgnoreLayers.value == 0)
+        {
+            raycastIgnoreLayers = LayerMask.GetMask(
+                "PickupItem",
+                "Player",
+                "UI",
+                "Ignore Raycast",
+                "TransparentFX",
+                "RaderIcon",
+                "NightVision",
+                "Floor");
+        }
+
+        interactionRayMask = ~raycastIgnoreLayers;
+
         if (interactionUI == null)
         {
             interactionUI = GetComponent<InteractionCrosshairUI>();
@@ -32,45 +49,45 @@ public class PlayerInteractor : MonoBehaviour
 
     private void HandleRaycast()
     {
-        // 카메라의 위치에서 전방(화면 정중앙)으로 레이 발사
-        Ray ray = new Ray(playerCamera.transform.position,playerCamera.transform.forward);
-        RaycastHit hit;
-
-        if(Physics.Raycast(ray, out hit, interactRange, interactableLayer))
+        if (playerCamera == null)
         {
-            // 충돌한 오브젝트가 IInteractable 인터페이스를 가지고 있는지 검사
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+            ClearTarget();
+            return;
+        }
 
-            //Debug.Log($"Ray에 맞은 오브젝트: {hit.collider.name}");
+        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
 
+        if (Physics.Raycast(ray, out RaycastHit hit, interactRange, interactionRayMask, QueryTriggerInteraction.Ignore))
+        {
+            IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
             if (interactable != null)
             {
                 currentTarget = interactable;
 
                 if (interactionUI != null)
                 {
-                    if (InteractableItemNameUtility.TryGetItemName(hit.collider, out string itemName))
-                    {
-                        interactionUI.SetItemName(itemName);
-                    }
-                    else
-                    {
-                        interactionUI.SetItemName(null);
-                    }
+                    interactionUI.SetItemName(ResolveInteractionLabel(interactable, hit.collider));
                 }
 
                 return;
             }
-            else
-            {
-                //Debug.LogWarning("맞은 오브젝트에 IInteractable 컴포넌트가 없습니다.");
-            }
         }
 
-        if (currentTarget != null)
+        ClearTarget();
+    }
+
+    private void HandleInput()
+    {
+        if (currentTarget != null && Input.GetButtonDown("Interact"))
         {
-            currentTarget = null;
+            currentTarget.Interact(gameObject);
+            Debug.Log("E키 입력 감지 및 상호작용 실행!");
         }
+    }
+
+    private void ClearTarget()
+    {
+        currentTarget = null;
 
         if (interactionUI != null)
         {
@@ -78,14 +95,19 @@ public class PlayerInteractor : MonoBehaviour
         }
     }
 
-    private void HandleInput()
+    private static string ResolveInteractionLabel(IInteractable interactable, Collider hitCollider)
     {
-        if (currentTarget != null && Input.GetButtonDown("Interact"))
+        string prompt = interactable.GetInteractPrompt();
+        if (!string.IsNullOrEmpty(prompt))
         {
-            // 인터페이스를 통해 다형성 호출. 자기 자신(플레이어)의 게임 오브젝트를 넘겨줍니다.
-            currentTarget.Interact(this.gameObject);
-
-            Debug.Log("E키 입력 감지 및 상호작용 실행!");
+            return prompt;
         }
+
+        if (InteractableItemNameUtility.TryGetItemName(hitCollider, out string itemName))
+        {
+            return itemName;
+        }
+
+        return null;
     }
 }

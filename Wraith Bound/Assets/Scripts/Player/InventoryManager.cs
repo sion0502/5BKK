@@ -3,15 +3,36 @@ using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 
+public enum HeldItemSource
+{
+    QuickSlot,
+    Camcorder
+}
+
 public class InventoryManager : MonoBehaviour
 {
+    private const string CamcorderResourcePath = "ItemDatas/Equipment/Camcorder";
+
     [Header("Capacity")]
     [SerializeField] private int baseCapacity = 3;
     [SerializeField] private int maxCapacity = 7;
     [SerializeField] private int bonusCapacity = 0;
 
+    [Header("Camcorder Slot (3칸 인벤과 별도)")]
+    [SerializeField] private Equipment camcorderEquipment;
+    [SerializeField] private bool grantCamcorderOnStart = true;
+    [SerializeField] private KeyCode camcorderSelectKey = KeyCode.F;
+
     [Header("Passive Slot")]
     [SerializeField] private PassiveItem passiveSlot;
+
+    private bool ownsCamcorder;
+    private HeldItemSource heldSource = HeldItemSource.QuickSlot;
+
+    public HeldItemSource HeldSource => heldSource;
+    public bool HasCamcorder => ownsCamcorder && camcorderEquipment != null;
+    public Equipment GetCamcorder() => HasCamcorder ? camcorderEquipment : null;
+    public bool IsCamcorderHeld() => heldSource == HeldItemSource.Camcorder && HasCamcorder;
 
     public int capacity
     {
@@ -197,6 +218,11 @@ public class InventoryManager : MonoBehaviour
             return false;
         }
 
+        if (IsCamcorderItem(itemToAcquire))
+        {
+            return TryAcquireCamcorder(out droppedFromInventory, out droppedInventoryAmount);
+        }
+
         // PassiveItem은 일반 인벤토리 slots를 사용하지 않고 passiveSlot으로만 들어갑니다.
         if (itemToAcquire is PassiveItem passiveItem)
         {
@@ -253,6 +279,12 @@ public class InventoryManager : MonoBehaviour
             return false;
         }
 
+        if (IsCamcorderItem(itemToAdd))
+        {
+            Debug.LogWarning($"[Inventory] {itemToAdd.itemName}은(는) 캠코더 전용 슬롯 아이템이라 일반 인벤토리에 넣을 수 없습니다.");
+            return TryAcquireCamcorder(out droppedItem, out droppedAmount);
+        }
+
         // PassiveItem은 일반 slots에 들어가면 안 되므로 여기서 한 번 더 방어합니다.
         if (itemToAdd is PassiveItem || itemToAdd.type == ItemType.Passive)
         {
@@ -288,6 +320,7 @@ public class InventoryManager : MonoBehaviour
                 }
 
                 slot.AddAmount(amount);
+                NotifyItemAdded(itemToAdd);
                 return true;
             }
         }
@@ -297,6 +330,7 @@ public class InventoryManager : MonoBehaviour
         {
             if (TrySwapWithSelectedSlot(itemToAdd, amount, out droppedItem, out droppedAmount))
             {
+                NotifyItemAdded(itemToAdd);
                 return true;
             }
 
@@ -311,7 +345,52 @@ public class InventoryManager : MonoBehaviour
         }
 
         slots.Add(new InventorySlot(itemToAdd, amount));
+        NotifyItemAdded(itemToAdd);
         return true;
+    }
+
+    /// <summary>
+    /// 아이템 획득/추가 후 선택 슬롯과 손에 든 표시를 갱신합니다.
+    /// 현재 선택이 비어 있으면 획득한 아이템 슬롯으로 자동 선택합니다.
+    /// </summary>
+    private void NotifyItemAdded(Items itemToAdd)
+    {
+        if (itemToAdd == null)
+        {
+            return;
+        }
+
+        int slotIndex = FindSlotIndex(itemToAdd);
+        if (slotIndex < 0)
+        {
+            return;
+        }
+
+        if (GetSelectedItem() == null)
+        {
+            SelectQuickSlot();
+            selectedSlotIndex = slotIndex;
+        }
+
+        OnSelectedSlotChanged();
+    }
+
+    private int FindSlotIndex(Items item)
+    {
+        if (item == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null && slots[i].item == item)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -346,15 +425,54 @@ public class InventoryManager : MonoBehaviour
         slot.item = newItem;
         slot.amount = newAmount;
 
-        OnSelectedSlotChanged();
-
         Debug.Log($"[Inventory] 선택 슬롯 {selectedSlotIndex} 교체: {droppedItem.itemName} x{droppedAmount} -> {newItem.itemName} x{newAmount}");
 
         return true;
     }
 
+    public int CountItem(Items item)
+    {
+        if (item == null)
+        {
+            return 0;
+        }
+
+        int total = 0;
+        foreach (InventorySlot slot in slots)
+        {
+            if (slot.item == item)
+            {
+                total += slot.amount;
+            }
+        }
+
+        return total;
+    }
+
+    public bool TryConsumeItem(Items item, int amount = 1)
+    {
+        if (item == null || amount <= 0)
+        {
+            return false;
+        }
+
+        if (CountItem(item) < amount)
+        {
+            return false;
+        }
+
+        RemoveItem(item, amount);
+        return true;
+    }
+
     public void RemoveItem(Items itemToRemove, int amount = 1)
     {
+        if (IsCamcorderItem(itemToRemove))
+        {
+            Debug.LogWarning("[Inventory] 캠코더는 제거할 수 없습니다.");
+            return;
+        }
+
         for (int i = 0; i < slots.Count; i++)
         {
             if (slots[i].item == itemToRemove)
@@ -379,11 +497,24 @@ public class InventoryManager : MonoBehaviour
 
     private EquipmentViewController equipmentView;
     private SmartPhoneHolderToggle smartPhoneToggle;
+    private CamcorderEnergyController camcorderEnergy;
 
     void Awake()
     {
         equipmentView = GetComponent<EquipmentViewController>();
         smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
+        camcorderEnergy = GetComponent<CamcorderEnergyController>();
+        ResolveCamcorderReference();
+    }
+
+    void Start()
+    {
+        if (grantCamcorderOnStart)
+        {
+            GrantCamcorder();
+        }
+
+        UpdateHeldItem();
     }
 
     void Update()
@@ -391,8 +522,109 @@ public class InventoryManager : MonoBehaviour
         HandleSlotInput();
     }
 
+    public bool IsCamcorderItem(Items item)
+    {
+        return item != null && camcorderEquipment != null && item == camcorderEquipment;
+    }
+
+    private void ResolveCamcorderReference()
+    {
+        if (camcorderEquipment != null)
+        {
+            return;
+        }
+
+        camcorderEquipment = Resources.Load<Equipment>(CamcorderResourcePath);
+        if (camcorderEquipment == null)
+        {
+            Debug.LogWarning($"[Inventory] 캠코더 Equipment를 찾을 수 없습니다: Resources/{CamcorderResourcePath}");
+        }
+    }
+
+    private bool GrantCamcorder()
+    {
+        if (camcorderEquipment == null)
+        {
+            return false;
+        }
+
+        ownsCamcorder = true;
+        return true;
+    }
+
+    private bool TryAcquireCamcorder(out Items droppedFromInventory, out int droppedInventoryAmount)
+    {
+        droppedFromInventory = null;
+        droppedInventoryAmount = 0;
+
+        if (camcorderEquipment == null)
+        {
+            Debug.LogWarning("[Inventory] 캠코더 데이터가 없어 획득할 수 없습니다.");
+            return false;
+        }
+
+        if (ownsCamcorder)
+        {
+            Debug.Log("[Inventory] 이미 캠코더를 소지하고 있습니다.");
+            return true;
+        }
+
+        ownsCamcorder = true;
+        Debug.Log($"[Inventory] 캠코더 전용 슬롯 획득: {camcorderEquipment.itemName}");
+        return true;
+    }
+
+    /// <summary>F키: 캠코더를 꺼냈다가 다시 누르면 집어넣기(퀵슬롯 표시로 복귀).</summary>
+    public void ToggleCamcorderHeld()
+    {
+        if (!HasCamcorder)
+        {
+            return;
+        }
+
+        if (IsCamcorderHeld())
+        {
+            SelectQuickSlot();
+        }
+        else
+        {
+            heldSource = HeldItemSource.Camcorder;
+        }
+
+        UpdateHeldItem();
+    }
+
+    public void SelectCamcorder() => ToggleCamcorderHeld();
+
+    private void SelectQuickSlot()
+    {
+        heldSource = HeldItemSource.QuickSlot;
+    }
+
+    /// <summary>지금 손에 표시·사용할 장비. F(캠코더) 또는 퀵슬롯 선택 기준.</summary>
+    public Equipment GetActiveHeldEquipment()
+    {
+        if (IsCamcorderHeld())
+        {
+            return GetCamcorder();
+        }
+
+        Items item = GetSelectedItem();
+        return item as Equipment;
+    }
+
     private void HandleSlotInput()
     {
+        if (Input.GetKeyDown(camcorderSelectKey))
+        {
+            ToggleCamcorderHeld();
+        }
+
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         float wheel = Input.GetAxis("Mouse ScrollWheel");
         if (wheel > 0f) ChangeSelectedSlot(-1);
         else if (wheel < 0f) ChangeSelectedSlot(1);
@@ -407,13 +639,28 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    /// <summary>뷰파인더 ON 중 퀵슬롯·스크롤 전환 차단 (스크롤은 캠코더 줌 전용).</summary>
+    public bool IsCamcorderViewfinderActive()
+    {
+        if (camcorderEnergy == null)
+            camcorderEnergy = GetComponent<CamcorderEnergyController>();
+
+        return camcorderEnergy != null && camcorderEnergy.IsViewfinderActive;
+    }
+
     private void ChangeSelectedSlot(int direction)
     {
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         if (capacity <= 0)
         {
             return;
         }
 
+        SelectQuickSlot();
         selectedSlotIndex += direction;
 
         if (selectedSlotIndex < 0)
@@ -430,11 +677,17 @@ public class InventoryManager : MonoBehaviour
 
     public void SetSelectedSlot(int index)
     {
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         if (index < 0 || index >= capacity)
         {
             return;
         }
 
+        SelectQuickSlot();
         selectedSlotIndex = index;
         OnSelectedSlotChanged();
     }
@@ -447,9 +700,21 @@ public class InventoryManager : MonoBehaviour
 
     public void UpdateHeldItem()
     {
+        // 현재 슬롯이 폰이 아니면 폰 UI를 즉시 강제 숨김 (Update() 타이밍 문제 방지)
+        if (smartPhoneToggle != null)
+        {
+            smartPhoneToggle.HideIfPhoneNotSelected();
+        }
+
         if (currentHeldItem != null)
         {
             Destroy(currentHeldItem);
+        }
+
+        if (IsCamcorderHeld())
+        {
+            ShowHeldEquipment(GetCamcorder());
+            return;
         }
 
         Items item = GetSelectedItem();
@@ -464,19 +729,7 @@ public class InventoryManager : MonoBehaviour
 
         if (item is Equipment equipment)
         {
-            if (smartPhoneToggle != null && smartPhoneToggle.IsSmartPhoneItem(equipment))
-            {
-                if (equipmentView != null)
-                {
-                    equipmentView.HideCurrent();
-                }
-                return;
-            }
-
-            if (equipmentView != null)
-            {
-                equipmentView.ShowEquipment(equipment);
-            }
+            ShowHeldEquipment(equipment);
             return;
         }
 
@@ -501,6 +754,32 @@ public class InventoryManager : MonoBehaviour
 
             SetLayerRecursively(currentHeldItem, LayerMask.NameToLayer("PickupItem"));
             EnsureHeldItemSway(currentHeldItem);
+        }
+    }
+
+    private void ShowHeldEquipment(Equipment equipment)
+    {
+        if (equipment == null)
+        {
+            if (equipmentView != null)
+            {
+                equipmentView.HideCurrent();
+            }
+            return;
+        }
+
+        if (smartPhoneToggle != null && smartPhoneToggle.IsSmartPhoneItem(equipment))
+        {
+            if (equipmentView != null)
+            {
+                equipmentView.HideCurrent();
+            }
+            return;
+        }
+
+        if (equipmentView != null)
+        {
+            equipmentView.ShowEquipment(equipment);
         }
     }
 
