@@ -16,6 +16,8 @@ public class Equipment : Items
     [Header("장비/내구도 데이터")]
     public float maxEnergy;    // 최대 배터리/필름 수
     public float consumeRate;  // 사용 시 소모되는 양
+    [Tooltip("미사용 시 충전 속도(캠코더 등). 0이면 consumeRate의 50%로 충전합니다.")]
+    public float rechargeRate;
     public float range;        // 카메라 스턴 범위, 나침반 탐색 범위 등
 
     public override void Use(PlayerController player)

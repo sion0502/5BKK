@@ -16,13 +16,14 @@ public static class WorldItemSpawnHelper
         Vector3 pos = worldPosition + dir * 0.6f + Vector3.up * 0.15f;
         Quaternion rot = Quaternion.LookRotation(dir);
 
-        if (item.itemPrefab == null)
+        GameObject dropPrefab = item.GetWorldDropPrefab();
+        if (dropPrefab == null)
         {
-            Debug.LogWarning($"[WorldItemSpawn] {item.itemName}에 itemPrefab이 없어 바닥에 드롭할 수 없습니다.");
+            Debug.LogWarning($"[WorldItemSpawn] {item.itemName}에 worldDropPrefab/itemPrefab이 없어 바닥에 드롭할 수 없습니다.");
             return;
         }
 
-        GameObject instance = Object.Instantiate(item.itemPrefab, pos, rot);
+        GameObject instance = Object.Instantiate(dropPrefab, pos, rot);
 
         ItemObject itemObject = instance.GetComponent<ItemObject>();
         if (itemObject != null)

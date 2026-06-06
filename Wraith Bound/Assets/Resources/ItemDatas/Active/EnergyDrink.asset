@@ -20,7 +20,8 @@ MonoBehaviour:
   maxCount: 2
   destroyOnUse: 1
   breakageChance: 0
-  itemPrefab: {fileID: 0}
+  itemPrefab: {fileID: 6972814222275577580, guid: 057e7cced4fbb4945a1171d4b323e0f0, type: 3}
+  worldDropPrefab: {fileID: 0}
   showInHand: 0
   spawnedInstance: {fileID: 0}
   value: 50

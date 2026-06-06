@@ -8,13 +8,19 @@ public class EquipmentViewController : MonoBehaviour
     [SerializeField] private Transform itemViewAnchor;
     [SerializeField] private string viewLayerName = "PickupItem";
 
+    /// <summary>손에 든 아이템 렌더 카메라. 캠코더 등에서 사용 중 Orthographic Size 조절용.</summary>
+    public Camera ItemViewCamera => itemViewCamera;
+
     private readonly Dictionary<Equipment, GameObject> spawnedViews = new();
     private InventoryManager inventory;
     private Equipment currentEquipment;
+    private FlashlightEnergyController flashlightEnergy;
+    private bool smartPhoneViewActive;
 
     void Awake()
     {
         inventory = GetComponent<InventoryManager>();
+        flashlightEnergy = GetComponent<FlashlightEnergyController>();
         SetCameraActive(false);
     }
 
@@ -25,7 +31,7 @@ public class EquipmentViewController : MonoBehaviour
             return;
         }
 
-        if (inventory.GetSelectedItem() != currentEquipment)
+        if (inventory.GetActiveHeldEquipment() != currentEquipment)
         {
             HideCurrent();
         }
@@ -86,7 +92,9 @@ public class EquipmentViewController : MonoBehaviour
         }
 
         currentEquipment = null;
-        SetCameraActive(false);
+
+        if (!smartPhoneViewActive)
+            SetCameraActive(false);
     }
 
     public bool TryGetCurrentView(Equipment equipment, out GameObject view)
@@ -98,6 +106,19 @@ public class EquipmentViewController : MonoBehaviour
 
         view = null;
         return false;
+    }
+
+    public bool TryGetEquipmentLight(Equipment equipment, out Light light)
+    {
+        light = null;
+
+        if (equipment == null || !TryGetView(equipment, out GameObject view) || view == null || !view.activeSelf)
+        {
+            return false;
+        }
+
+        light = view.GetComponentInChildren<Light>(true);
+        return light != null;
     }
 
     private GameObject GetOrCreateView(Equipment equipment)
@@ -115,6 +136,7 @@ public class EquipmentViewController : MonoBehaviour
         StripWorldOnlyComponents(view);
         SetLayerRecursively(view, LayerMask.NameToLayer(viewLayerName));
         EnsureHeldItemSway(view);
+        EnsureFlashlightClipPreventer(equipment, view);
         view.SetActive(false);
 
         spawnedViews[equipment] = view;
@@ -152,6 +174,19 @@ public class EquipmentViewController : MonoBehaviour
         }
     }
 
+    private void EnsureFlashlightClipPreventer(Equipment equipment, GameObject view)
+    {
+        if (view == null)
+            return;
+
+        bool isFlashlight = flashlightEnergy != null && flashlightEnergy.IsFlashlightEquipment(equipment);
+        if (!isFlashlight)
+            return;
+
+        if (view.GetComponent<FlashlightClipPreventer>() == null)
+            view.AddComponent<FlashlightClipPreventer>();
+    }
+
     private bool TryGetView(Equipment equipment, out GameObject view)
     {
         if (spawnedViews.TryGetValue(equipment, out view) && view != null)
@@ -161,6 +196,19 @@ public class EquipmentViewController : MonoBehaviour
 
         view = null;
         return false;
+    }
+
+    /// <summary>
+    /// SmartPhoneHolderToggle에서 스마트폰 표시/숨김 시 호출.
+    /// 다른 장비 뷰가 없을 때만 카메라를 끈다.
+    /// </summary>
+    public void SetSmartPhoneViewActive(bool active)
+    {
+        smartPhoneViewActive = active;
+        if (active)
+            SetCameraActive(true);
+        else if (currentEquipment == null)
+            SetCameraActive(false);
     }
 
     private void SetCameraActive(bool isActive)

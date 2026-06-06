@@ -1,11 +1,10 @@
 using UnityEngine;
-using UnityEngine.AI;
 
 public class DoorClick : MonoBehaviour
 {
+    private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
+
     private bool open;
-    private bool isMousePressed;
-    private bool broken;
 
     [Header("Door Settings")]
     public float smooth = 2.0f;
@@ -25,16 +24,13 @@ public class DoorClick : MonoBehaviour
     public bool autoDirection = true;
 
     [Header("Interaction Settings")]
+    [SerializeField] private Camera viewCamera;
     public float interactDistance = 3f;
-
-    [Header("Door Block Settings")]
-    [SerializeField] private Collider blockCollider;
-    [SerializeField] private Collider interactCollider;
-    [SerializeField] private NavMeshObstacle navObstacle;
+    public KeyCode interactKey = KeyCode.E;
 
     [Header("GUI Settings")]
-    public string openMessage = "Open Mouse Left";
-    public string closeMessage = "Close Mouse Left";
+    public string openMessage = "Open [E]";
+    public string closeMessage = "Close [E]";
 
     public Font messageFont;
     public int fontSize = 24;
@@ -46,24 +42,11 @@ public class DoorClick : MonoBehaviour
     [Header("Audio Settings")]
     public AudioClip openSound;
     public AudioClip closeSound;
+    [Tooltip("재생마다 랜덤 피치 범위 (낮을수록 굵고, 높을수록 가늘게 들림)")]
+    public float pitchMin = 0.88f;
+    public float pitchMax = 1.12f;
 
     private AudioSource audioSource;
-    private Camera cam;
-
-    public bool IsOpen()
-    {
-        return open;
-    }
-
-    public bool IsClosed()
-    {
-        return !open && !broken;
-    }
-
-    public bool IsBroken()
-    {
-        return broken;
-    }
 
     private void Start()
     {
@@ -78,46 +61,21 @@ public class DoorClick : MonoBehaviour
         defaultLocalPos = transform.localPosition;
         targetLocalSlidePos = defaultLocalPos + slideOffset;
 
-        audioSource = GetComponent<AudioSource>();
+        audioSource = gameObject.AddComponent<AudioSource>();
 
-        if (audioSource == null)
-            audioSource = gameObject.AddComponent<AudioSource>();
-
-        cam = Camera.main;
-
-        if (blockCollider == null)
-            blockCollider = GetComponent<Collider>();
-
-        if (navObstacle == null)
-            navObstacle = GetComponent<NavMeshObstacle>();
-
-        if (interactCollider != null)
-            interactCollider.isTrigger = true;
-
-        ApplyDoorBlockState();
+        if (viewCamera == null)
+        {
+            viewCamera = Camera.main;
+        }
     }
 
     private void Update()
     {
-        if (broken)
+        if (viewCamera == null)
         {
-            doorMessage = "";
-            return;
+            viewCamera = Camera.main;
         }
 
-        MoveDoor();
-
-        if (Input.GetMouseButtonDown(0) && !isMousePressed)
-            TryClickDoor();
-
-        if (Input.GetMouseButtonUp(0))
-            isMousePressed = false;
-
-        UpdateDoorMessage();
-    }
-
-    private void MoveDoor()
-    {
         if (isSlidingDoor)
         {
             Vector3 targetPos = open ? targetLocalSlidePos : defaultLocalPos;
@@ -138,52 +96,69 @@ public class DoorClick : MonoBehaviour
                 Time.deltaTime * smooth
             );
         }
+
+        if (WasInteractPressed() && IsAimedAtDoor())
+        {
+            if (!open)
+            {
+                SetDoorDirection();
+            }
+
+            open = !open;
+            PlayDoorSound();
+        }
+
+        UpdateDoorMessage();
     }
 
-    private void TryClickDoor()
+    private bool WasInteractPressed()
     {
-        if (cam == null)
-            return;
+        return Input.GetButtonDown("Interact") || Input.GetKeyDown(interactKey);
+    }
 
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+    private bool IsAimedAtDoor()
+    {
+        if (viewCamera == null)
+        {
+            return false;
+        }
 
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactDistance, ~0, QueryTriggerInteraction.Collide))
-            return;
+        Ray ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
+        int hitCount = Physics.RaycastNonAlloc(ray, HitBuffer, interactDistance);
 
-        DoorClick door = hit.collider.GetComponentInParent<DoorClick>();
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (IsDoorCollider(HitBuffer[i].collider))
+            {
+                return true;
+            }
+        }
 
-        if (door != this)
-            return;
+        return false;
+    }
 
-        if (!open)
-            SetDoorDirection();
+    private bool IsDoorCollider(Collider col)
+    {
+        if (col == null)
+        {
+            return false;
+        }
 
-        open = !open;
-        isMousePressed = true;
+        Transform hitTransform = col.transform;
+        if (hitTransform == transform)
+        {
+            return true;
+        }
 
-        ApplyDoorBlockState();
-        PlayDoorSound();
+        return hitTransform.IsChildOf(transform) || transform.IsChildOf(hitTransform);
     }
 
     private void UpdateDoorMessage()
     {
-        if (cam == null || broken)
+        if (IsAimedAtDoor())
         {
-            doorMessage = "";
+            doorMessage = open ? closeMessage : openMessage;
             return;
-        }
-
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-        if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, ~0, QueryTriggerInteraction.Collide))
-        {
-            DoorClick door = hit.collider.GetComponentInParent<DoorClick>();
-
-            if (door == this)
-            {
-                doorMessage = open ? closeMessage : openMessage;
-                return;
-            }
         }
 
         doorMessage = "";
@@ -191,122 +166,85 @@ public class DoorClick : MonoBehaviour
 
     private void OnGUI()
     {
-        if (string.IsNullOrEmpty(doorMessage))
-            return;
-
-        GUIStyle style = new GUIStyle(GUI.skin.label)
+        if (!string.IsNullOrEmpty(doorMessage))
         {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = fontSize,
-            normal = { textColor = fontColor }
-        };
+            GUIStyle style = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = fontSize,
+                normal = { textColor = fontColor }
+            };
 
-        if (messageFont != null)
-            style.font = messageFont;
+            if (messageFont != null)
+            {
+                style.font = messageFont;
+            }
 
-        float screenWidth = Screen.width;
-        float screenHeight = Screen.height;
+            float screenWidth = Screen.width;
+            float screenHeight = Screen.height;
 
-        Vector2 labelSize = style.CalcSize(new GUIContent(doorMessage));
+            Vector2 labelSize = style.CalcSize(
+                new GUIContent(doorMessage)
+            );
 
-        float labelX = screenWidth * messagePosition.x - labelSize.x / 2;
-        float labelY = screenHeight * messagePosition.y - labelSize.y / 2;
+            float labelX =
+                screenWidth * messagePosition.x - labelSize.x / 2;
 
-        GUI.Label(
-            new Rect(labelX, labelY, labelSize.x, labelSize.y),
-            doorMessage,
-            style
-        );
+            float labelY =
+                screenHeight * messagePosition.y - labelSize.y / 2;
+
+            GUI.Label(
+                new Rect(labelX, labelY, labelSize.x, labelSize.y),
+                doorMessage,
+                style
+            );
+        }
     }
 
     private void PlayDoorSound()
     {
         if (audioSource == null)
+        {
             return;
+        }
 
-        if (open && openSound != null)
+        AudioClip clip = open ? openSound : closeSound;
+        if (clip == null)
         {
-            audioSource.clip = openSound;
-            audioSource.Play();
+            return;
         }
-        else if (!open && closeSound != null)
-        {
-            audioSource.clip = closeSound;
-            audioSource.Play();
-        }
+
+        float minPitch = Mathf.Min(pitchMin, pitchMax);
+        float maxPitch = Mathf.Max(pitchMin, pitchMax);
+        audioSource.pitch = Random.Range(minPitch, maxPitch);
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 
     private void SetDoorDirection()
     {
-        if (!autoDirection || cam == null)
+        if (!autoDirection || viewCamera == null)
+        {
             return;
+        }
 
-        Vector3 playerDir = cam.transform.position - transform.position;
+        Vector3 playerDir =
+            viewCamera.transform.position - transform.position;
 
         float dot = Vector3.Dot(
             transform.right,
             playerDir
         );
 
-        float angle = dot > 0 ? DoorOpenAngle : -DoorOpenAngle;
+        float angle =
+            dot > 0
+            ? DoorOpenAngle
+            : -DoorOpenAngle;
 
         openRot = Quaternion.Euler(
             transform.eulerAngles.x,
             transform.eulerAngles.y + angle,
             transform.eulerAngles.z
         );
-    }
-
-    private void ApplyDoorBlockState()
-    {
-        if (broken)
-        {
-            if (blockCollider != null)
-                blockCollider.enabled = false;
-
-            if (navObstacle != null)
-                navObstacle.enabled = false;
-
-            if (interactCollider != null)
-                interactCollider.enabled = false;
-
-            return;
-        }
-
-        bool shouldBlock = !open;
-
-        if (blockCollider != null)
-            blockCollider.enabled = shouldBlock;
-
-        if (navObstacle != null)
-            navObstacle.enabled = shouldBlock;
-
-        if (interactCollider != null)
-            interactCollider.enabled = true;
-    }
-
-    public void SetBroken()
-    {
-        broken = true;
-        open = true;
-        ApplyDoorBlockState();
-    }
-
-    public void ForceOpen()
-    {
-        if (broken)
-            return;
-
-        open = true;
-        ApplyDoorBlockState();
-    }
-
-    public void ForceClose()
-    {
-        if (broken)
-            return;
-
-        open = false;
-        ApplyDoorBlockState();
     }
 }
