@@ -1457,6 +1457,7 @@ MonoBehaviour:
   transitionDuration: 0.5
   mouseSensitivity: 2
   maxFrontAngle: 45
+  hideAudio: {fileID: 0}
 --- !u!143 &1244363168
 CharacterController:
   m_ObjectHideFlags: 0
@@ -1518,11 +1519,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractor
   playerCamera: {fileID: 147430200}
-  interactRange: 5
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 8
+  interactRange: 2
   interactionUI: {fileID: 0}
+  raycastIgnoreLayers:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!114 &1244363171
 MonoBehaviour:
   m_ObjectHideFlags: 0
