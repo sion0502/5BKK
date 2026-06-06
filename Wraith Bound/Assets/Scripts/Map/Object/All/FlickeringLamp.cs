@@ -8,6 +8,10 @@ public class FlickeringLamp : MonoBehaviour
     [SerializeField] private ParticleSystem sparkParticles;
     [SerializeField] private Transform sparkOrigin;
 
+    [Header("Emission Flicker")]
+    [Tooltip("발광부 MeshRenderer가 따로 지정된 경우에만 켜세요. 자동 수집은 램프 전체 메쉬를 검게 만들 수 있습니다.")]
+    [SerializeField] private bool driveEmissionRenderers = false;
+
     [Header("Light Flicker")]
     [SerializeField] private float baseIntensity = -1f;
     [SerializeField] private float minIntensityMultiplier = 0.25f;
@@ -32,11 +36,14 @@ public class FlickeringLamp : MonoBehaviour
     [SerializeField] private float blackoutIntensityMultiplier = 0.02f;
 
     [Header("Sparks")]
+    [SerializeField] private bool useLineSparks = true;
     [SerializeField] private bool createSparkParticlesIfMissing = true;
     [SerializeField] private Vector3 sparkLocalOffset = new Vector3(0f, -0.08f, 0f);
     [SerializeField] private float sparkChancePerSecond = 0.7f;
     [SerializeField] private Vector2Int sparkBurstCount = new Vector2Int(2, 7);
     [SerializeField] private Color sparkColor = new Color(1f, 0.72f, 0.28f, 1f);
+    [SerializeField] private Vector2 sparkLineLength = new Vector2(0.08f, 0.22f);
+    [SerializeField] private Vector2 sparkLineLifetime = new Vector2(0.04f, 0.11f);
 
     [Header("Optional Crackle Audio")]
     [SerializeField] private AudioSource crackleAudio;
@@ -49,6 +56,8 @@ public class FlickeringLamp : MonoBehaviour
     private float blackoutTimer;
     private Color emissionColor = Color.white;
     private Material generatedSparkMaterial;
+    private Texture2D generatedSparkTexture;
+    private Material generatedLineSparkMaterial;
 
     private void Awake()
     {
@@ -64,22 +73,24 @@ public class FlickeringLamp : MonoBehaviour
             targetLight = CreateLocalFlickerLight(referenceLight);
         }
 
-        if (emissiveRenderers == null || emissiveRenderers.Length == 0)
-        {
-            emissiveRenderers = GetComponentsInChildren<Renderer>(true);
-        }
-
-        if (sparkParticles == null)
+        if (!useLineSparks && sparkParticles == null)
         {
             sparkParticles = GetComponentInChildren<ParticleSystem>(true);
         }
 
-        if (sparkParticles == null && createSparkParticlesIfMissing)
+        if (!useLineSparks && sparkParticles == null && createSparkParticlesIfMissing)
         {
             sparkParticles = CreateSparkParticles();
         }
 
-        ConfigureSparkMaterial();
+        if (useLineSparks)
+        {
+            ConfigureLineSparkMaterial();
+        }
+        else
+        {
+            ConfigureSparkMaterial();
+        }
 
         if (targetLight != null)
         {
@@ -154,10 +165,27 @@ public class FlickeringLamp : MonoBehaviour
 
     private void OnDestroy()
     {
+        ClearEmissionBlocks();
+
         if (generatedSparkMaterial != null)
         {
             Destroy(generatedSparkMaterial);
         }
+
+        if (generatedSparkTexture != null)
+        {
+            Destroy(generatedSparkTexture);
+        }
+
+        if (generatedLineSparkMaterial != null)
+        {
+            Destroy(generatedLineSparkMaterial);
+        }
+    }
+
+    private void OnDisable()
+    {
+        ClearEmissionBlocks();
     }
 
     private void Update()
@@ -206,7 +234,7 @@ public class FlickeringLamp : MonoBehaviour
 
     private void ApplyEmission(float multiplier)
     {
-        if (emissiveRenderers == null)
+        if (!driveEmissionRenderers || emissiveRenderers == null)
         {
             return;
         }
@@ -230,9 +258,27 @@ public class FlickeringLamp : MonoBehaviour
         }
     }
 
+    private void ClearEmissionBlocks()
+    {
+        if (emissiveRenderers == null)
+        {
+            return;
+        }
+
+        foreach (Renderer renderer in emissiveRenderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            renderer.SetPropertyBlock(null);
+        }
+    }
+
     private void TryEmitSparks(float multiplier)
     {
-        if (sparkParticles == null)
+        if (!useLineSparks && sparkParticles == null)
         {
             return;
         }
@@ -252,7 +298,18 @@ public class FlickeringLamp : MonoBehaviour
 
     private void EmitSparks(int count)
     {
-        if (sparkParticles == null || count <= 0)
+        if (count <= 0)
+        {
+            return;
+        }
+
+        if (useLineSparks)
+        {
+            EmitLineSparks(count);
+            return;
+        }
+
+        if (sparkParticles == null)
         {
             return;
         }
@@ -294,6 +351,26 @@ public class FlickeringLamp : MonoBehaviour
         main.gravityModifier = 0.8f;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
 
+        ParticleSystem.ColorOverLifetimeModule colorOverLifetime =
+            particles.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(sparkColor, 0f),
+                new GradientColorKey(Color.white, 0.25f),
+                new GradientColorKey(sparkColor, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0.65f, 0.45f),
+                new GradientAlphaKey(0f, 1f)
+            }
+        );
+        colorOverLifetime.color = gradient;
+
         ParticleSystem.EmissionModule emission = particles.emission;
         emission.enabled = false;
 
@@ -313,6 +390,9 @@ public class FlickeringLamp : MonoBehaviour
         ParticleSystemRenderer particleRenderer = particles.GetComponent<ParticleSystemRenderer>();
         particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
         particleRenderer.sortingOrder = 10;
+        particleRenderer.receiveShadows = false;
+        particleRenderer.shadowCastingMode =
+            UnityEngine.Rendering.ShadowCastingMode.Off;
 
         return particles;
     }
@@ -357,6 +437,17 @@ public class FlickeringLamp : MonoBehaviour
             name = "Lamp Spark Material (Runtime)"
         };
 
+        generatedSparkTexture = CreateSoftSparkTexture();
+        if (generatedSparkMaterial.HasProperty("_BaseMap"))
+        {
+            generatedSparkMaterial.SetTexture("_BaseMap", generatedSparkTexture);
+        }
+
+        if (generatedSparkMaterial.HasProperty("_MainTex"))
+        {
+            generatedSparkMaterial.SetTexture("_MainTex", generatedSparkTexture);
+        }
+
         if (generatedSparkMaterial.HasProperty("_BaseColor"))
         {
             generatedSparkMaterial.SetColor("_BaseColor", sparkColor);
@@ -367,6 +458,151 @@ public class FlickeringLamp : MonoBehaviour
             generatedSparkMaterial.SetColor("_Color", sparkColor);
         }
 
+        ConfigureTransparentSparkBlend(generatedSparkMaterial);
         particleRenderer.material = generatedSparkMaterial;
+    }
+
+    private void ConfigureLineSparkMaterial()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Universal Render Pipeline/Unlit");
+        }
+
+        if (shader == null)
+        {
+            shader = Shader.Find("Sprites/Default");
+        }
+
+        if (shader == null)
+        {
+            return;
+        }
+
+        generatedLineSparkMaterial = new Material(shader)
+        {
+            name = "Lamp Line Spark Material (Runtime)"
+        };
+
+        if (generatedLineSparkMaterial.HasProperty("_BaseColor"))
+        {
+            generatedLineSparkMaterial.SetColor("_BaseColor", sparkColor);
+        }
+
+        if (generatedLineSparkMaterial.HasProperty("_Color"))
+        {
+            generatedLineSparkMaterial.SetColor("_Color", sparkColor);
+        }
+
+        ConfigureTransparentSparkBlend(generatedLineSparkMaterial);
+    }
+
+    private void EmitLineSparks(int count)
+    {
+        Transform parent = sparkOrigin != null ? sparkOrigin : transform;
+        Vector3 origin = parent.TransformPoint(sparkLocalOffset);
+
+        for (int i = 0; i < count; i++)
+        {
+            GameObject sparkObject = new GameObject("Lamp_LineSpark_Runtime");
+            sparkObject.transform.position = origin;
+
+            LineRenderer line = sparkObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.material = generatedLineSparkMaterial;
+            line.startWidth = Random.Range(0.008f, 0.018f);
+            line.endWidth = 0f;
+            line.numCapVertices = 2;
+            line.numCornerVertices = 1;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+
+            Color startColor = sparkColor;
+            Color endColor = sparkColor;
+            startColor.a = 1f;
+            endColor.a = 0f;
+            line.startColor = startColor;
+            line.endColor = endColor;
+
+            Vector3 direction = new Vector3(
+                Random.Range(-0.8f, 0.8f),
+                Random.Range(-1.2f, -0.2f),
+                Random.Range(-0.8f, 0.8f)
+            ).normalized;
+            float length = Random.Range(sparkLineLength.x, sparkLineLength.y);
+            line.SetPosition(0, origin);
+            line.SetPosition(1, origin + direction * length);
+
+            Destroy(sparkObject, Random.Range(sparkLineLifetime.x, sparkLineLifetime.y));
+        }
+    }
+
+    private Texture2D CreateSoftSparkTexture()
+    {
+        const int textureSize = 32;
+        Texture2D texture = new Texture2D(
+            textureSize,
+            textureSize,
+            TextureFormat.RGBA32,
+            false
+        )
+        {
+            name = "Lamp Spark Soft Dot (Runtime)",
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        Color[] pixels = new Color[textureSize * textureSize];
+        float center = (textureSize - 1) * 0.5f;
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                float dx = (x - center) / center;
+                float dy = (y - center) / center;
+                float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                float alpha = Mathf.Clamp01(1f - distance);
+                alpha = alpha * alpha * alpha;
+                pixels[y * textureSize + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        texture.SetPixels(pixels);
+        texture.Apply(false, true);
+        return texture;
+    }
+
+    private void ConfigureTransparentSparkBlend(Material material)
+    {
+        if (material.HasProperty("_Surface"))
+        {
+            material.SetFloat("_Surface", 1f);
+        }
+
+        if (material.HasProperty("_Blend"))
+        {
+            material.SetFloat("_Blend", 2f);
+        }
+
+        if (material.HasProperty("_SrcBlend"))
+        {
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        }
+
+        if (material.HasProperty("_DstBlend"))
+        {
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+        }
+
+        if (material.HasProperty("_ZWrite"))
+        {
+            material.SetFloat("_ZWrite", 0f);
+        }
+
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
     }
 }
