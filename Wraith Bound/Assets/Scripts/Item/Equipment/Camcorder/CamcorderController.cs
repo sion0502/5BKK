@@ -219,6 +219,7 @@ public class CamcorderController : MonoBehaviour
 
     private void OnDisable()
     {
+        UnregisterFromEnergy();
         Camera.onPreCull -= OnCameraPreCull;
 
         if (isHeldView)
@@ -267,6 +268,11 @@ public class CamcorderController : MonoBehaviour
 
         if (active == value) return;
         active = value;
+
+        if (value)
+            RegisterWithEnergy();
+        else
+            UnregisterFromEnergy();
 
         StopSequence();
         sequenceRoutine = StartCoroutine(value ? ActivateSequence() : DeactivateSequence());
@@ -577,6 +583,22 @@ public class CamcorderController : MonoBehaviour
 
         if (camcorderEnergy == null)
             camcorderEnergy = FindFirstObjectByType<CamcorderEnergyController>();
+    }
+
+    private void RegisterWithEnergy()
+    {
+        if (camcorderEnergy == null)
+            ResolveCamcorderEnergy();
+
+        camcorderEnergy?.RegisterActiveViewfinder(this);
+    }
+
+    private void UnregisterFromEnergy()
+    {
+        if (camcorderEnergy == null)
+            ResolveCamcorderEnergy();
+
+        camcorderEnergy?.UnregisterActiveViewfinder(this);
     }
 
     private bool CanOpenViewfinder()

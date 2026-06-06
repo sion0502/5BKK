@@ -452,11 +452,13 @@ public class InventoryManager : MonoBehaviour
 
     private EquipmentViewController equipmentView;
     private SmartPhoneHolderToggle smartPhoneToggle;
+    private CamcorderEnergyController camcorderEnergy;
 
     void Awake()
     {
         equipmentView = GetComponent<EquipmentViewController>();
         smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
+        camcorderEnergy = GetComponent<CamcorderEnergyController>();
         ResolveCamcorderReference();
     }
 
@@ -573,6 +575,11 @@ public class InventoryManager : MonoBehaviour
             ToggleCamcorderHeld();
         }
 
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         float wheel = Input.GetAxis("Mouse ScrollWheel");
         if (wheel > 0f) ChangeSelectedSlot(-1);
         else if (wheel < 0f) ChangeSelectedSlot(1);
@@ -587,8 +594,22 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    /// <summary>뷰파인더 ON 중 퀵슬롯·스크롤 전환 차단 (스크롤은 캠코더 줌 전용).</summary>
+    public bool IsCamcorderViewfinderActive()
+    {
+        if (camcorderEnergy == null)
+            camcorderEnergy = GetComponent<CamcorderEnergyController>();
+
+        return camcorderEnergy != null && camcorderEnergy.IsViewfinderActive;
+    }
+
     private void ChangeSelectedSlot(int direction)
     {
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         if (capacity <= 0)
         {
             return;
@@ -611,6 +632,11 @@ public class InventoryManager : MonoBehaviour
 
     public void SetSelectedSlot(int index)
     {
+        if (IsCamcorderViewfinderActive())
+        {
+            return;
+        }
+
         if (index < 0 || index >= capacity)
         {
             return;

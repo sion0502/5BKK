@@ -12,9 +12,14 @@ public class CamcorderEnergyController : MonoBehaviour
 
     private InventoryManager inventory;
     private EquipmentViewController equipmentView;
+    private CamcorderController activeCamcorderController;
     private float currentEnergy = -1f;
 
     public Equipment CamcorderEquipment => camcorderEquipment;
+
+    /// <summary>뷰파인더(야간투시)가 켜져 있으면 true. 인벤 슬롯 입력 차단 등에 사용.</summary>
+    public bool IsViewfinderActive =>
+        activeCamcorderController != null && activeCamcorderController.IsViewfinderActive;
 
     public float CurrentEnergy
     {
@@ -65,36 +70,49 @@ public class CamcorderEnergyController : MonoBehaviour
         if (camcorderEquipment == null || inventory == null || !inventory.HasCamcorder)
         {
             currentEnergy = -1f;
+            activeCamcorderController = null;
             return;
         }
 
         EnsureInitialized();
 
-        if (IsViewfinderActive())
+        if (IsViewfinderActive)
         {
             currentEnergy -= camcorderEquipment.consumeRate * Time.deltaTime;
             if (currentEnergy <= 0f)
             {
                 currentEnergy = 0f;
-                NotifyBatteryHud();   // 0%를 HUD에 먼저 반영
+                NotifyBatteryHud();
                 ForceCloseViewfinder();
             }
             else
             {
-                NotifyBatteryHud();   // 매 프레임 HUD 갱신
+                NotifyBatteryHud();
             }
         }
         else
         {
+            activeCamcorderController = null;
             float recharge = GetRechargeRate();
             currentEnergy = Mathf.Min(camcorderEquipment.maxEnergy, currentEnergy + recharge * Time.deltaTime);
         }
     }
 
+    public void RegisterActiveViewfinder(CamcorderController controller)
+    {
+        if (controller != null)
+            activeCamcorderController = controller;
+    }
+
+    public void UnregisterActiveViewfinder(CamcorderController controller)
+    {
+        if (activeCamcorderController == controller)
+            activeCamcorderController = null;
+    }
+
     /// <summary>
     /// 0=Empty, 1~4=Battery_1~4.
-    /// Floor 방식: 에너지가 구간 아래로 내려가는 즉시 한 칸 줄어들어 보입니다.
-    ///   100% → 4칸  /  75% → 3칸  /  50% → 2칸  /  25% → 1칸  /  0% → Empty
+    /// Floor: 75%→4칸, 50%→3칸, 25%→2칸, 0% 초과→1칸.
     /// </summary>
     public int GetBatteryLevelIndex()
     {
@@ -107,53 +125,22 @@ public class CamcorderEnergyController : MonoBehaviour
             return 0;
 
         float ratio = EnergyRatio;
-        // Floor: 0~0.25 → 0(Empty 처리됨), 0.25~0.5 → 1, 0.5~0.75 → 2, 0.75~1 → 3 → +1 = 1~4
         int level = Mathf.FloorToInt(ratio * 4f);
         return Mathf.Clamp(level + 1, 1, 4);
     }
 
-    public bool IsViewfinderActive()
-    {
-        if (inventory == null || !inventory.IsCamcorderHeld() || equipmentView == null || camcorderEquipment == null)
-            return false;
-
-        if (!equipmentView.TryGetCurrentView(camcorderEquipment, out GameObject view))
-            return false;
-
-        CamcorderController controller = view.GetComponentInChildren<CamcorderController>(true);
-        return controller != null && controller.IsViewfinderActive;
-    }
-
     public void ForceCloseViewfinder()
     {
-        if (inventory == null || !inventory.IsCamcorderHeld() || equipmentView == null || camcorderEquipment == null)
+        if (activeCamcorderController == null || !activeCamcorderController.IsViewfinderActive)
             return;
 
-        if (!equipmentView.TryGetCurrentView(camcorderEquipment, out GameObject view))
-            return;
-
-        CamcorderController controller = view.GetComponentInChildren<CamcorderController>(true);
-        if (controller != null && controller.IsViewfinderActive)
-        {
-            controller.SetActive(false);
-            Debug.Log("[Camcorder] 배터리 방전으로 뷰파인더를 닫습니다.");
-        }
+        activeCamcorderController.SetActive(false);
+        Debug.Log("[Camcorder] 배터리 방전으로 뷰파인더를 닫습니다.");
     }
 
-    /// <summary>
-    /// CamcorderController 쪽 HUD 갱신을 요청합니다.
-    /// 뷰파인더 Update와 독립적으로 소모량을 즉시 반영하기 위해 에너지 측에서 직접 호출합니다.
-    /// </summary>
     private void NotifyBatteryHud()
     {
-        if (inventory == null || !inventory.IsCamcorderHeld() || equipmentView == null || camcorderEquipment == null)
-            return;
-
-        if (!equipmentView.TryGetCurrentView(camcorderEquipment, out GameObject view))
-            return;
-
-        CamcorderController controller = view.GetComponentInChildren<CamcorderController>(true);
-        controller?.RequestBatteryHudRefresh();
+        activeCamcorderController?.RequestBatteryHudRefresh();
     }
 
     private float GetRechargeRate()
