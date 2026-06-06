@@ -14,6 +14,8 @@ public class SceneStarter : MonoBehaviour
     public float gravity = 60f;        // 중력 값 (클수록 팍! 꽂힘)
     public float startWaitTime = 1.0f; // 암전 상태 대기 시간
 
+    public AudioClip impactSound; // 재생할 사운드 파일
+
     void Start()
     {
         // 카메라를 할당 안 했을 경우 자동 찾기
@@ -24,6 +26,8 @@ public class SceneStarter : MonoBehaviour
 
     IEnumerator StartSequence()
     {
+        fadeImage = ScreenFader.Prepare(fadeImage);
+
         // 1. 컴포넌트 참조 및 비활성화
         PlayerController pc = player.GetComponent<PlayerController>();
         CharacterController cc = player.GetComponent<CharacterController>();
@@ -100,6 +104,16 @@ public class SceneStarter : MonoBehaviour
         // -1.2f 정도로 확 낮추면 거의 바닥에 기어가는 높이가 됩니다.
         Vector3 crouchPos = originPos + new Vector3(0, -1.2f, 0); 
         Quaternion faceDownRot = Quaternion.Euler(50f, 5f, -10f); // 고개도 푹 숙이고 옆으로 살짝 삐딱하게
+
+        GameObject soundObj = new GameObject("TempAudio");
+        AudioSource audioSource = soundObj.AddComponent<AudioSource>();
+
+        // 클립 할당 및 사운드 재생
+        audioSource.clip = impactSound;
+        audioSource.Play();
+
+        // 재생이 끝난 후 게임 오브젝트 자동 삭제 (오디오 길이 기준)
+        Destroy(soundObj, impactSound.length);
 
         while (t < 0.08f) // 팍! 하고 쓰러지는 속도
         {
