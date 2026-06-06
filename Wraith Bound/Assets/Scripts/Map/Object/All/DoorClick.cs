@@ -48,6 +48,17 @@ public class DoorClick : MonoBehaviour
 
     private AudioSource audioSource;
 
+    public bool IsOpen()
+    {
+        return open;
+    }
+
+    public bool IsBroken()
+    {
+        DoorBrokenTest brokenDoor = GetComponent<DoorBrokenTest>();
+        return brokenDoor != null && brokenDoor.IsBroken();
+    }
+
     private void Start()
     {
         defaultRot = transform.rotation;

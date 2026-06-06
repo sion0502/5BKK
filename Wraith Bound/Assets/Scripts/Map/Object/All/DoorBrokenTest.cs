@@ -13,6 +13,11 @@ public class DoorBrokenTest : MonoBehaviour
     private Rigidbody rb;
     private DoorClick doorScript;
 
+    public bool IsBroken()
+    {
+        return isBroken;
+    }
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -29,11 +34,16 @@ public class DoorBrokenTest : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Y))
         {
-            HitDoor();
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            Vector3 attackerPosition = player != null
+                ? player.transform.position
+                : transform.position - transform.forward;
+
+            HitDoor(attackerPosition);
         }
     }
 
-    private void HitDoor()
+    public void HitDoor(Vector3 attackerPosition)
     {
         if (isBroken) return;
 
@@ -43,11 +53,11 @@ public class DoorBrokenTest : MonoBehaviour
 
         if (currentHits >= hitsToBreak)
         {
-            BreakDoor();
+            BreakDoor(attackerPosition);
         }
     }
 
-    private void BreakDoor()
+    private void BreakDoor(Vector3 attackerPosition)
     {
         isBroken = true;
 
@@ -74,23 +84,18 @@ public class DoorBrokenTest : MonoBehaviour
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Vector3 dir =
+            (transform.position - attackerPosition).normalized;
 
-        if (player != null)
-        {
-            Vector3 dir =
-                (transform.position - player.transform.position).normalized;
+        rb.AddForce(
+            (dir + Vector3.up * 0.05f) * 100f,
+            ForceMode.Impulse
+        );
 
-            rb.AddForce(
-                (dir + Vector3.up * 0.05f) * 100f,
-                ForceMode.Impulse
-            );
-
-            rb.AddTorque(
-                Random.insideUnitSphere * 50f,
-                ForceMode.Impulse
-            );
-        }
+        rb.AddTorque(
+            Random.insideUnitSphere * 50f,
+            ForceMode.Impulse
+        );
 
         StartCoroutine(FadeAndDestroy());
     }
