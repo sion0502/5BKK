@@ -35,7 +35,9 @@ public static class CamcorderItemBuilder
 
         GameObject viewPrefab = BuildViewPrefab(modelPrefab);
         Equipment equipment = BuildEquipmentAsset(viewPrefab);
-        BuildWorldPrefab(modelPrefab, equipment);
+        GameObject worldPrefab = BuildWorldPrefab(modelPrefab, equipment);
+        equipment.worldDropPrefab = worldPrefab;
+        EditorUtility.SetDirty(equipment);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -122,7 +124,7 @@ public static class CamcorderItemBuilder
         return equipment;
     }
 
-    private static void BuildWorldPrefab(GameObject modelPrefab, Equipment equipment)
+    private static GameObject BuildWorldPrefab(GameObject modelPrefab, Equipment equipment)
     {
         GameObject root = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
         root.name = "World_Camcorder";
@@ -138,8 +140,9 @@ public static class CamcorderItemBuilder
         ItemObject itemObject = root.AddComponent<ItemObject>();
         itemObject.itemData = equipment;
 
-        PrefabUtility.SaveAsPrefabAsset(root, WorldPrefabPath);
+        GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, WorldPrefabPath);
         Object.DestroyImmediate(root);
+        return saved;
     }
 
     private static void EnsureFolders()

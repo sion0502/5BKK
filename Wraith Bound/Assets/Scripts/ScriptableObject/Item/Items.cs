@@ -22,10 +22,20 @@ public abstract class Items : ScriptableObject // 추상 클래스
     [Range(0, 100)] public float breakageChance; // 사용 시 고장/파괴될 확률
 
     [Header("시각적 요소")]
-    public GameObject itemPrefab; // 획득 시 생성할 프리팹 (손에 들 모델 등)
+    [Tooltip("손에 들/view 카메라용 프리팹 (View_*). 장비는 EquipmentViewController가 사용합니다.")]
+    public GameObject itemPrefab;
+
+    [Tooltip("인벤 교체 등으로 바닥에 떨어뜨릴 월드 프리팹 (World_*). 비어 있으면 itemPrefab을 사용합니다.")]
+    public GameObject worldDropPrefab;
 
     // [추가] 이 아이템을 획득했을 때 ItemHolder에 생성할지 여부
     public bool showInHand;
+
+    /// <summary>바닥 드롭에 쓸 프리팹. worldDropPrefab 우선, 없으면 itemPrefab.</summary>
+    public GameObject GetWorldDropPrefab()
+    {
+        return worldDropPrefab != null ? worldDropPrefab : itemPrefab;
+    }
 
     // 런타임에 생성된 실제 오브젝트 보관용
     [HideInInspector] public GameObject spawnedInstance;

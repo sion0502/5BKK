@@ -320,6 +320,7 @@ public class InventoryManager : MonoBehaviour
                 }
 
                 slot.AddAmount(amount);
+                NotifyItemAdded(itemToAdd);
                 return true;
             }
         }
@@ -329,6 +330,7 @@ public class InventoryManager : MonoBehaviour
         {
             if (TrySwapWithSelectedSlot(itemToAdd, amount, out droppedItem, out droppedAmount))
             {
+                NotifyItemAdded(itemToAdd);
                 return true;
             }
 
@@ -343,7 +345,52 @@ public class InventoryManager : MonoBehaviour
         }
 
         slots.Add(new InventorySlot(itemToAdd, amount));
+        NotifyItemAdded(itemToAdd);
         return true;
+    }
+
+    /// <summary>
+    /// 아이템 획득/추가 후 선택 슬롯과 손에 든 표시를 갱신합니다.
+    /// 현재 선택이 비어 있으면 획득한 아이템 슬롯으로 자동 선택합니다.
+    /// </summary>
+    private void NotifyItemAdded(Items itemToAdd)
+    {
+        if (itemToAdd == null)
+        {
+            return;
+        }
+
+        int slotIndex = FindSlotIndex(itemToAdd);
+        if (slotIndex < 0)
+        {
+            return;
+        }
+
+        if (GetSelectedItem() == null)
+        {
+            SelectQuickSlot();
+            selectedSlotIndex = slotIndex;
+        }
+
+        OnSelectedSlotChanged();
+    }
+
+    private int FindSlotIndex(Items item)
+    {
+        if (item == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null && slots[i].item == item)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -377,8 +424,6 @@ public class InventoryManager : MonoBehaviour
 
         slot.item = newItem;
         slot.amount = newAmount;
-
-        OnSelectedSlotChanged();
 
         Debug.Log($"[Inventory] 선택 슬롯 {selectedSlotIndex} 교체: {droppedItem.itemName} x{droppedAmount} -> {newItem.itemName} x{newAmount}");
 
