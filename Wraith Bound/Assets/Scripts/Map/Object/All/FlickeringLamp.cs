@@ -281,6 +281,7 @@ public class FlickeringLamp : MonoBehaviour
         sparkObject.transform.localRotation = Quaternion.identity;
 
         ParticleSystem particles = sparkObject.AddComponent<ParticleSystem>();
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         ParticleSystem.MainModule main = particles.main;
         main.loop = false;
