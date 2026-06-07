@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d58998031af378645b463d3ddd06fbce, type: 3}
+  m_Name: PassiveKeroseneLamp
+  m_EditorClassIdentifier: Assembly-CSharp::PassiveItem
+  id: 3002
+  itemName: "\uB4F1\uC720 \uB7A8\uD504"
+  type: 2
+  description: "\uD68D\uB4DD \uC2DC \uC8FC\uBCC0 \uC57D 2m\uB97C \uB530\uB73B\uD55C
+    \uBD88\uBE5B\uC73C\uB85C \uBC1D\uD600 \uC90D\uB2C8\uB2E4."
+  icon: {fileID: 0}
+  maxCount: 1
+  destroyOnUse: 0
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 2758558454613401779, guid: cafff4d6dd810564fb9dc9d2e47d309f, type: 3}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
+  statModifier: 0
+  extraSlots: 0
+  providesAmbientLight: 1
+  ambientLightRange: 2
+  ambientLightIntensity: 2.5
+  ambientLightColor: {r: 1, g: 0.72, b: 0.38, a: 1}
+  flickerLight: 1

@@ -18,9 +18,10 @@ public class PlayerController : MonoBehaviour
     public float runSpeed; // 달리기 속도
     public float staminaDrainRate; // 달리기 시 소비할 스태미나
     public float gravity = -10.0f; // 중력
-    public bool isRun = false; // 달리기 상태
-    public bool grounded = true; // 지면에 있는 지
-    
+    public bool isGrounded = true;
+    public bool hitCeiling = false;
+    public bool isRun = false;
+
     [Header("Falling Settings")]
     public float damagePerMeter = 3f; // 1미터 당 3 데미지
     public float minFallHeight = 20f; // 20m 미만은 데미지 없음
@@ -43,12 +44,15 @@ public class PlayerController : MonoBehaviour
     private float targetHeight;
     private float targetCameraHeight;
 
-    // 지면 검사 거리
-    private float groundCheckRadius = 0.35f;
-    private float groundCheckDistance = 0.2f; // CharacterController는 항상 지면에 딱 붙어있지 않기 때문에 이를 보정할 변수 생성
-    private float groundCheckStartOffset = 0.1f;
-    private float maxGroundAngle = 45f;
-    private RaycastHit groundHit;
+    [Header("Ground Check Settings")]
+    [SerializeField] private float groundCheckOffset = 0.05f; // 캐릭터 컨트롤러 하단에서 시작할 오프셋
+    [SerializeField] private float groundCheckDistance = 0.15f; // 감지 레이 길이
+    [SerializeField] private float groundSphereRadius = 0.28f; // SphereCast 사용 시 반지름 (컨트롤러 반경보다 약간 작게 설정)
+
+    [Header("Ceiling Check Settings")]
+    [SerializeField] private float ceilingCheckOffset = 0.05f; // 캐릭터 컨트롤러 상단에서 시작할 오프셋
+    [SerializeField] private float ceilingCheckDistance = 0.15f; // 감지 레이 길이
+    [SerializeField] private float ceilingSphereRadius = 0.28f;
 
     [Header("References")]
     private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
@@ -59,6 +63,13 @@ public class PlayerController : MonoBehaviour
     private Vector3 horizontalVelocity;
     public LayerMask ceilingCheckLayer; // 천장 충돌을 체크할 레이어
     public LayerMask groundMask; // 지면 검사를 체크할 레이어
+
+    void Reset()
+    {
+        // 기본값 세팅 (기본 CharacterController radius인 0.5보다 작게 세팅하여 벽면 마찰 간섭 최소화)
+        groundSphereRadius = controller.radius * 0.9f;
+        ceilingSphereRadius = controller.radius * 0.9f;
+    }
 
     void Start()
     {
@@ -76,7 +87,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        HandleGrounded();
+        CheckGround();
         HandleMovement();
         HandleGravity();
 
@@ -86,54 +97,44 @@ public class PlayerController : MonoBehaviour
         HandleFallingDamage();
     }
 
-    private void HandleGrounded()
+    private void CheckGround()
     {
-        /* Vector3 origin = transform.position + controller.center;
-        origin.y -= controller.height / 2 - controller.radius;
-        float radius = controller.radius;
+        /*
+        // CharacterController의 실제 바닥 중심 좌표 계산 (스케일 및 피벗 오프셋 반영)
+        Vector3 controllerBottom = transform.position
+                                   + transform.up * (controller.center.y - (controller.height * 0.5f));
 
-        grounded = Physics.SphereCast(origin, radius, Vector3.down, out RaycastHit hit, controller.height / 2 - radius + groundCheckDistance, groundMask);
+        // Character Controller 자체 스킨 너비(Skin Width)보다 약간 위에서 발사하도록 시작점 오프셋 적용
+        Vector3 rayStartPoint = controllerBottom + transform.up * groundCheckOffset;
 
-        if (grounded)
-        {
-            controller.stepOffset = 0.3f; // 지상에서는 기본 stepOffset 값으로 적용함
-        }
-        else
-        {
-            controller.stepOffset = 0f; // 공중에서는 stepOffset을 0으로 설정하여 벽에 걸리는 것을 방지함
-        } */
+        // SphereCast를 사용하여 경사면 및 모서리 바닥까지 정확하게 커버
+        bool hit = Physics.SphereCast(
+            rayStartPoint,
+            groundSphereRadius,
+            -transform.up,
+            out _groundHit,
+            groundCheckDistance,
+            groundLayer,
+            QueryTriggerInteraction.Ignore
+        );
+
+        return hit;
+
+        */
 
         Vector3 origin = transform.position + Vector3.up * groundCheckDistance;
         float groundCheckRadius = controller.radius * 0.85f;
 
         // SphereCast는 구체를 방향으로 쏘면서 충돌을 찾는데, '이미 접속 중인 지면'에 대한 검사에서 오류가 발생할 수 있음
         // 따라서 CheckSphere를 사용함
-        grounded = Physics.CheckSphere(
+        isGrounded = Physics.CheckSphere(
             origin,
             groundCheckRadius,
             groundMask,
             QueryTriggerInteraction.Ignore
         );
 
-        controller.stepOffset = grounded ? 0.3f : 0f; // 지상에서는 기본 stepOffset 값으로, 공중에서는 stepOffset 값을 0으로 설정하여 벽에 걸리는 것을 방지
-        
-
-        /* Vector3 origin = transform.position + Vector3.up * groundCheckStartOffset;
-        float distance = groundCheckStartOffset + groundCheckDistance;
-        float minGroundNormalY = Mathf.Cos(maxGroundAngle * Mathf.Deg2Rad);
-
-        grounded = Physics.SphereCast(
-            origin,
-            groundCheckRadius,
-            Vector3.down,
-            out groundHit,
-            distance,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Ignore
-        ) && groundHit.normal.y >= minGroundNormalY;
-
-        controller.stepOffset = grounded ? 0.3f : 0f; */
-
+        controller.stepOffset = isGrounded ? 0.3f : 0f; // 지상에서는 기본 stepOffset 값으로, 공중에서는 stepOffset 값을 0으로 설정하여 벽에 걸리는 것을 방지
     }
 
     // 움직임 처리
@@ -148,9 +149,9 @@ public class PlayerController : MonoBehaviour
         Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0f, controller.velocity.z);
         bool isActuallyMoving = horizontalVelocity.sqrMagnitude > 0.1f;
 
-        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false && z > 0.1f && isActuallyMoving)
+        if (Input.GetKey(KeyCode.LeftShift) && conditions.CanSprint() && isCrouching == false && z > 0.1f && isActuallyMoving)
         {
-            if (grounded)
+            if (isGrounded)
             {
                 isRun = true;
                 conditions.ConsumeStamina(staminaDrainRate);
@@ -170,7 +171,7 @@ public class PlayerController : MonoBehaviour
         // 웅크리기 키 (예: 좌측 컨트롤 키)
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
-            if (grounded)
+            if (isGrounded)
             {
                 isCrouching = true;
             }
@@ -178,7 +179,7 @@ public class PlayerController : MonoBehaviour
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
             // 일어서기 시도
-            if (CanStandUp())
+            if (CheckCeiling())
             {
                 isCrouching = false;
             }
@@ -189,7 +190,7 @@ public class PlayerController : MonoBehaviour
         // 장애물이 없어졌을 때 자동으로 일어서도록 처리 (Toggle 방식이 아닌 Hold 방식일 때)
         if (isCrouching && !Input.GetKey(KeyCode.LeftControl))
         {
-            if (CanStandUp())
+            if (CheckCeiling())
             {
                 isCrouching = false;
             }
@@ -201,13 +202,13 @@ public class PlayerController : MonoBehaviour
 
         if (isCrouching)
         {
-            if (grounded) {
+            if (isGrounded) {
             Crouch(move);
             }
         }
         else if (isRun)
         {
-            if (grounded) {
+            if (isGrounded) {
             Run(move);
             }
         }
@@ -292,7 +293,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // 머리 위에 장애물이 있는지 확인하여 일어설 수 있는지 체크
-    private bool CanStandUp()
+    private bool CheckCeiling()
     {
         // 벽면 긁힘 등 미세한 오차로 인해 못 일어나는 버그를 방지하기 위해 반경을 90%로 줄임
         float checkRadius = controller.radius * 0.9f;
@@ -304,7 +305,28 @@ public class PlayerController : MonoBehaviour
         Vector3 top = standCenter + Vector3.up * ((normalHeight * 0.5f) - controller.radius);
         // Physics.CheckCapsule은 해당 영역에 지정된 레이어의 콜라이더가 겹치면 true를 반환
         bool hitCeiling = Physics.CheckCapsule(bottom, top, checkRadius, ceilingCheckLayer, QueryTriggerInteraction.Ignore);
-        return !hitCeiling;
+        return !hitCeiling; 
+
+        /*
+        // CharacterController의 실제 천장 중심 좌표 계산
+        Vector3 controllerTop = transform.position
+                                 + transform.up * (controller.center.y + (controller.height * 0.5f));
+
+        // 머리 상단 오프셋 아래에서 시작하여 위쪽으로 발사
+        Vector3 rayStartPoint = controllerTop - transform.up * ceilingCheckOffset;
+
+        bool hit = Physics.SphereCast(
+            rayStartPoint,
+            ceilingSphereRadius,
+            transform.up,
+            out _ceilingHit,
+            ceilingCheckDistance,
+            ceilingLayer,
+            QueryTriggerInteraction.Ignore
+        );
+
+        return hit;
+        */
     }
 
     private float highestY;
@@ -352,7 +374,7 @@ public class PlayerController : MonoBehaviour
         float footY = transform.position.y - (controller.height * 0.5f);
 
         // 공중 상태
-        if (!grounded)
+        if (!isGrounded)
         {
             if (!isFalling)
             {
@@ -374,7 +396,7 @@ public class PlayerController : MonoBehaviour
         else
         {
             // 착지 순간
-            if (grounded && isFalling)
+            if (isGrounded && isFalling)
             {
                 if (GetGroundY(out float groundY))
                 {
