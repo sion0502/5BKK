@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 좌상단 퀵슬롯 인벤토리 HUD.
 /// - 기본 상태: 현재 슬롯(=slot[0])만 표시 + 좌하단 패시브 슬롯
-/// - Tab(기본키) 홀드: 모든 슬롯이 오른쪽으로 펼쳐지며 표시 (페이드+슬라이드)
+/// - Tab(기본키) 토글: 모든 슬롯이 오른쪽으로 펼쳐지며 표시 (페이드+슬라이드)
 /// - 슬롯 전환(휠/숫자키)에는 슬롯 컨테이너 슬라이드 애니메이션 적용
 /// - 슬롯 위치 i에는 (selectedSlotIndex + i) % capacity 데이터가 매핑되어 좌상단이 항상 현재 슬롯이 됩니다.
 /// - InventoryManager.capacity 변동에 자동 대응합니다.
@@ -105,6 +105,7 @@ public class QuickInventoryHudUI : MonoBehaviour
     {
         if (GetComponent<Canvas>() != null)
         {
+            GameplayHudCanvasSetup.EnsureOverlayCanvas(gameObject);
             return;
         }
 
@@ -238,10 +239,9 @@ public class QuickInventoryHudUI : MonoBehaviour
 
     private void HandleExpandInput()
     {
-        bool wantExpanded = Input.GetKey(expandKey);
-        if (wantExpanded != isExpanded)
+        if (Input.GetKeyDown(expandKey))
         {
-            isExpanded = wantExpanded;
+            isExpanded = !isExpanded;
             StartExpandAnimation();
         }
     }

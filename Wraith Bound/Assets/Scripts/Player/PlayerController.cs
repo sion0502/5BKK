@@ -148,7 +148,7 @@ public class PlayerController : MonoBehaviour
         Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0f, controller.velocity.z);
         bool isActuallyMoving = horizontalVelocity.sqrMagnitude > 0.1f;
 
-        if (Input.GetKey(KeyCode.LeftShift) && conditions.GetCurrentStamina() > 0f && isCrouching == false && z > 0.1f && isActuallyMoving)
+        if (Input.GetKey(KeyCode.LeftShift) && conditions.CanSprint() && isCrouching == false && z > 0.1f && isActuallyMoving)
         {
             if (grounded)
             {
