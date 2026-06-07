@@ -74,6 +74,11 @@ public class AbyssSinker : MonoBehaviour
         Image activeFade = ScreenFader.Prepare(fadeImage);
         ScreenFader.SetAlpha(activeFade, 0f);
 
+        if (BGMManager.Instance != null)
+        {
+            BGMManager.Instance.FadeOut(totalDuration, fallFadeCurve);
+        }
+
         HubAbyssFallConfig fallConfig = new HubAbyssFallConfig
         {
             WaitTime = waitTime,

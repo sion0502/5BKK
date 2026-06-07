@@ -8357,6 +8357,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: HH_Hospital_DoubleDoor_01
       objectReference: {fileID: 0}
+    - target: {fileID: 3752761252133471073, guid: d00bb4518cc7d944ab4d6a2768f8df3d, type: 3}
+      propertyPath: m_TagString
+      value: Exit
+      objectReference: {fileID: 0}
     - target: {fileID: 4904722637957614817, guid: d00bb4518cc7d944ab4d6a2768f8df3d, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.1
@@ -11836,7 +11840,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1015230408
 Transform:
   m_ObjectHideFlags: 0
@@ -16804,9 +16808,9 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 90a3fb83ecec1354ebeafad5c51284a2, type: 3}
+  m_Resource: {fileID: 8300000, guid: 46a7bfb58ea87844cbd23a06eac029be, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 0.192
   m_Pitch: 1
   Loop: 1
   Mute: 0
