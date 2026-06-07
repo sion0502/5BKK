@@ -18,6 +18,7 @@ public struct ChapterTitleTransitionConfig
     public float TitleExitFadeDuration;
     public AudioClip TitleAppearSound;
     public float TitleAppearVolume;
+    public bool SkipInitialFade;
 }
 
 public static class ChapterTitleTransition
@@ -25,19 +26,19 @@ public static class ChapterTitleTransition
     public static IEnumerator Run(Image fadeImage, ChapterTitleTransitionConfig config)
     {
         Image fade = ScreenFader.Prepare(fadeImage);
-        ScreenFader.SetAlpha(fade, fade.color.a);
+        GameObject fadeCanvasRoot = fade != null ? fade.GetComponentInParent<Canvas>()?.gameObject : null;
+        if (fadeCanvasRoot != null)
+        {
+            fadeCanvasRoot.SetActive(false);
+        }
 
-        yield return ScreenFader.FadeToBlack(fade, config.FadeDuration, config.FadeCurve);
-
-        GameObject titleRoot = CreateTitleRoot(fade);
-        TextMeshProUGUI titleLabel = CreateLabel(
-            titleRoot.transform,
-            "ChapterTitle",
-            new Vector2(0f, 48f),
-            config.TitleFontSize,
-            Color.white
+        GameObject titleScreen = CreateTitleScreen(
+            out TextMeshProUGUI titleLabel,
+            out CanvasGroup titleCanvasGroup,
+            config.TitleFontSize
         );
         titleLabel.text = config.Title;
+        SetLabelAlpha(titleLabel, 1f);
 
         PlayTitleSound2D(config.TitleAppearSound, config.TitleAppearVolume);
 
@@ -47,11 +48,16 @@ public static class ChapterTitleTransition
             config.TitleFadePeriod
         );
 
-        yield return FadeOutTitle(titleLabel, config.TitleExitFadeDuration);
+        yield return FadeOutTitleScreen(titleCanvasGroup, titleLabel, config.TitleExitFadeDuration);
 
-        if (titleRoot != null)
+        if (titleScreen != null)
         {
-            UnityEngine.Object.Destroy(titleRoot);
+            UnityEngine.Object.Destroy(titleScreen);
+        }
+
+        if (fadeCanvasRoot != null)
+        {
+            fadeCanvasRoot.SetActive(true);
         }
 
         ScreenFader.SetAlpha(fade, 1f);
@@ -91,6 +97,7 @@ public static class ChapterTitleTransition
         float titleFadePeriod)
     {
         yield return null;
+        yield return null;
 
         float titlePhase = 0f;
 
@@ -109,48 +116,147 @@ public static class ChapterTitleTransition
         }
     }
 
-    private static IEnumerator FadeOutTitle(TextMeshProUGUI titleLabel, float duration)
+    private static IEnumerator FadeOutTitleScreen(
+        CanvasGroup canvasGroup,
+        TextMeshProUGUI titleLabel,
+        float duration)
     {
-        if (titleLabel == null)
-        {
-            yield break;
-        }
-
-        float startAlpha = titleLabel.color.a;
         if (duration <= 0f)
         {
-            SetLabelAlpha(titleLabel, 0f);
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 0f;
+            }
+
+            if (titleLabel != null)
+            {
+                SetLabelAlpha(titleLabel, 0f);
+            }
+
             yield break;
         }
 
+        float startGroupAlpha = canvasGroup != null ? canvasGroup.alpha : 1f;
+        float startLabelAlpha = titleLabel != null ? titleLabel.color.a : 1f;
         float timer = 0f;
+
         while (timer < duration)
         {
             timer += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(timer / duration);
-            SetLabelAlpha(titleLabel, Mathf.Lerp(startAlpha, 0f, t));
+
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = Mathf.Lerp(startGroupAlpha, 0f, t);
+            }
+
+            if (titleLabel != null)
+            {
+                SetLabelAlpha(titleLabel, Mathf.Lerp(startLabelAlpha, 0f, t));
+            }
+
             yield return null;
         }
 
-        SetLabelAlpha(titleLabel, 0f);
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 0f;
+        }
+
+        if (titleLabel != null)
+        {
+            SetLabelAlpha(titleLabel, 0f);
+        }
     }
 
     private static void SetLabelAlpha(TextMeshProUGUI label, float alpha)
     {
+        if (label == null)
+        {
+            return;
+        }
+
+        alpha = Mathf.Clamp01(alpha);
         Color color = label.color;
-        color.a = Mathf.Clamp01(alpha);
+        color.r = 1f;
+        color.g = 1f;
+        color.b = 1f;
+        color.a = alpha;
         label.color = color;
+
+        Material material = label.fontMaterial;
+        if (material != null && material.HasProperty(ShaderUtilities.ID_FaceColor))
+        {
+            Color faceColor = material.GetColor(ShaderUtilities.ID_FaceColor);
+            faceColor.r = 1f;
+            faceColor.g = 1f;
+            faceColor.b = 1f;
+            faceColor.a = alpha;
+            material.SetColor(ShaderUtilities.ID_FaceColor, faceColor);
+        }
     }
 
-    private static GameObject CreateTitleRoot(Image fade)
+    private static GameObject CreateTitleScreen(
+        out TextMeshProUGUI titleLabel,
+        out CanvasGroup canvasGroup,
+        float fontSize)
     {
-        Canvas canvas = fade.GetComponentInParent<Canvas>();
-        Transform parent = canvas != null ? canvas.transform : fade.transform;
+        GameObject canvasObject = new GameObject("ChapterTitleScreen");
+        Canvas canvas = canvasObject.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 32768;
 
-        GameObject root = new GameObject("ChapterTitleRoot");
-        root.transform.SetParent(parent, false);
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
 
-        RectTransform rect = root.AddComponent<RectTransform>();
+        GameObject backgroundObject = new GameObject("Background");
+        backgroundObject.transform.SetParent(canvasObject.transform, false);
+
+        Image background = backgroundObject.AddComponent<Image>();
+        background.color = Color.black;
+        background.raycastTarget = false;
+        StretchFullScreen(background.rectTransform);
+
+        GameObject labelObject = new GameObject("ChapterTitle");
+        labelObject.transform.SetParent(canvasObject.transform, false);
+
+        RectTransform labelRect = labelObject.AddComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        labelRect.pivot = new Vector2(0.5f, 0.5f);
+        labelRect.anchoredPosition = new Vector2(0f, 48f);
+        labelRect.sizeDelta = new Vector2(1600f, fontSize * 2.2f);
+
+        titleLabel = labelObject.AddComponent<TextMeshProUGUI>();
+        titleLabel.alignment = TextAlignmentOptions.Center;
+        titleLabel.fontSize = fontSize;
+        titleLabel.fontStyle = FontStyles.Normal;
+        titleLabel.color = Color.white;
+        titleLabel.raycastTarget = false;
+        titleLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        titleLabel.overflowMode = TextOverflowModes.Overflow;
+
+        TMP_FontAsset font = UIFontConfig.PolHumanRights;
+        if (font != null)
+        {
+            titleLabel.font = font;
+        }
+
+        DisableOutline(titleLabel);
+
+        canvasGroup = canvasObject.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        return canvasObject;
+    }
+
+    private static void StretchFullScreen(RectTransform rect)
+    {
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
         rect.pivot = new Vector2(0.5f, 0.5f);
@@ -158,44 +264,6 @@ public static class ChapterTitleTransition
         rect.sizeDelta = Vector2.zero;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
-
-        return root;
-    }
-
-    private static TextMeshProUGUI CreateLabel(
-        Transform parent,
-        string objectName,
-        Vector2 anchoredPosition,
-        float fontSize,
-        Color color)
-    {
-        GameObject labelObject = new GameObject(objectName);
-        labelObject.transform.SetParent(parent, false);
-
-        RectTransform rect = labelObject.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = anchoredPosition;
-        rect.sizeDelta = new Vector2(1600f, fontSize * 2.2f);
-
-        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
-        label.alignment = TextAlignmentOptions.Center;
-        label.fontSize = fontSize;
-        label.fontStyle = FontStyles.Normal;
-        label.color = color;
-        label.raycastTarget = false;
-        label.textWrappingMode = TextWrappingModes.NoWrap;
-        label.overflowMode = TextOverflowModes.Overflow;
-
-        TMP_FontAsset font = UIFontConfig.PolHumanRights;
-        if (font != null)
-        {
-            label.font = font;
-        }
-
-        DisableOutline(label);
-        return label;
     }
 
     private static void DisableOutline(TextMeshProUGUI label)
