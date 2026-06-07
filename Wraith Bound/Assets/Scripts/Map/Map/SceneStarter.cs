@@ -16,6 +16,12 @@ public class SceneStarter : MonoBehaviour
 
     public AudioClip impactSound; // 재생할 사운드 파일
 
+    [Header("Hole")]
+    public Transform hole;
+    public float holeAnimateDelay = 0.5f;
+    public float holeRemoveLocalY = 4.5f;
+    public float holeRiseSpeed = 0.35f;
+
     void Start()
     {
         // 카메라를 할당 안 했을 경우 자동 찾기
@@ -27,6 +33,11 @@ public class SceneStarter : MonoBehaviour
     IEnumerator StartSequence()
     {
         fadeImage = ScreenFader.Prepare(fadeImage);
+        Image persistedFade = ScreenFader.GetPersistedOverlay();
+        if (persistedFade != null)
+        {
+            fadeImage = persistedFade;
+        }
 
         // 1. 컴포넌트 참조 및 비활성화
         PlayerController pc = player.GetComponent<PlayerController>();
@@ -79,7 +90,7 @@ public class SceneStarter : MonoBehaviour
         // 바닥 위치 보정
         player.transform.position = landPos;
 
-        // 3. 강력한 착지 충격 (카메라 덜컥거림)
+        StartCoroutine(AnimateAndRemoveHole());
         yield return StartCoroutine(LandingImpactStrong());
 
         // 4. 모든 기능 복구
@@ -92,6 +103,7 @@ public class SceneStarter : MonoBehaviour
         if (ml != null) ml.enabled = true;
         
         fadeImage.color = Color.clear;
+        ScreenFader.ClearPersisted();
     }
 
     IEnumerator LandingImpactStrong()
@@ -146,5 +158,40 @@ public class SceneStarter : MonoBehaviour
         // 최종 위치 고정
         targetCamera.localPosition = originPos;
         targetCamera.localRotation = originRot;
+    }
+
+    IEnumerator AnimateAndRemoveHole()
+    {
+        Transform holeTransform = hole;
+        if (holeTransform == null)
+        {
+            GameObject found = GameObject.Find("Hole");
+            if (found != null)
+            {
+                holeTransform = found.transform;
+            }
+        }
+
+        if (holeTransform == null)
+        {
+            yield break;
+        }
+
+        yield return new WaitForSeconds(holeAnimateDelay);
+
+        float riseSpeed = Mathf.Max(holeRiseSpeed, 0.01f);
+        while (holeTransform.localPosition.y < holeRemoveLocalY)
+        {
+            Vector3 localPosition = holeTransform.localPosition;
+            localPosition.y = Mathf.MoveTowards(
+                localPosition.y,
+                holeRemoveLocalY,
+                riseSpeed * Time.deltaTime
+            );
+            holeTransform.localPosition = localPosition;
+            yield return null;
+        }
+
+        Destroy(holeTransform.gameObject);
     }
 }
