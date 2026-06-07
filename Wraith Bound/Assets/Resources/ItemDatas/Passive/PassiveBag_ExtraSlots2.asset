@@ -21,7 +21,13 @@ MonoBehaviour:
   destroyOnUse: 0
   breakageChance: 0
   itemPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 1748393711760956, guid: db4ce440d68b7a44fb1763a51a73bdb2, type: 3}
   showInHand: 0
   spawnedInstance: {fileID: 0}
   statModifier: 0
   extraSlots: 2
+  providesAmbientLight: 0
+  ambientLightRange: 2
+  ambientLightIntensity: 2.5
+  ambientLightColor: {r: 1, g: 0.72, b: 0.38, a: 1}
+  flickerLight: 1
