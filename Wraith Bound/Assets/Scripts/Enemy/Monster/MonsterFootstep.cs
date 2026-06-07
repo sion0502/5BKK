@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class MonsterFootstep : MonoBehaviour
@@ -34,10 +35,21 @@ public class MonsterFootstep : MonoBehaviour
     {
         if (!useAutoStep) return;
         if (audioSource == null) return;
-        if (speed < minMoveSpeed) return;
+        if (speed < minMoveSpeed)
+        {
+            // 멈춤 또는 느린 속도면 타이머를 초기화
+            timer = 0f;
+            return;
+        }
 
+        // 타이머 감소
         timer -= Time.deltaTime;
+
+        // 간격은 상태에 따라 결정
         float interval = isRunning ? runStepInterval : walkStepInterval;
+
+        // 속도에 비례한 간격 보정 (선호도에 따라 조정)
+        interval = interval * Mathf.Clamp01(speed / (minMoveSpeed * 2f));
 
         if (timer <= 0f)
         {
@@ -66,11 +78,25 @@ public class MonsterFootstep : MonoBehaviour
     {
         if (audioSource == null) return;
 
-        AudioClip[] clips = running ? runClips : walkClips;
+        AudioClip[] clips = goingToArray(running);
         if (clips == null || clips.Length == 0) return;
 
-        AudioClip clip = clips[Random.Range(0, clips.Length)];
-        audioSource.pitch = Random.Range(pitchRange.x, pitchRange.y);
-        audioSource.PlayOneShot(clip, running ? runVolume : walkVolume);
+        int idx = UnityEngine.Random.Range(0, clips.Length);
+        AudioClip clip = clips[idx];
+
+        float vol = running ? runVolume : walkVolume;
+        float pitch = UnityEngine.Random.Range(pitchRange.x, pitchRange.y);
+        audioSource.pitch = Mathf.Clamp(pitch, 0.5f, 2.0f);
+
+        audioSource.PlayOneShot(clip, vol);
+    }
+
+    // 헬퍼: 런/워크 클립 배열 얻기
+    private AudioClip[] goingToArray(bool running)
+    {
+        if (running)
+            return runClips;
+        else
+            return walkClips;
     }
 }

@@ -15,6 +15,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected static readonly int AnimAttack = Animator.StringToHash("Attack");
 
     [Header("References")]
+    [SerializeField] private MonsterFootstep footstep;
     [SerializeField] protected Monsters data;
     [SerializeField] protected Transform player;
     [SerializeField] protected Transform eyePoint;
@@ -32,16 +33,20 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected float pathDoorCheckRadius = 0.25f;
 
     [Header("Patrol")]
-    [SerializeField] protected float patrolRadius = 20f;
     [SerializeField] protected float patrolReachDistance = 0.5f;
+    [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
 
     [Header("Investigate")]
     [SerializeField] protected float investigateRadius = 3f;
     [SerializeField] protected float investigateDuration = 10f;
     [SerializeField] protected float investigateReachDistance = 0.6f;
+    [SerializeField] protected float investigateStartDistance = 2.2f;
 
     [Header("Hearing")]
     [SerializeField] protected float minFootstepMoveSpeed = 0.15f;
+
+    [Header("Sense Timing")]
+    [SerializeField] protected float senseStartDelay = 0.5f;
 
     protected NavMeshAgent agent;
     protected Animator anim;
@@ -56,8 +61,13 @@ public abstract class EnemyBase : MonoBehaviour
     protected bool lockAnimator;
     protected bool reachedLastKnownPosition;
 
+    protected Vector3 currentPatrolDestination;
+    protected bool hasPatrolDestination;
+
     private bool investigateRoutineRunning;
     private float nextSenseTime;
+    private float senseEnableTime;
+    private NavMeshTriangulation cachedTriangulation;
 
     protected virtual void Awake()
     {
@@ -73,6 +83,8 @@ public abstract class EnemyBase : MonoBehaviour
             enabled = false;
             return;
         }
+        if (footstep == null)
+            footstep = GetComponent<MonsterFootstep>();
 
         if (anim == null)
         {
@@ -110,16 +122,29 @@ public abstract class EnemyBase : MonoBehaviour
         lastDetectTime = -999f;
         investigateTimer = 0f;
         reachedLastKnownPosition = false;
+        hasPatrolDestination = false;
+
+        senseEnableTime = Time.time + senseStartDelay;
 
         agent.isStopped = false;
         agent.speed = GetPatrolSpeed();
 
+        CacheTriangulation();
         SetAnimatorByState();
-        SetRandomPatrolPoint();
+        SetNextGlobalPatrolDestination();
     }
 
     protected virtual void Update()
     {
+
+        if (footstep != null)
+        {
+            footstep.SetMoveState(
+                agent.velocity.magnitude,
+                currentState == State.Chase
+            );
+        }
+
         if (player == null)
             return;
 
@@ -149,26 +174,32 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected void UpdateSenses()
     {
+        canDetectPlayer = false;
+
+        if (Time.time < senseEnableTime)
+            return;
+
         if (Time.time < nextSenseTime)
             return;
 
         nextSenseTime = Time.time + Mathf.Max(0.02f, data.checkInterval);
 
-        canDetectPlayer = CheckVision();
+        bool sawPlayer = CheckVision();
+        bool heardPlayer = false;
 
-        if (canDetectPlayer)
-        {
-            lastKnownPosition = player.position;
-            lastDetectTime = Time.time;
-            reachedLastKnownPosition = false;
+        if (!sawPlayer)
+            heardPlayer = CheckHearing();
 
-            if (currentState != State.Chase)
-                ChangeState(State.Chase);
-
+        if (!sawPlayer && !heardPlayer)
             return;
-        }
 
-        DetectPlayerBySound();
+        canDetectPlayer = true;
+        lastKnownPosition = player.position;
+        lastDetectTime = Time.time;
+        reachedLastKnownPosition = false;
+
+        if (currentState != State.Chase)
+            ChangeState(State.Chase);
     }
 
     protected virtual bool CheckVision()
@@ -211,27 +242,19 @@ public abstract class EnemyBase : MonoBehaviour
         return false;
     }
 
-    protected virtual void DetectPlayerBySound()
+    protected virtual bool CheckHearing()
     {
         if (playerFootstepSource == null)
-            return;
+            return false;
 
         if (!playerFootstepSource.isPlaying)
-            return;
+            return false;
 
         if (!IsPlayerActuallyMoving())
-            return;
+            return false;
 
         float dist = Vector3.Distance(transform.position, player.position);
-        if (dist > data.hearingRange)
-            return;
-
-        lastKnownPosition = player.position;
-        lastDetectTime = Time.time;
-        reachedLastKnownPosition = false;
-
-        if (currentState != State.Chase)
-            ChangeState(State.Chase);
+        return dist <= data.hearingRange;
     }
 
     protected bool IsPlayerActuallyMoving()
@@ -276,17 +299,26 @@ public abstract class EnemyBase : MonoBehaviour
             return;
 
         agent.speed = GetPatrolSpeed();
+        agent.isStopped = false;
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
-            SetRandomPatrolPoint();
+            SetNextGlobalPatrolDestination();
             return;
         }
+
+        if (!hasPatrolDestination)
+        {
+            SetNextGlobalPatrolDestination();
+            return;
+        }
+
+        agent.SetDestination(currentPatrolDestination);
 
         if (!HasReachedDestination(patrolReachDistance))
             return;
 
-        SetRandomPatrolPoint();
+        SetNextGlobalPatrolDestination();
     }
 
     protected void UpdateChase()
@@ -311,14 +343,23 @@ public abstract class EnemyBase : MonoBehaviour
 
         float lostTime = Time.time - lastDetectTime;
 
-        if (lostTime < data.targetLostTIme)
+        if (lostTime < 10f)
         {
             agent.SetDestination(lastKnownPosition);
             return;
         }
 
-        if (!investigateRoutineRunning)
-            StartCoroutine(StartInvestigate());
+        float distToLastKnown = Vector3.Distance(transform.position, lastKnownPosition);
+
+        if (distToLastKnown <= investigateStartDistance)
+        {
+            if (!investigateRoutineRunning)
+                StartCoroutine(StartInvestigate());
+        }
+        else
+        {
+            ReturnToPatrolRoute();
+        }
     }
 
     protected IEnumerator StartInvestigate()
@@ -347,11 +388,11 @@ public abstract class EnemyBase : MonoBehaviour
             return;
 
         agent.speed = GetPatrolSpeed();
+        agent.isStopped = false;
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
-            ChangeState(State.Patrol);
-            SetRandomPatrolPoint();
+            ReturnToPatrolRoute();
             return;
         }
 
@@ -359,8 +400,7 @@ public abstract class EnemyBase : MonoBehaviour
         {
             if (HasClosedDoorBetween(transform.position, lastKnownPosition))
             {
-                ChangeState(State.Patrol);
-                SetRandomPatrolPoint();
+                ReturnToPatrolRoute();
                 return;
             }
 
@@ -379,8 +419,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (investigateTimer <= 0f)
         {
-            ChangeState(State.Patrol);
-            SetRandomPatrolPoint();
+            ReturnToPatrolRoute();
             return;
         }
 
@@ -390,29 +429,46 @@ public abstract class EnemyBase : MonoBehaviour
         SetRandomInvestigatePoint();
     }
 
-    protected void SetRandomPatrolPoint()
+    protected void ReturnToPatrolRoute()
+    {
+        ChangeState(State.Patrol);
+
+        if (hasPatrolDestination)
+        {
+            agent.isStopped = false;
+            agent.speed = GetPatrolSpeed();
+            agent.SetDestination(currentPatrolDestination);
+        }
+        else
+        {
+            SetNextGlobalPatrolDestination();
+        }
+    }
+
+    protected void SetNextGlobalPatrolDestination()
     {
         if (!agent.isOnNavMesh)
             return;
 
-        for (int i = 0; i < 30; i++)
+        CacheTriangulation();
+
+        for (int i = 0; i < 40; i++)
         {
-            Vector3 randomDir = Random.insideUnitSphere * patrolRadius;
-            randomDir.y = 0f;
-
-            Vector3 randomPos = transform.position + randomDir;
-
-            if (!NavMesh.SamplePosition(randomPos, out NavMeshHit hit, patrolRadius, NavMesh.AllAreas))
+            if (!TryGetRandomGlobalNavMeshPoint(out Vector3 point))
                 continue;
 
-            if (HasClosedDoorBetween(transform.position, hit.position))
+            if (HasClosedDoorBetween(transform.position, point))
                 continue;
+
+            currentPatrolDestination = point;
+            hasPatrolDestination = true;
 
             agent.isStopped = false;
-            agent.SetDestination(hit.position);
+            agent.SetDestination(currentPatrolDestination);
             return;
         }
 
+        hasPatrolDestination = false;
         agent.isStopped = true;
     }
 
@@ -439,8 +495,43 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        ChangeState(State.Patrol);
-        SetRandomPatrolPoint();
+        agent.isStopped = false;
+        agent.SetDestination(lastKnownPosition);
+    }
+
+    protected void CacheTriangulation()
+    {
+        cachedTriangulation = NavMesh.CalculateTriangulation();
+    }
+
+    protected bool TryGetRandomGlobalNavMeshPoint(out Vector3 result)
+    {
+        result = transform.position;
+
+        if (cachedTriangulation.vertices == null || cachedTriangulation.vertices.Length < 3)
+            return false;
+
+        for (int attempt = 0; attempt < 20; attempt++)
+        {
+            int idx = Random.Range(0, cachedTriangulation.vertices.Length);
+            Vector3 basePoint = cachedTriangulation.vertices[idx];
+
+            Vector3 randomOffset = new Vector3(
+                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius),
+                0f,
+                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius)
+            );
+
+            Vector3 samplePoint = basePoint + randomOffset;
+
+            if (NavMesh.SamplePosition(samplePoint, out NavMeshHit hit, globalPatrolSampleRadius + 1f, NavMesh.AllAreas))
+            {
+                result = hit.position;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected bool HasReachedDestination(float extraDistance)

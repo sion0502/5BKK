@@ -1,104 +1,192 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.AI.Navigation;
 
 public class LobbyEnemySpawner : MonoBehaviour
 {
-    [Header("Enemy Prefabs")]
-    [SerializeField] private GameObject monsterPrefab;
-    [SerializeField] private GameObject ghostPrefab;
+    [Header("Environment")]
+    [SerializeField] private NavMeshSurface surface;
 
-    [Header("Spawn Count")]
-    [SerializeField] private int monsterCount = 2;
-    [SerializeField] private int ghostCount = 2;
+    [Header("Monster Prefabs")]
+    [SerializeField] private GameObject[] monsterPrefabs;
+
+    [Header("Ghost Prefabs")]
+    [SerializeField] private GameObject[] ghostPrefabs;
 
     [Header("Lobby Search")]
     [SerializeField] private string lobbyNameKeyword = "(Lobby)";
-    [SerializeField] private float waitTime = 2.0f;
+
+    [Header("NavMesh Build")]
+    [SerializeField] private float waitBeforeBuild = 0.5f;
+    [SerializeField] private float waitAfterBuild = 0.2f;
 
     [Header("Spawn Area")]
-    [SerializeField] private float spawnRadius = 4f;
-    [SerializeField] private float navMeshSampleRadius = 8f;
+    [SerializeField] private float spawnRadius = 6f;
+    [SerializeField] private float navMeshSampleRadius = 12f;
     [SerializeField] private float heightOffset = 2f;
+
+    private bool initialized = false;
+
+    private void Awake()
+    {
+        if (surface == null)
+            surface = GetComponent<NavMeshSurface>();
+    }
 
     private IEnumerator Start()
     {
-        yield return new WaitForSeconds(waitTime);
+        if (initialized)
+            yield break;
 
-        Transform lobby = FindLobbyChild();
-        if (lobby == null)
+        initialized = true;
+
+        Debug.Log("LobbyEnemySpawner Start");
+
+        if (surface == null)
         {
-            Debug.LogError($"이름에 {lobbyNameKeyword} 포함된 로비를 못 찾음");
+            Debug.LogError("NavMeshSurface가 없습니다.");
             yield break;
         }
 
-        Vector3 lobbyCenter = GetLobbyCenter(lobby);
-        Debug.Log($"로비 찾음: {lobby.name} / 중심: {lobbyCenter}");
+        yield return new WaitForSeconds(waitBeforeBuild);
 
-        SpawnEnemies(monsterPrefab, monsterCount, lobbyCenter);
-        SpawnEnemies(ghostPrefab, ghostCount, lobbyCenter);
-    }
+        surface.BuildNavMesh();
 
-    private Transform FindLobbyChild()
-    {
-        foreach (Transform child in transform)
+        Debug.Log("NavMesh Build Complete");
+
+        yield return new WaitForSeconds(waitAfterBuild);
+
+        List<Transform> lobbies = FindAllLobbyRoots();
+
+        Debug.Log($"찾은 로비 수 : {lobbies.Count}");
+
+        foreach (Transform lobby in lobbies)
         {
-            if (child.name.Contains(lobbyNameKeyword))
-                return child;
+            Debug.Log($"로비 발견 : {lobby.name}");
         }
 
-        return null;
+        if (lobbies.Count == 0)
+        {
+            Debug.LogError("Lobby를 찾지 못했습니다.");
+            yield break;
+        }
+
+        Debug.Log($"Monster Prefab 개수 : {monsterPrefabs.Length}");
+        Debug.Log($"Ghost Prefab 개수 : {ghostPrefabs.Length}");
+
+        SpawnUniqueLobby(monsterPrefabs, lobbies, "Monster");
+        SpawnUniqueLobby(ghostPrefabs, lobbies, "Ghost");
+
+        Debug.Log("Spawn Complete");
+    }
+
+    private List<Transform> FindAllLobbyRoots()
+    {
+        List<Transform> list = new List<Transform>();
+
+        foreach (Transform t in transform)
+        {
+            if (t.name.Contains(lobbyNameKeyword))
+            {
+                list.Add(t);
+            }
+        }
+
+        return list;
     }
 
     private Vector3 GetLobbyCenter(Transform lobby)
     {
-        Renderer r = lobby.GetComponentInChildren<Renderer>();
-        if (r != null)
-            return r.bounds.center;
-
         Collider c = lobby.GetComponentInChildren<Collider>();
+
         if (c != null)
             return c.bounds.center;
+
+        Renderer r = lobby.GetComponentInChildren<Renderer>();
+
+        if (r != null)
+            return r.bounds.center;
 
         return lobby.position;
     }
 
-    private void SpawnEnemies(GameObject prefab, int count, Vector3 center)
+    private void SpawnUniqueLobby(GameObject[] prefabs, List<Transform> lobbies, string label)
     {
-        if (prefab == null)
+        if (prefabs == null || prefabs.Length == 0)
         {
-            Debug.LogWarning("프리팹이 비어있음");
+            Debug.LogWarning($"{label} 프리팹이 비어있음");
             return;
         }
 
-        if (count <= 0)
-            return;
+        List<Transform> availableLobbies = new List<Transform>(lobbies);
 
-        for (int i = 0; i < count; i++)
+        foreach (GameObject prefab in prefabs)
         {
-            bool spawned = false;
+            if (prefab == null)
+                continue;
 
-            for (int tryCount = 0; tryCount < 20; tryCount++)
+            if (availableLobbies.Count == 0)
             {
-                Vector2 circle = Random.insideUnitCircle * spawnRadius;
-                Vector3 candidate = new Vector3(
-                    center.x + circle.x,
-                    center.y + heightOffset,
-                    center.z + circle.y
-                );
-
-                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSampleRadius, NavMesh.AllAreas))
-                {
-                    GameObject obj = Instantiate(prefab, hit.position, Quaternion.identity);
-                    Debug.Log($"생성 성공: {obj.name} / 위치: {hit.position}");
-                    spawned = true;
-                    break;
-                }
+                Debug.LogWarning($"{label} : 배정 가능한 로비 없음");
+                break;
             }
 
-            if (!spawned)
+            int lobbyIndex = Random.Range(0, availableLobbies.Count);
+
+            Transform selectedLobby = availableLobbies[lobbyIndex];
+
+            availableLobbies.RemoveAt(lobbyIndex);
+
+            Vector3 center = GetLobbyCenter(selectedLobby);
+
+            Vector2 randomPos = Random.insideUnitCircle * spawnRadius;
+
+            Vector3 origin = new Vector3(
+                center.x + randomPos.x,
+                center.y + heightOffset,
+                center.z + randomPos.y
+            );
+
+            Debug.Log(
+                $"[{label}] {prefab.name} 선택\n" +
+                $"로비 : {selectedLobby.name}\n" +
+                $"Center : {center}\n" +
+                $"Origin : {origin}"
+            );
+
+            if (NavMesh.SamplePosition(
+                origin,
+                out NavMeshHit hit,
+                navMeshSampleRadius,
+                NavMesh.AllAreas))
             {
-                Debug.LogError($"NavMesh 위 스폰 실패: {prefab.name}");
+                Debug.Log(
+                    $"★★★★ SPAWN 성공 ★★★★\n" +
+                    $"Prefab : {prefab.name}\n" +
+                    $"Lobby : {selectedLobby.name}\n" +
+                    $"Spawn Position : {hit.position}\n" +
+                    $"X = {hit.position.x:F2}\n" +
+                    $"Y = {hit.position.y:F2}\n" +
+                    $"Z = {hit.position.z:F2}"
+                );
+
+                Instantiate(
+                    prefab,
+                    hit.position,
+                    Quaternion.identity
+                );
+            }
+            else
+            {
+                Debug.LogError(
+                    $"XXXX SPAWN 실패 XXXX\n" +
+                    $"Prefab : {prefab.name}\n" +
+                    $"Lobby : {selectedLobby.name}\n" +
+                    $"Origin : {origin}\n" +
+                    $"Center : {center}"
+                );
             }
         }
     }
