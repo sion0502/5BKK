@@ -9,6 +9,7 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
     [SerializeField] private Light[] targetLights;
     [SerializeField] private Transform autoSearchRoot;
     [SerializeField] private string lampNameContains = "[Lamp] Lamp";
+    [SerializeField] private string powerOffCoverName = "PowerOff";
 
     [Header("Switch")]
     [SerializeField] private Transform button;
@@ -67,6 +68,7 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
     private IEnumerator StartupLights()
     {
         Light[] lights = ResolveLights();
+        GameObject[] powerOffCovers = ResolvePowerOffCovers();
         if (lights.Length == 0)
         {
             yield break;
@@ -88,6 +90,8 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
             light.enabled = false;
         }
 
+        SetPowerOffCoversActive(powerOffCovers, true);
+
         yield return new WaitForSeconds(offDuration);
 
         if (tickDelays != null && tickDelays.Length > 0)
@@ -101,9 +105,11 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
 
                 PlayLampSound(tickSound, lights);
                 SetLightsEnabled(lights, true, originalIntensity);
+                SetPowerOffCoversActive(powerOffCovers, false);
                 yield return new WaitForSeconds(tickLightOnDuration);
 
                 SetLightsEnabled(lights, false, originalIntensity);
+                SetPowerOffCoversActive(powerOffCovers, true);
                 yield return new WaitForSeconds(tickLightOffDuration);
             }
         }
@@ -115,6 +121,7 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
 
         PlayLampSound(finalClickSound, lights);
         SetLightsEnabled(lights, !restoreOriginalLightState, originalIntensity);
+        SetPowerOffCoversActive(powerOffCovers, false);
 
         for (int i = 0; i < lights.Length; i++)
         {
@@ -160,6 +167,27 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         return lights.ToArray();
     }
 
+    private GameObject[] ResolvePowerOffCovers()
+    {
+        List<GameObject> covers = new List<GameObject>();
+
+        if (lamps != null)
+        {
+            foreach (GameObject lamp in lamps)
+            {
+                AddPowerOffCover(lamp != null ? lamp.transform : null, covers);
+            }
+        }
+
+        if (covers.Count == 0)
+        {
+            Transform root = autoSearchRoot != null ? autoSearchRoot : transform.root;
+            AddAutoFoundPowerOffCovers(root, covers);
+        }
+
+        return covers.ToArray();
+    }
+
     private void AddAutoFoundLampLights(Transform root, List<Light> lights)
     {
         if (root == null)
@@ -178,6 +206,24 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         }
     }
 
+    private void AddAutoFoundPowerOffCovers(Transform root, List<GameObject> covers)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (!child.name.Contains(lampNameContains))
+            {
+                continue;
+            }
+
+            AddPowerOffCover(child, covers);
+        }
+    }
+
     private void AddLights(IReadOnlyList<Light> source, List<Light> destination)
     {
         if (source == null)
@@ -192,6 +238,20 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
             {
                 destination.Add(light);
             }
+        }
+    }
+
+    private void AddPowerOffCover(Transform lampRoot, List<GameObject> covers)
+    {
+        if (lampRoot == null)
+        {
+            return;
+        }
+
+        Transform cover = FindChildByName(lampRoot, powerOffCoverName);
+        if (cover != null && !covers.Contains(cover.gameObject))
+        {
+            covers.Add(cover.gameObject);
         }
     }
 
@@ -235,6 +295,22 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
             if (intensities != null && i < intensities.Length)
             {
                 light.intensity = intensities[i];
+            }
+        }
+    }
+
+    private void SetPowerOffCoversActive(GameObject[] covers, bool active)
+    {
+        if (covers == null)
+        {
+            return;
+        }
+
+        foreach (GameObject cover in covers)
+        {
+            if (cover != null)
+            {
+                cover.SetActive(active);
             }
         }
     }

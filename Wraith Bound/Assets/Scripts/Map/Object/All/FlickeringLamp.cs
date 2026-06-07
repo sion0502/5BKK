@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class FlickeringLamp : MonoBehaviour
 {
@@ -29,11 +30,14 @@ public class FlickeringLamp : MonoBehaviour
     [SerializeField] private Color generatedLightColor = new Color(1f, 0.72f, 0.38f, 1f);
     [SerializeField] private bool useReferenceLightColor = false;
     [SerializeField] private Vector3 generatedLightLocalOffset = new Vector3(0f, 0f, 0f);
+    [SerializeField] private bool generatedLightCastsShadows = false;
+    [Tooltip("램프 housing이 벽에 직사각형 그림자를 남기지 않도록 MeshRenderer 그림자 cast를 끕니다.")]
+    [SerializeField] private bool disableLampMeshShadowCasters = true;
 
     [Header("Blackout Jitter")]
-    [SerializeField] private float blackoutChancePerSecond = 0.45f;
-    [SerializeField] private Vector2 blackoutDuration = new Vector2(0.03f, 0.12f);
-    [SerializeField] private float blackoutIntensityMultiplier = 0.02f;
+    [SerializeField] private float blackoutChancePerSecond = 0.28f;
+    [SerializeField] private Vector2 blackoutDuration = new Vector2(0.03f, 0.1f);
+    [SerializeField] private float blackoutIntensityMultiplier = 0.35f;
 
     [Header("Sparks")]
     [SerializeField] private bool useLineSparks = true;
@@ -94,16 +98,40 @@ public class FlickeringLamp : MonoBehaviour
 
         if (targetLight != null)
         {
-            initialIntensity = baseIntensity > 0f ? baseIntensity : targetLight.intensity;
+            initialIntensity = SanitizeIntensity(
+                baseIntensity > 0f ? baseIntensity : targetLight.intensity,
+                generatedLightIntensity
+            );
             emissionColor = targetLight.color;
             targetLight.enabled = true;
+            targetLight.shadows = LightShadows.None;
+            targetLight.intensity = initialIntensity;
         }
         else
         {
-            initialIntensity = Mathf.Max(baseIntensity, 1f);
+            initialIntensity = SanitizeIntensity(Mathf.Max(baseIntensity, 1f), generatedLightIntensity);
+        }
+
+        if (disableLampMeshShadowCasters)
+        {
+            DisableLampMeshShadowCasters();
         }
 
         noiseSeed = Random.value * 100f;
+    }
+
+    private void DisableLampMeshShadowCasters()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer is ParticleSystemRenderer || renderer is LineRenderer || renderer is TrailRenderer)
+            {
+                continue;
+            }
+
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+        }
     }
 
     private Light ResolveTargetLight()
@@ -148,15 +176,18 @@ public class FlickeringLamp : MonoBehaviour
             ? referenceLight.color
             : generatedLightColor;
         float fallbackIntensity = referenceLight != null
-            ? referenceLight.intensity * 0.45f
+            ? SanitizeIntensity(referenceLight.intensity, generatedLightIntensity) * 0.45f
             : 12f;
         float fallbackRange = referenceLight != null
             ? Mathf.Clamp(referenceLight.range * 0.18f, 5f, maxFlickerLightRange)
             : 6f;
 
-        light.intensity = Mathf.Max(generatedLightIntensity, fallbackIntensity);
+        light.intensity = SanitizeIntensity(
+            Mathf.Max(generatedLightIntensity, fallbackIntensity),
+            generatedLightIntensity
+        );
         light.range = Mathf.Max(generatedLightRange, fallbackRange);
-        light.shadows = LightShadows.Soft;
+        light.shadows = generatedLightCastsShadows ? LightShadows.Soft : LightShadows.None;
         light.shadowStrength = 0.75f;
         light.bounceIntensity = 0.2f;
 
@@ -224,12 +255,39 @@ public class FlickeringLamp : MonoBehaviour
             return;
         }
 
-        float targetIntensity = initialIntensity * multiplier;
-        targetLight.intensity = Mathf.Lerp(
-            targetLight.intensity,
-            targetIntensity,
-            Time.deltaTime * smoothing
+        if (!IsValidIntensity(initialIntensity))
+        {
+            initialIntensity = SanitizeIntensity(generatedLightIntensity, 1f);
+        }
+
+        float safeMultiplier = Mathf.Clamp(
+            SanitizeIntensity(multiplier, 1f),
+            0f,
+            Mathf.Max(maxIntensityMultiplier, blackoutIntensityMultiplier)
         );
+        float targetIntensity = initialIntensity * safeMultiplier;
+        float currentIntensity = SanitizeIntensity(targetLight.intensity, targetIntensity);
+
+        float blend = Mathf.Clamp01(Time.deltaTime * smoothing);
+        targetLight.intensity = SanitizeIntensity(
+            Mathf.Lerp(currentIntensity, targetIntensity, blend),
+            targetIntensity
+        );
+    }
+
+    private static bool IsValidIntensity(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
+    }
+
+    private static float SanitizeIntensity(float value, float fallback)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
+        {
+            return Mathf.Max(fallback, 0f);
+        }
+
+        return value;
     }
 
     private void ApplyEmission(float multiplier)

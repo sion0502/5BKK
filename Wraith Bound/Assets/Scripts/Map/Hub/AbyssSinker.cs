@@ -1,58 +1,87 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using System.Collections;
 
 public class AbyssSinker : MonoBehaviour
 {
+    [Header("Scene")]
     public string nextSceneName = "Chapter1";
-    public float waitTime = 1.0f;      // 툭 멈췄을 때의 정적 시간
-    public float fallSpeed = 15.0f;    // 쑤욱 빨려 들어가는 속도 (이전보다 빠르게)
-    public float totalDuration = 4.0f; // 전체 연출 시간 (1초 대기 + 3초 추락 등)
 
-    private bool isWorking = false;
+    [Header("Fall Sequence")]
+    public float waitTime = 1.0f;
+    public float fallSpeed = 15.0f;
+    public float totalDuration = 4.0f;
+
+    [Header("Chapter Intro")]
+    public string chapterTitle = "폐병원";
+    public Image fadeImage;
+    public float fadeToBlackDuration = 1.2f;
+    public AnimationCurve fadeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    public float titleFontSize = 156f;
+    public float titleFadeMinAlpha = 0.42f;
+    public float titleFadePeriod = 2.8f;
+    public float titleExitFadeDuration = 1.2f;
+
+    [Header("Chapter Intro Sound")]
+    public AudioClip titleAppearSound;
+    [Range(0f, 1f)]
+    public float titleAppearVolume = 1f;
+
+    private bool isWorking;
 
     private void OnTriggerEnter(Collider other)
     {
-        if (isWorking || !other.CompareTag("Player")) return;
+        if (isWorking || !other.CompareTag("Player"))
+        {
+            return;
+        }
 
         isWorking = true;
         StartCoroutine(StartFallingSequence(other.gameObject));
     }
 
-    IEnumerator StartFallingSequence(GameObject player)
+    private IEnumerator StartFallingSequence(GameObject player)
     {
-        // 1. [툭!] 모든 조작과 물리 정지
         MonoBehaviour[] scripts = player.GetComponents<MonoBehaviour>();
         foreach (MonoBehaviour script in scripts)
         {
-            if (script != this) script.enabled = false;
+            if (script != this)
+            {
+                script.enabled = false;
+            }
         }
 
         CharacterController cc = player.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
+        if (cc != null)
+        {
+            cc.enabled = false;
+        }
 
-        // [추가 연출] 이때 심장박동 소리나 "툭" 하는 짧은 효과음을 넣으면 베스트입니다.
-        // 예: AudioSource.PlayClipAtPoint(thudSound, player.transform.position);
-
-        // 2. [정적] 1초간 그 자리에 고정 (무슨 일이 일어날지 모르는 공포)
         yield return new WaitForSeconds(waitTime);
 
-        // 3. [쑤욱!] 빠른 속도로 추락 시작
         float timer = 0f;
-        while (timer < totalDuration - waitTime)
+        float fallDuration = totalDuration - waitTime;
+        while (timer < fallDuration)
         {
             timer += Time.deltaTime;
-            
-            // 아래로 빠르게 이동
             player.transform.position += Vector3.down * fallSpeed * Time.deltaTime;
-            
-            // 추락할수록 더 빨라지는 느낌을 주고 싶다면 아래처럼 가속도를 붙일 수도 있습니다.
-            // player.transform.position += Vector3.down * (fallSpeed + timer * 5f) * Time.deltaTime;
-
             yield return null;
         }
 
-        // 4. 씬 전환
-        SceneManager.LoadScene(nextSceneName);
+        ChapterTitleTransitionConfig config = new ChapterTitleTransitionConfig
+        {
+            Title = chapterTitle,
+            SceneName = nextSceneName,
+            FadeDuration = fadeToBlackDuration,
+            FadeCurve = fadeCurve,
+            TitleFontSize = titleFontSize,
+            TitleFadeMinAlpha = titleFadeMinAlpha,
+            TitleFadePeriod = titleFadePeriod,
+            TitleExitFadeDuration = titleExitFadeDuration,
+            TitleAppearSound = titleAppearSound,
+            TitleAppearVolume = titleAppearVolume
+        };
+
+        yield return ChapterTitleTransition.Run(fadeImage, config);
     }
 }

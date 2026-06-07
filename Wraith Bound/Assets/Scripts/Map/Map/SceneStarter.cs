@@ -27,6 +27,11 @@ public class SceneStarter : MonoBehaviour
     IEnumerator StartSequence()
     {
         fadeImage = ScreenFader.Prepare(fadeImage);
+        Image persistedFade = ScreenFader.GetPersistedOverlay();
+        if (persistedFade != null)
+        {
+            fadeImage = persistedFade;
+        }
 
         // 1. 컴포넌트 참조 및 비활성화
         PlayerController pc = player.GetComponent<PlayerController>();
@@ -92,6 +97,7 @@ public class SceneStarter : MonoBehaviour
         if (ml != null) ml.enabled = true;
         
         fadeImage.color = Color.clear;
+        ScreenFader.ClearPersisted();
     }
 
     IEnumerator LandingImpactStrong()
