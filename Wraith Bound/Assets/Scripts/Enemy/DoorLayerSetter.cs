@@ -16,18 +16,16 @@ public class DoorLayerSetter : MonoBehaviour
 
         if (layer == -1)
         {
-            Debug.LogError("Door 레이어가 없습니다. 먼저 Layer를 만들어주세요.");
+            Debug.LogError("Door layer not found. Add a Door layer in TagManager.");
             return;
         }
 
-        DoorClick[] doors = GetComponentsInChildren<DoorClick>(true);
+        DoorClick[] doors = Object.FindObjectsByType<DoorClick>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         for (int i = 0; i < doors.Length; i++)
-        {
             SetLayerRecursively(doors[i].gameObject, layer);
-        }
 
-        Debug.Log($"Door 레이어 적용 완료: {doors.Length}개");
+        Debug.Log($"Door layer applied: {doors.Length}");
     }
 
     private void SetLayerRecursively(GameObject obj, int layer)

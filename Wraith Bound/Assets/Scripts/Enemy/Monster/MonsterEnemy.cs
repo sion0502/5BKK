@@ -23,6 +23,10 @@ public class MonsterEnemy : EnemyBase
             return;
 
         DoorBrokenTest door = GetClosedDoorOnChasePath(doorDetectDistance);
+
+        if (door == null && agent.velocity.sqrMagnitude < 0.05f)
+            door = GetClosedDoorOnChasePath(doorDetectDistance * 1.5f);
+
         if (door == null)
             return;
 

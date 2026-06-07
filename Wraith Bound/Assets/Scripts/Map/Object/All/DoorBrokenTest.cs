@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-
 public class DoorBrokenTest : MonoBehaviour
 {
     [SerializeField] private int hitsToBreak = 5;
@@ -28,6 +27,8 @@ public class DoorBrokenTest : MonoBehaviour
             rb.isKinematic = true;
             rb.useGravity = true;
         }
+
+        DoorNavMeshUtility.EnsureCarveObstacle(transform);
     }
 
     private void Update()
@@ -62,9 +63,9 @@ public class DoorBrokenTest : MonoBehaviour
         isBroken = true;
 
         if (doorScript != null)
-        {
             doorScript.enabled = false;
-        }
+
+        DoorNavMeshUtility.SetNavMeshBlocked(transform, false);
 
         BoxCollider col = GetComponent<BoxCollider>();
 
@@ -73,10 +74,14 @@ public class DoorBrokenTest : MonoBehaviour
             col.size = new Vector3(1f, 1f, 0.3f);
         }
 
-        // �θ� �и�
         transform.SetParent(null);
 
-        // ���� Ȱ��ȭ
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        if (rb == null)
+            return;
+
         rb.isKinematic = false;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;

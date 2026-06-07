@@ -48,6 +48,11 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Sense Timing")]
     [SerializeField] protected float senseStartDelay = 0.5f;
 
+    [Header("Stuck Recovery")]
+    [SerializeField] private float stuckSpeedThreshold = 0.08f;
+    [SerializeField] private float stuckTimeThreshold = 0.75f;
+    [SerializeField] private float stuckSampleRadius = 1.5f;
+
     protected NavMeshAgent agent;
     protected Animator anim;
 
@@ -68,11 +73,17 @@ public abstract class EnemyBase : MonoBehaviour
     private float nextSenseTime;
     private float senseEnableTime;
     private NavMeshTriangulation cachedTriangulation;
+    private float stuckTimer;
+    private Vector3 lastStuckSamplePosition;
 
     protected virtual void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponentInChildren<Animator>();
+
+        Collider bodyCollider = GetComponent<Collider>();
+        if (bodyCollider != null)
+            bodyCollider.isTrigger = true;
     }
 
     protected virtual void Start()
@@ -128,6 +139,9 @@ public abstract class EnemyBase : MonoBehaviour
 
         agent.isStopped = false;
         agent.speed = GetPatrolSpeed();
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.MedQualityObstacleAvoidance;
+
+        lastStuckSamplePosition = transform.position;
 
         CacheTriangulation();
         SetAnimatorByState();
@@ -170,6 +184,67 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!lockAnimator)
             SetAnimatorByState();
+
+        TryRecoverFromStuck();
+    }
+
+    private void TryRecoverFromStuck()
+    {
+        if (isBusy || agent == null || !agent.isOnNavMesh)
+            return;
+
+        if (currentState != State.Chase && currentState != State.Patrol && currentState != State.Investigate)
+            return;
+
+        if (agent.pathPending)
+        {
+            stuckTimer = 0f;
+            return;
+        }
+
+        Vector3 horizontalVelocity = agent.velocity;
+        horizontalVelocity.y = 0f;
+
+        float movedSq = (transform.position - lastStuckSamplePosition).sqrMagnitude;
+        bool barelyMoved = movedSq < 0.0004f;
+        bool slow = horizontalVelocity.sqrMagnitude < stuckSpeedThreshold * stuckSpeedThreshold;
+
+        if (slow && barelyMoved && agent.hasPath)
+            stuckTimer += Time.deltaTime;
+        else
+            stuckTimer = 0f;
+
+        lastStuckSamplePosition = transform.position;
+
+        if (stuckTimer < stuckTimeThreshold)
+            return;
+
+        stuckTimer = 0f;
+
+        if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, stuckSampleRadius, NavMesh.AllAreas))
+        {
+            if ((hit.position - transform.position).sqrMagnitude > 0.01f)
+                agent.Warp(hit.position);
+        }
+
+        agent.isStopped = false;
+
+        if (currentState == State.Chase && player != null)
+        {
+            agent.SetDestination(player.position);
+            return;
+        }
+
+        if (currentState == State.Investigate)
+        {
+            agent.SetDestination(lastKnownPosition);
+            return;
+        }
+
+        if (hasPatrolDestination)
+            agent.SetDestination(currentPatrolDestination);
+        else
+            SetNextGlobalPatrolDestination();
     }
 
     protected void UpdateSenses()
@@ -597,16 +672,33 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected DoorBrokenTest GetClosedDoorOnChasePath(float distance)
     {
-        Vector3 origin = transform.position + Vector3.up * doorCheckHeight;
-        Vector3 dir = GetChaseMoveDirection();
+        DoorBrokenTest door = FindClosedDoor(GetChaseMoveDirection(), distance);
+        if (door != null)
+            return door;
 
-        if (dir.sqrMagnitude <= 0.0001f)
+        if (player == null)
             return null;
+
+        Vector3 toPlayer = player.position - transform.position;
+        toPlayer.y = 0f;
+
+        if (toPlayer.sqrMagnitude <= 0.0001f)
+            return null;
+
+        return FindClosedDoor(toPlayer.normalized, distance);
+    }
+
+    protected DoorBrokenTest FindClosedDoor(Vector3 direction, float distance)
+    {
+        if (direction.sqrMagnitude <= 0.0001f)
+            return null;
+
+        Vector3 origin = transform.position + Vector3.up * doorCheckHeight;
 
         RaycastHit[] hits = Physics.SphereCastAll(
             origin,
             0.25f,
-            dir,
+            direction.normalized,
             distance,
             doorLayer,
             QueryTriggerInteraction.Collide
