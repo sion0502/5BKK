@@ -23,7 +23,7 @@ public class PlayerHidingController : MonoBehaviour
     HidingSpot currentSpot;
     [SerializeField]AudioSource hideAudio;
 
-    bool isHiding = false;
+    public bool isHiding = false;
     bool isTransitioning = false;
 
     float currentYaw = 0f;
