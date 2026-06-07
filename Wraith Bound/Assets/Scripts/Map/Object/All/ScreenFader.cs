@@ -27,6 +27,16 @@ public static class ScreenFader
             }
         }
 
+        GameObject runtimeRoot = GameObject.Find("ScreenFadeOverlay");
+        if (runtimeRoot != null)
+        {
+            Image runtimeImage = runtimeRoot.GetComponentInChildren<Image>(true);
+            if (runtimeImage != null && Configure(runtimeImage))
+            {
+                return runtimeImage;
+            }
+        }
+
         return CreateRuntimeOverlay(false);
     }
 
