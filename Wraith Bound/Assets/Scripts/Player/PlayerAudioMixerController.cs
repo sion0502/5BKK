@@ -24,6 +24,8 @@ public class PlayerAudioMixerController : MonoBehaviour
 
     [Header("Player Physics & States (References)")]
     [SerializeField] private CharacterController characterController;
+    [SerializeField] private PlayerController playerController;
+    [SerializeField] private PlayerHidingController playerHidingController;
 
     private MovementState currentState = MovementState.Walk;
     private FootstepData currentData;
@@ -32,6 +34,8 @@ public class PlayerAudioMixerController : MonoBehaviour
     private void Start()
     {
         UpdateMovementState(MovementState.Walk);
+        playerController = GetComponent<PlayerController>();
+        playerHidingController = GetComponent<PlayerHidingController>();
     }
 
     private void Update()
@@ -62,16 +66,17 @@ public class PlayerAudioMixerController : MonoBehaviour
     private void EvaluateMovementState()
     {
         // 예시용 판정 로직 (실제 프로젝트의 입력/상태 변수에 맞춰 매핑)
-        if (Input.GetKey(KeyCode.LeftControl)) // 웅크리기 키
+        if (Input.GetKey(KeyCode.LeftControl) && playerController.isCrouching && !playerHidingController.isHiding) // 웅크리기 키
         {
             UpdateMovementState(MovementState.Crouch);
         }
-        else if (Input.GetKey(KeyCode.LeftShift)) // 달리기 키
+        else if (Input.GetKey(KeyCode.LeftShift) && playerController.isRun && !playerController.isCrouching && !playerHidingController.isHiding) // 달리기 키
         {
             UpdateMovementState(MovementState.Run);
         }
         else
         {
+            if(!playerHidingController.isHiding)
             UpdateMovementState(MovementState.Walk);
         }
     }
