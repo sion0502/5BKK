@@ -5,7 +5,7 @@ public class DoorClick : MonoBehaviour
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
     private bool open;
-
+  
     [Header("Door Settings")]
     public float smooth = 2.0f;
     public float DoorOpenAngle = 87.0f;
@@ -61,6 +61,7 @@ public class DoorClick : MonoBehaviour
 
     private void Start()
     {
+       
         defaultRot = transform.rotation;
 
         openRot = Quaternion.Euler(
@@ -116,6 +117,9 @@ public class DoorClick : MonoBehaviour
             }
 
             open = !open;
+
+           
+
             PlayDoorSound();
         }
 
