@@ -14,7 +14,6 @@ public class PlayerStatusHudUI : MonoBehaviour
     private static readonly Color HealthColorNormal = Color.white;
     private static readonly Color HealthColorWarning = Color.yellow;
     private static readonly Color HealthColorCritical = Color.red;
-    private static readonly Color StaminaBarColor = new Color(0.2f, 0.95f, 0.35f, 0.45f);
 
     [Header("References")]
     [SerializeField] private PlayerConditions conditions;
@@ -35,6 +34,7 @@ public class PlayerStatusHudUI : MonoBehaviour
     private GameObject staminaTrackGo;
     private RectTransform staminaFillRect;
     private GameObject staminaFillGo;
+    private Image staminaFillImage;
     private Coroutine staminaFadeCoroutine;
 
     void Awake()
@@ -69,6 +69,7 @@ public class PlayerStatusHudUI : MonoBehaviour
     {
         if (GetComponent<Canvas>() != null)
         {
+            GameplayHudCanvasSetup.EnsureOverlayCanvas(gameObject);
             return;
         }
 
@@ -146,9 +147,9 @@ public class PlayerStatusHudUI : MonoBehaviour
         staminaFillRect.anchoredPosition = Vector2.zero;
         staminaFillRect.sizeDelta = staminaBarSize;
 
-        Image fillImage = staminaFillGo.AddComponent<Image>();
-        fillImage.color = StaminaBarColor;
-        fillImage.raycastTarget = false;
+        staminaFillImage = staminaFillGo.AddComponent<Image>();
+        staminaFillImage.color = PlayerConditions.EvaluateStaminaBarColor(1f);
+        staminaFillImage.raycastTarget = false;
 
         staminaRoot.SetActive(false);
     }
@@ -190,10 +191,10 @@ public class PlayerStatusHudUI : MonoBehaviour
         bool isDraining = playerController != null && playerController.isRun;
         bool isRegenerating = conditions.IsRegeneratingStamina;
         bool isDepleted = conditions.GetCurrentStamina() <= 0.01f;
-        bool wantsVisible = isDraining || isRegenerating || isDepleted;
-
-        float maxStamina = Mathf.Max(1f, conditions.maxStamina);
-        float ratio = Mathf.Clamp01(conditions.GetCurrentStamina() / maxStamina);
+        float ratio = conditions.GetStaminaRatio();
+        bool isExhaustedLockout = conditions.IsStaminaExhausted
+            && ratio < conditions.SprintRecoverThreshold;
+        bool wantsVisible = isDraining || isRegenerating || isDepleted || isExhaustedLockout;
 
         if (wantsVisible)
         {
@@ -236,6 +237,13 @@ public class PlayerStatusHudUI : MonoBehaviour
 
         staminaFillGo.SetActive(true);
         staminaFillRect.sizeDelta = new Vector2(staminaBarSize.x * ratio, staminaBarSize.y);
+
+        if (staminaFillImage != null)
+        {
+            staminaFillImage.color = conditions != null
+                ? conditions.GetStaminaBarColor()
+                : PlayerConditions.EvaluateStaminaBarColor(ratio);
+        }
     }
 
     private IEnumerator FadeOutStaminaBar()
