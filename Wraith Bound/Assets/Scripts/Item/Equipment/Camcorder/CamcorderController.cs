@@ -80,7 +80,7 @@ public class CamcorderController : MonoBehaviour
     [Tooltip("Display 기준 로컬 회전(도)")]
     [SerializeField] private Vector3 screenLocalEuler = new Vector3(0f, -90f, 0f);
     [Tooltip("Display rest scale=1 기준. 사용 중 Display 확대 시 역보정")]
-    [SerializeField] private Vector3 screenLocalScale = new Vector3(0.2f, 0.1125f, 0.0125f);
+    [SerializeField] private Vector3 screenLocalScale = new Vector3(0.2f, 0.15f, 0.0125f);
 
     [Header("사용 중 — Display 레이아웃 (피드 ON·본체 숨김 때만, 전환 애니 제외)")]
     [SerializeField] private Vector3 displayActiveLocalPosition = new Vector3(0.0599f, -0.0751f, 0.3089f);
@@ -130,6 +130,14 @@ public class CamcorderController : MonoBehaviour
     [SerializeField] private Sprite batteryEmptySprite;
     [SerializeField] private Sprite[] batteryLevelSprites = new Sprite[4]; // Battery_1 ~ 4
 
+    [Header("Use Sound")]
+    [SerializeField] private AudioClip useClip;
+    [SerializeField] private float useSoundVolume = 0.8f;
+    [Tooltip("뷰파인더 펼치기 연출 후 재생까지 대기(초)")]
+    [SerializeField] private float useSoundDelay = 1f;
+
+    private const string UseClipPath = "Sound/Camcorder_NightVision";
+
     private Camera eyeCamera;
     private Camera lensCamera;
     private RenderTexture renderTexture;
@@ -175,12 +183,13 @@ public class CamcorderController : MonoBehaviour
     private float targetFov;
     private float screenLevel; // 0 = 꺼짐(검정), 1 = 완전 표시
     private Coroutine sequenceRoutine;
+    private Coroutine useSoundRoutine;
 
     private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
     private static readonly int MetallicId = Shader.PropertyToID("_Metallic");
-    private static readonly Vector3 DemoScreenLocalScale = new Vector3(0.101591215f, 0.057145067f, 0.006349451f);
+    private static readonly Vector3 DemoScreenLocalScale = new Vector3(0.101591215f, 0.076193411f, 0.006349451f);
     private void Start()
     {
         // itemPrefab은 월드 드롭에도 쓰이므로, 손에 든 뷰일 때만 기능을 켭니다.
@@ -276,10 +285,15 @@ public class CamcorderController : MonoBehaviour
 
         StopSequence();
         sequenceRoutine = StartCoroutine(value ? ActivateSequence() : DeactivateSequence());
+
+        if (value)
+            ScheduleUseSound();
     }
 
     private void StopSequence()
     {
+        CancelUseSound();
+
         if (sequenceRoutine != null)
         {
             StopCoroutine(sequenceRoutine);
@@ -320,7 +334,8 @@ public class CamcorderController : MonoBehaviour
         {
             targetFov = Mathf.Clamp(targetFov - scroll * zoomStep, minFov, maxFov);
         }
-        lensCamera.fieldOfView = Mathf.Lerp(lensCamera.fieldOfView, targetFov, Time.deltaTime * 10f);
+        float lensTargetFov = GetLensVerticalFov(targetFov);
+        lensCamera.fieldOfView = Mathf.Lerp(lensCamera.fieldOfView, lensTargetFov, Time.deltaTime * 10f);
 
         if (recDot != null)
         {
@@ -347,7 +362,7 @@ public class CamcorderController : MonoBehaviour
 
         targetFov = eyeCamera != null ? eyeCamera.fieldOfView : defaultFov;
         if (lensCamera != null)
-            lensCamera.fieldOfView = targetFov;
+            lensCamera.fieldOfView = GetLensVerticalFov(targetFov);
 
         SetViewfinderFeedActive(true);
         if (lensCamera != null && eyeCamera != null)
@@ -922,12 +937,65 @@ public class CamcorderController : MonoBehaviour
         }
     }
 
+    private void EnsureUseClip()
+    {
+        if (useClip == null)
+        {
+            useClip = Resources.Load<AudioClip>(UseClipPath);
+        }
+    }
+
+    private void ScheduleUseSound()
+    {
+        CancelUseSound();
+        useSoundRoutine = StartCoroutine(PlayUseSoundDelayed());
+    }
+
+    private void CancelUseSound()
+    {
+        if (useSoundRoutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(useSoundRoutine);
+        useSoundRoutine = null;
+    }
+
+    private IEnumerator PlayUseSoundDelayed()
+    {
+        if (useSoundDelay > 0f)
+        {
+            yield return new WaitForSeconds(useSoundDelay);
+        }
+
+        PlayUseSound();
+        useSoundRoutine = null;
+    }
+
+    private void PlayUseSound()
+    {
+        if (!isHeldView)
+        {
+            return;
+        }
+
+        EnsureUseClip();
+        if (useClip == null)
+        {
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(useClip, transform.position, useSoundVolume);
+    }
+
     private void SyncLensCameraToEye()
     {
         if (lensCamera == null || eyeCamera == null) return;
 
         lensCamera.transform.SetPositionAndRotation(eyeCamera.transform.position, eyeCamera.transform.rotation);
         lensCamera.CopyFrom(eyeCamera);
+        lensCamera.fieldOfView = GetLensVerticalFov(targetFov);
         lensCamera.targetTexture = renderTexture;
         lensCamera.cullingMask = BuildLensCullingMask();
         lensCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -944,6 +1012,30 @@ public class CamcorderController : MonoBehaviour
                 ? (baseVolumeMask | (1 << nightVisionLayer))
                 : baseVolumeMask;
         }
+    }
+
+    /// <summary>4:3 RT에 메인 카메라와 같은 가로 시야를 유지하도록 세로 FOV를 보정합니다.</summary>
+    private float GetLensVerticalFov(float eyeVerticalFov)
+    {
+        if (eyeCamera == null)
+        {
+            return eyeVerticalFov;
+        }
+
+        float horizontalFov = Camera.VerticalToHorizontalFieldOfView(eyeVerticalFov, eyeCamera.aspect);
+        return Camera.HorizontalToVerticalFieldOfView(horizontalFov, GetRenderTextureAspect());
+    }
+
+    private float GetRenderTextureAspect()
+    {
+        if (renderTexture != null)
+        {
+            return (float)renderTexture.width / renderTexture.height;
+        }
+
+        return renderTextureHeight > 0
+            ? (float)renderTextureWidth / renderTextureHeight
+            : 4f / 3f;
     }
 
     private void ResolveReferences()
@@ -1001,11 +1093,12 @@ public class CamcorderController : MonoBehaviour
         {
             lensCamera.CopyFrom(eyeCamera);
             targetFov = eyeCamera.fieldOfView;
+            lensCamera.fieldOfView = GetLensVerticalFov(targetFov);
         }
         else
         {
-            lensCamera.fieldOfView = defaultFov;
             targetFov = defaultFov;
+            lensCamera.fieldOfView = GetLensVerticalFov(defaultFov);
         }
 
         lensCamera.nearClipPlane = 0.03f;
@@ -1182,7 +1275,7 @@ public class CamcorderController : MonoBehaviour
         viewfinderCanvas.worldCamera = itemViewCamera;
 
         const float refW = 960f;
-        const float refH = 540f;
+        const float refH = 720f;
         RectTransform canvasRect = canvasGo.GetComponent<RectTransform>();
         canvasRect.sizeDelta = new Vector2(refW, refH);
         canvasRect.localScale = new Vector3(1f / refW, 1f / refH, 1f / refW);
