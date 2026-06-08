@@ -19,11 +19,12 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected Transform eyePoint;
 
     [Header("Runtime Player Auto Find")]
-     protected string playerTag = "Player";
-     protected Transform player;
-     protected AudioSource playerFootstepSource;
-     protected CharacterController playerCharacterController;
-     protected Rigidbody playerRigidbody;
+    protected string playerTag = "Player";
+
+    protected Transform player;
+    protected AudioSource playerFootstepSource;
+    protected CharacterController playerCharacterController;
+    protected Rigidbody playerRigidbody;
 
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
@@ -80,6 +81,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected bool lockAnimator;
     protected bool reachedLastKnownPosition;
     protected bool investigateRoutineRunning;
+    protected bool visualChaseLocked;
 
     protected Vector3 currentPatrolDestination;
     protected NavMeshTriangulation cachedTriangulation;
@@ -125,6 +127,7 @@ public abstract class EnemyBase : MonoBehaviour
         investigateTimer = 0f;
         reachedLastKnownPosition = false;
         hasPatDestination = false;
+        visualChaseLocked = false;
 
         senseEnableTime = Time.time + senseStartDelay;
 
@@ -226,7 +229,21 @@ public abstract class EnemyBase : MonoBehaviour
             return;
 
         canDetectPlayer = true;
-        lastKnownPosition = DetectPlayerPosition();
+
+        if (sawPlayer)
+        {
+            visualChaseLocked = true;
+
+            if (player != null)
+                lastKnownPosition = player.position;
+            else
+                lastKnownPosition = DetectPlayerPosition();
+        }
+        else
+        {
+            lastKnownPosition = DetectPlayerPosition();
+        }
+
         lastDetectTime = Time.time;
 
         if (currentState != State.Chase)
@@ -359,6 +376,13 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
+        if (visualChaseLocked && player != null)
+        {
+            lastKnownPosition = player.position;
+            SetChaseDestination(lastKnownPosition);
+            return;
+        }
+
         float lostTime = Time.time - lastDetectTime;
 
         if (lostTime < data.targetLostTIme)
@@ -466,6 +490,8 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected void ReturnToPatrolRoute()
     {
+        visualChaseLocked = false;
+
         ChangeState(State.Patrol);
 
         if (hasPatDestination)
