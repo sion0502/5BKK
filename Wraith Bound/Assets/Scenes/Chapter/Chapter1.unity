@@ -119,6 +119,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!4 &5 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8213547622226761728, guid: 81c02f43ddbd74f40815dfe3fc208c0d, type: 3}
+  m_PrefabInstance: {fileID: 178974593}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &17937699
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2045,11 +2050,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 81c02f43ddbd74f40815dfe3fc208c0d, type: 3}
---- !u!4 &178974594 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1449468925551399082, guid: 81c02f43ddbd74f40815dfe3fc208c0d, type: 3}
-  m_PrefabInstance: {fileID: 178974593}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &193169547
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15540,8 +15540,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LobbyEnemySpawner
   surface: {fileID: 0}
   monsterPrefabs:
-  - {fileID: 2758035746770673312, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
-  - {fileID: 3992468658594580169, guid: e75385f47b874194187ac8bf7905084a, type: 3}
+  - {fileID: 0}
+  - {fileID: 0}
   ghostPrefabs: []
   lobbyNameKeyword: (Lobby)
   waitBeforeBuild: 0.5
@@ -16652,7 +16652,7 @@ PrefabInstance:
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 178974594}
+      addedObject: {fileID: 5}
     - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 512154166}
@@ -25162,7 +25162,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2758035746770673312, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2758035746770673312, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
       propertyPath: m_TagString
@@ -25182,7 +25182,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3246341387383735322, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -53
+      value: -74.68
       objectReference: {fileID: 0}
     - target: {fileID: 3246341387383735322, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
       propertyPath: m_LocalRotation.w
