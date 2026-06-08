@@ -28,6 +28,8 @@ public abstract class EnemyBase : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
+    [SerializeField] protected bool debugStateLog = true;
+    [SerializeField] protected bool debugSenseLog = true;
 
     [Header("Vision")]
     [SerializeField] protected float viewAngle = 90f;
@@ -83,6 +85,9 @@ public abstract class EnemyBase : MonoBehaviour
     protected bool investigateRoutineRunning;
     protected bool visualChaseLocked;
 
+    protected bool lastSawPlayer;
+    protected bool lastHeardPlayer;
+
     protected Vector3 currentPatrolDestination;
     protected NavMeshTriangulation cachedTriangulation;
 
@@ -128,6 +133,8 @@ public abstract class EnemyBase : MonoBehaviour
         reachedLastKnownPosition = false;
         hasPatDestination = false;
         visualChaseLocked = false;
+        lastSawPlayer = false;
+        lastHeardPlayer = false;
 
         senseEnableTime = Time.time + senseStartDelay;
 
@@ -135,6 +142,8 @@ public abstract class EnemyBase : MonoBehaviour
         CacheTriangulation();
         SetAnimatorByState();
         SetNextGlobalPatDestination();
+
+        LogAI("초기 상태: Patrol");
     }
 
     protected virtual void Update()
@@ -213,6 +222,8 @@ public abstract class EnemyBase : MonoBehaviour
     protected void UpdateSenses()
     {
         canDetectPlayer = false;
+        lastSawPlayer = false;
+        lastHeardPlayer = false;
 
         if (Time.time < senseEnableTime) return;
         if (Time.time < nextSenseTime) return;
@@ -220,10 +231,10 @@ public abstract class EnemyBase : MonoBehaviour
         nextSenseTime = Time.time + Mathf.Max(0.02f, data.checkInterval);
 
         bool sawPlayer = CheckVision();
-        bool heardPlayer = false;
+        bool heardPlayer = CheckHearing();
 
-        if (!sawPlayer)
-            heardPlayer = CheckHearing();
+        lastSawPlayer = sawPlayer;
+        lastHeardPlayer = heardPlayer;
 
         if (!sawPlayer && !heardPlayer)
             return;
@@ -245,6 +256,13 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         lastDetectTime = Time.time;
+
+        if (sawPlayer && heardPlayer)
+            LogSense("시야 + 소리 둘 다 감지 → Chase 진입/유지");
+        else if (sawPlayer)
+            LogSense("시야만 감지 → Chase 진입/유지");
+        else if (heardPlayer)
+            LogSense("소리만 감지 → Chase 진입/유지");
 
         if (currentState != State.Chase)
             ChangeState(State.Chase);
@@ -340,12 +358,14 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
+            LogAI("순찰 중 닫힌 문 감지 → 새 순찰 목적지 선택");
             SetNextGlobalPatDestination();
             return;
         }
 
         if (!hasPatDestination)
         {
+            LogAI("순찰 목적지 없음 → 새 순찰 목적지 선택");
             SetNextGlobalPatDestination();
             return;
         }
@@ -355,6 +375,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (!HasReachedDestination(patrolReachDistance))
             return;
 
+        LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
         SetNextGlobalPatDestination();
     }
 
@@ -373,6 +394,14 @@ public abstract class EnemyBase : MonoBehaviour
         if (canDetectPlayer)
         {
             SetChaseDestination(lastKnownPosition);
+
+            if (lastSawPlayer && lastHeardPlayer)
+                LogSense("시야 + 소리 둘 다 감지 CHASE 중");
+            else if (lastSawPlayer)
+                LogSense("시야만 감지 CHASE 중");
+            else if (lastHeardPlayer)
+                LogSense("소리만 감지 CHASE 중");
+
             return;
         }
 
@@ -380,6 +409,20 @@ public abstract class EnemyBase : MonoBehaviour
         {
             lastKnownPosition = player.position;
             SetChaseDestination(lastKnownPosition);
+
+            LogSense("시야로 본 적 있음 → 감지 끊겨도 플레이어 현재 위치 계속 추격");
+            return;
+        }
+
+        float distToLastKnown = Vector3.Distance(transform.position, lastKnownPosition);
+
+        if (distToLastKnown <= investigateStartDistance)
+        {
+            LogAI("마지막 위치 도달 → 수색 시작");
+
+            if (!investigateRoutineRunning)
+                StartCoroutine(StartInvestigate());
+
             return;
         }
 
@@ -388,20 +431,13 @@ public abstract class EnemyBase : MonoBehaviour
         if (lostTime < data.targetLostTIme)
         {
             SetChaseDestination(lastKnownPosition);
+
+            LogAI($"감지 끊김 → {data.targetLostTIme - lostTime:F1}초 동안 마지막 위치 추격 중");
             return;
         }
 
-        float distToLastKnown = Vector3.Distance(transform.position, lastKnownPosition);
-
-        if (distToLastKnown <= investigateStartDistance)
-        {
-            if (!investigateRoutineRunning)
-                StartCoroutine(StartInvestigate());
-        }
-        else
-        {
-            SetChaseDestination(lastKnownPosition);
-        }
+        LogAI("감지 끊김 + 마지막 위치 도달 실패 → 순찰 복귀");
+        ReturnToPatrolRoute();
     }
 
     protected void SetChaseDestination(Vector3 target)
@@ -451,6 +487,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
+            LogAI("수색 중 닫힌 문 감지 → 순찰 복귀");
             ReturnToPatrolRoute();
             return;
         }
@@ -459,6 +496,7 @@ public abstract class EnemyBase : MonoBehaviour
         {
             if (HasClosedDoorBetween(transform.position, lastKnownPosition))
             {
+                LogAI("수색 위치까지 닫힌 문 존재 → 순찰 복귀");
                 ReturnToPatrolRoute();
                 return;
             }
@@ -470,6 +508,9 @@ public abstract class EnemyBase : MonoBehaviour
 
             reachedLastKnownPosition = true;
             investigateTimer = data.targetLostTIme;
+
+            LogAI("마지막 위치 도착 완료 → 주변 랜덤 수색 시작");
+
             SetRandomInvestigatePointAround(lastKnownPosition, investigateRadius);
             return;
         }
@@ -478,6 +519,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (investigateTimer <= 0f)
         {
+            LogAI("수색 실패 → 순찰 복귀");
             ReturnToPatrolRoute();
             return;
         }
@@ -485,6 +527,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (!HasReachedDestination(investigateReachDistance))
             return;
 
+        LogAI($"수색 중 → 남은 시간 {investigateTimer:F1}초, 다음 수색 지점 선택");
         SetRandomInvestigatePointAround(lastKnownPosition, investigateRadius);
     }
 
@@ -778,6 +821,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (currentState == nextState)
             return;
 
+        State prevState = currentState;
         currentState = nextState;
 
         switch (currentState)
@@ -794,6 +838,8 @@ public abstract class EnemyBase : MonoBehaviour
                 agent.speed = GetPatrolSpeed();
                 break;
         }
+
+        LogAI($"상태 변경: {prevState} → {currentState}");
 
         if (!lockAnimator)
             SetAnimatorByState();
@@ -827,6 +873,18 @@ public abstract class EnemyBase : MonoBehaviour
     protected float GetChaseSpeed()
     {
         return data.moveSpeed;
+    }
+
+    protected void LogAI(string message)
+    {
+        if (!debugStateLog) return;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    protected void LogSense(string message)
+    {
+        if (!debugSenseLog) return;
+        Debug.Log($"[{name}] {message}");
     }
 
     protected virtual void HandleChaseSpecial()
