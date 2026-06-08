@@ -1,75 +1,32 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GhostEnemy : EnemyBase
 {
-    [Header("Ghost Pass Door")]
-    [SerializeField] private Collider ghostBodyCollider;
-    [SerializeField] private float doorIgnoreRadius = 2.5f;
+    [Header("Door Pass-Through")]
+    [SerializeField] private bool canPassThroughDoors = true;
 
-    private readonly List<Collider> ignoredDoors = new List<Collider>();
-
-    protected override void Awake()
+    protected override void HandleChaseSpecial()
     {
-        base.Awake();
+        if (currentState != State.Chase) return;
+        if (!canPassThroughDoors) return;
 
-        if (ghostBodyCollider == null)
-            ghostBodyCollider = GetComponent<Collider>();
-    }
+        DoorBrokenTest door = GetClosedDoorOnChasePath(chaseDoorDetectDistance);
 
-    protected override void Update()
-    {
-        base.Update();
+        if (door == null) return;
 
-        if (ghostBodyCollider == null)
-            return;
+        agent.isStopped = false;
 
-        if (currentState == State.Chase)
-            IgnoreClosedDoorsNearby();
-        else
-            RestoreIgnoredDoors();
-    }
-
-    private void IgnoreClosedDoorsNearby()
-    {
-        Collider[] hits = Physics.OverlapSphere(transform.position, doorIgnoreRadius, doorLayer, QueryTriggerInteraction.Collide);
-
-        for (int i = 0; i < hits.Length; i++)
+        if (canDetectPlayer)
         {
-            Collider col = hits[i];
-            if (col == null || col == ghostBodyCollider)
-                continue;
-
-            DoorClick door = col.GetComponentInParent<DoorClick>();
-            if (door == null)
-                continue;
-
-            if (door.IsOpen() || door.IsBroken())
-                continue;
-
-            if (ignoredDoors.Contains(col))
-                continue;
-
-            Physics.IgnoreCollision(ghostBodyCollider, col, true);
-            ignoredDoors.Add(col);
+            agent.SetDestination(lastKnownPosition);
         }
     }
 
-    private void RestoreIgnoredDoors()
+    protected override Vector3 DetectPlayerPosition()
     {
-        for (int i = ignoredDoors.Count - 1; i >= 0; i--)
-        {
-            Collider col = ignoredDoors[i];
+        if (player != null)
+            return player.position;
 
-            if (col != null && ghostBodyCollider != null)
-                Physics.IgnoreCollision(ghostBodyCollider, col, false);
-
-            ignoredDoors.RemoveAt(i);
-        }
-    }
-
-    private void OnDisable()
-    {
-        RestoreIgnoredDoors();
+        return base.DetectPlayerPosition();
     }
 }

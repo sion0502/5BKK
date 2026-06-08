@@ -3246,7 +3246,7 @@ Transform:
   m_GameObject: {fileID: 3992468658594580169}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.9997011, z: -0, w: -0.024450678}
-  m_LocalPosition: {x: 99.75686, y: 0, z: 362.17172}
+  m_LocalPosition: {x: 199.164, y: 0, z: -78.04}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3383,7 +3383,7 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3992468658594580169}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
@@ -3485,34 +3485,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2af883f120d9a404ca2ec9e985a2391a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
-  footstep: {fileID: 0}
   data: {fileID: 11400000, guid: dac19af480d096d49acc21fdb3dadddd, type: 2}
-  player: {fileID: 0}
   eyePoint: {fileID: 2101545404024439703}
-  playerFootstepSource: {fileID: 0}
-  playerCharacterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
   drawVisionDebug: 1
+  viewAngle: 90
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  playerDetectRadius: 0.35
   doorLayer:
     serializedVersion: 2
     m_Bits: 67108864
   doorCheckHeight: 1
   patrolDoorFrontCheckDistance: 1.2
   pathDoorCheckRadius: 0.25
+  chaseDoorDetectDistance: 2.2
   patrolReachDistance: 0.5
   globalPatrolSampleRadius: 2
+  minWallClearance: 0.8
+  minPatrolPointDistance: 4
   investigateRadius: 3
-  investigateDuration: 10
   investigateReachDistance: 0.6
   investigateStartDistance: 2.2
   minFootstepMoveSpeed: 0.15
   senseStartDelay: 0.5
-  doorDetectDistance: 2.2
+  chaseDestinationUpdateInterval: 0.15
+  chaseRepathDistance: 0.35
+  doorAttackStartDistance: 1
+  doorStopDistance: 0.7
   idleBeforeAttackTime: 0.5
   doorHitDelay: 0.35
   attackEndDelay: 0.7
   faceRotateSpeed: 12
   postAttackCooldown: 0.2
+  attackFaceAngle: 6
+  approachTimeout: 3
 --- !u!114 &1343134716226361337
 MonoBehaviour:
   m_ObjectHideFlags: 0
