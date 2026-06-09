@@ -1,28 +1,34 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorNavMesh : MonoBehaviour
 {
-    DoorClick doorClick;
+    private DoorClick doorClick;
+    private Collider[] cols;
 
-    Collider[] cols;
-
-    void Start()
+    private void Start()
     {
         doorClick = GetComponent<DoorClick>();
-
         cols = GetComponents<Collider>();
+        DoorNavMeshUtility.EnsureCarveObstacle(transform);
     }
 
-    void Update()
+    private void Update()
     {
         if (doorClick == null)
             return;
 
-        bool open = doorClick.IsOpen();
+        bool blocked = !doorClick.IsOpen() && !doorClick.IsBroken();
 
-        foreach (Collider col in cols)
+        if (cols != null)
         {
-            col.enabled = !open;
+            for (int i = 0; i < cols.Length; i++)
+            {
+                if (cols[i] != null)
+                    cols[i].enabled = blocked;
+            }
         }
+
+        DoorNavMeshUtility.SetNavMeshBlocked(transform, blocked);
     }
 }
