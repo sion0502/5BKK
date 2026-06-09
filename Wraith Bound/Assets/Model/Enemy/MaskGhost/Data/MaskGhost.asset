@@ -17,7 +17,7 @@ MonoBehaviour:
   description: MaskGhost
   hp: 2000
   moveSpeed: 4
-  detectRange: 40
+  detectRange: 50
   viewAngle: 190
   checkInterval: 0
   obstacleLayer:
@@ -27,4 +27,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   targetLostTIme: 10
-  hearingRange: 50
+  hearingRange: 60
