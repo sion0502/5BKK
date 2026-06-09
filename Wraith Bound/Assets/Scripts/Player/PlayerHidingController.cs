@@ -38,6 +38,8 @@ public class PlayerHidingController : MonoBehaviour
         playerController =
             GetComponent<PlayerController>();
 
+        playerAudioMixerController = GetComponent<PlayerAudioMixerController>();
+
         mouseLook =
             playerCamera.GetComponent<MouseLook>();
     }
