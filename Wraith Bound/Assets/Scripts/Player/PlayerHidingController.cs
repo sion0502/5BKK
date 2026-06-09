@@ -10,6 +10,7 @@ public class PlayerHidingController : MonoBehaviour
 
     PlayerController playerController;
     MonoBehaviour mouseLook;
+    PlayerAudioMixerController playerAudioMixerController;
 
     public float interactionDistance = 2.5f;
     public LayerMask interactableLayer;
@@ -121,6 +122,8 @@ public class PlayerHidingController : MonoBehaviour
         JustEnteredHiding = true;
 
         isHiding = true;
+
+        playerAudioMixerController.enabled = false;
 
         characterController.enabled =
             false;
@@ -251,6 +254,9 @@ public class PlayerHidingController : MonoBehaviour
         transform.rotation =
             targetRot;
 
+        playerAudioMixerController.enabled = true;    
+
+        
         characterController.enabled =
             true;
 
