@@ -15,30 +15,42 @@ public abstract class EnemyBase : MonoBehaviour
     protected static readonly int AnimAttack = Animator.StringToHash("Attack");
 
     [Header("References")]
-    [SerializeField] private MonsterFootstep footstep;
     [SerializeField] protected Monsters data;
-    [SerializeField] protected Transform player;
     [SerializeField] protected Transform eyePoint;
-    [SerializeField] protected AudioSource playerFootstepSource;
-    [SerializeField] protected CharacterController playerCharacterController;
-    [SerializeField] protected Rigidbody playerRigidbody;
+
+    [Header("Runtime Player Auto Find")]
+    protected string playerTag = "Player";
+
+    protected Transform player;
+    protected AudioSource playerFootstepSource;
+    protected CharacterController playerCharacterController;
+    protected Rigidbody playerRigidbody;
 
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
+    [SerializeField] protected bool debugStateLog = true;
+    [SerializeField] protected bool debugSenseLog = true;
+
+    [Header("Vision")]
+    [SerializeField] protected float viewAngle = 90f;
+    [SerializeField] protected LayerMask obstacleLayer;
+    [SerializeField] protected float playerDetectRadius = 0.35f;
 
     [Header("Door")]
     [SerializeField] protected LayerMask doorLayer;
     [SerializeField] protected float doorCheckHeight = 1.0f;
     [SerializeField] protected float patrolDoorFrontCheckDistance = 1.2f;
     [SerializeField] protected float pathDoorCheckRadius = 0.25f;
+    [SerializeField] protected float chaseDoorDetectDistance = 2.2f;
 
     [Header("Patrol")]
     [SerializeField] protected float patrolReachDistance = 0.5f;
     [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
+    [SerializeField] protected float minWallClearance = 0.8f;
+    [SerializeField] protected float minPatrolPointDistance = 4f;
 
     [Header("Investigate")]
     [SerializeField] protected float investigateRadius = 3f;
-    [SerializeField] protected float investigateDuration = 10f;
     [SerializeField] protected float investigateReachDistance = 0.6f;
     [SerializeField] protected float investigateStartDistance = 2.2f;
 
@@ -48,42 +60,48 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Sense Timing")]
     [SerializeField] protected float senseStartDelay = 0.5f;
 
-    [Header("Stuck Recovery")]
-    [SerializeField] private float stuckSpeedThreshold = 0.08f;
-    [SerializeField] private float stuckTimeThreshold = 0.75f;
-    [SerializeField] private float stuckSampleRadius = 1.5f;
+    [Header("Chase Optimization")]
+    [SerializeField] protected float chaseDestinationUpdateInterval = 0.15f;
+    [SerializeField] protected float chaseRepathDistance = 0.35f;
+
+    [Header("Log Timing")]
+    [SerializeField] protected float logInterval = 0.5f;
 
     protected NavMeshAgent agent;
     protected Animator anim;
 
     protected State currentState;
     protected Vector3 lastKnownPosition;
+    protected Vector3 lastChaseDestination;
+
     protected float lastDetectTime;
     protected float investigateTimer;
+    protected float nextSenseTime;
+    protected float senseEnableTime;
+    protected float nextChaseRepathTime;
+    protected float nextLogTime;
 
+    protected bool hasPatDestination;
     protected bool isBusy;
     protected bool canDetectPlayer;
     protected bool lockAnimator;
     protected bool reachedLastKnownPosition;
+    protected bool investigateRoutineRunning;
+
+    protected bool lastSawPlayer;
+    protected bool lastHeardPlayer;
+    protected bool targetLostActive;
 
     protected Vector3 currentPatrolDestination;
-    protected bool hasPatrolDestination;
-
-    private bool investigateRoutineRunning;
-    private float nextSenseTime;
-    private float senseEnableTime;
-    private NavMeshTriangulation cachedTriangulation;
-    private float stuckTimer;
-    private Vector3 lastStuckSamplePosition;
+    protected NavMeshTriangulation cachedTriangulation;
 
     protected virtual void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponentInChildren<Animator>();
 
-        Collider bodyCollider = GetComponent<Collider>();
-        if (bodyCollider != null)
-            bodyCollider.isTrigger = true;
+        if (eyePoint == null)
+            eyePoint = transform;
     }
 
     protected virtual void Start()
@@ -94,8 +112,6 @@ public abstract class EnemyBase : MonoBehaviour
             enabled = false;
             return;
         }
-        if (footstep == null)
-            footstep = GetComponent<MonsterFootstep>();
 
         if (anim == null)
         {
@@ -111,59 +127,37 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        if (player == null)
-        {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj != null)
-                player = playerObj.transform;
-        }
-
-        if (player == null)
-        {
-            Debug.LogError($"{name} : Player 태그 오브젝트를 찾지 못했습니다.");
-            enabled = false;
-            return;
-        }
-
-        if (eyePoint == null)
-            eyePoint = transform;
+        AutoFindPlayerReferences();
 
         currentState = State.Patrol;
         lastKnownPosition = transform.position;
+        lastChaseDestination = transform.position;
         lastDetectTime = -999f;
         investigateTimer = 0f;
         reachedLastKnownPosition = false;
-        hasPatrolDestination = false;
+        hasPatDestination = false;
+        lastSawPlayer = false;
+        lastHeardPlayer = false;
+        targetLostActive = false;
 
         senseEnableTime = Time.time + senseStartDelay;
 
-        agent.isStopped = false;
-        agent.speed = GetPatrolSpeed();
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.MedQualityObstacleAvoidance;
-
-        lastStuckSamplePosition = transform.position;
-
+        SetupAgent();
         CacheTriangulation();
         SetAnimatorByState();
-        SetNextGlobalPatrolDestination();
+        SetNextGlobalPatDestination();
+
+        LogAI("초기 상태: Patrol");
     }
 
     protected virtual void Update()
     {
-
-        if (footstep != null)
-        {
-            footstep.SetMoveState(
-                agent.velocity.magnitude,
-                currentState == State.Chase
-            );
-        }
+        if (eyePoint == null) return;
+        if (agent == null) return;
+        if (!agent.isOnNavMesh) return;
 
         if (player == null)
-            return;
-
-        if (!agent.isOnNavMesh)
-            return;
+            AutoFindPlayerReferences();
 
         UpdateSenses();
 
@@ -184,94 +178,87 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!lockAnimator)
             SetAnimatorByState();
-
-        TryRecoverFromStuck();
     }
 
-    private void TryRecoverFromStuck()
+    protected void SetupAgent()
     {
-        if (isBusy || agent == null || !agent.isOnNavMesh)
-            return;
-
-        if (currentState != State.Chase && currentState != State.Patrol && currentState != State.Investigate)
-            return;
-
-        if (agent.pathPending)
-        {
-            stuckTimer = 0f;
-            return;
-        }
-
-        Vector3 horizontalVelocity = agent.velocity;
-        horizontalVelocity.y = 0f;
-
-        float movedSq = (transform.position - lastStuckSamplePosition).sqrMagnitude;
-        bool barelyMoved = movedSq < 0.0004f;
-        bool slow = horizontalVelocity.sqrMagnitude < stuckSpeedThreshold * stuckSpeedThreshold;
-
-        if (slow && barelyMoved && agent.hasPath)
-            stuckTimer += Time.deltaTime;
-        else
-            stuckTimer = 0f;
-
-        lastStuckSamplePosition = transform.position;
-
-        if (stuckTimer < stuckTimeThreshold)
-            return;
-
-        stuckTimer = 0f;
-
-        if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, stuckSampleRadius, NavMesh.AllAreas))
-        {
-            if ((hit.position - transform.position).sqrMagnitude > 0.01f)
-                agent.Warp(hit.position);
-        }
-
         agent.isStopped = false;
+        agent.speed = GetPatrolSpeed();
 
-        if (currentState == State.Chase && player != null)
+        agent.autoBraking = true;
+        agent.autoRepath = true;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        agent.avoidancePriority = Random.Range(30, 60);
+
+        if (agent.radius < 0.35f)
+            agent.radius = 0.35f;
+    }
+
+    protected void AutoFindPlayerReferences()
+    {
+        if (player == null)
         {
-            agent.SetDestination(player.position);
-            return;
+            GameObject taggedPlayer = GameObject.FindGameObjectWithTag(playerTag);
+            if (taggedPlayer != null)
+                player = taggedPlayer.transform;
         }
 
-        if (currentState == State.Investigate)
+        if (player == null)
         {
-            agent.SetDestination(lastKnownPosition);
-            return;
+            Collider[] hits = Physics.OverlapSphere(transform.position, 200f, data.playerLayer, QueryTriggerInteraction.Ignore);
+            if (hits.Length > 0)
+                player = hits[0].transform;
         }
 
-        if (hasPatrolDestination)
-            agent.SetDestination(currentPatrolDestination);
-        else
-            SetNextGlobalPatrolDestination();
+        if (player == null)
+            return;
+
+        if (playerCharacterController == null)
+            playerCharacterController = player.GetComponent<CharacterController>();
+
+        if (playerRigidbody == null)
+            playerRigidbody = player.GetComponent<Rigidbody>();
+
+        if (playerFootstepSource == null)
+            playerFootstepSource = player.GetComponentInChildren<AudioSource>();
     }
 
     protected void UpdateSenses()
     {
         canDetectPlayer = false;
+        lastSawPlayer = false;
+        lastHeardPlayer = false;
 
-        if (Time.time < senseEnableTime)
-            return;
-
-        if (Time.time < nextSenseTime)
-            return;
+        if (Time.time < senseEnableTime) return;
+        if (Time.time < nextSenseTime) return;
 
         nextSenseTime = Time.time + Mathf.Max(0.02f, data.checkInterval);
 
         bool sawPlayer = CheckVision();
-        bool heardPlayer = false;
+        bool heardPlayer = CheckHearing();
 
-        if (!sawPlayer)
-            heardPlayer = CheckHearing();
+        lastSawPlayer = sawPlayer;
+        lastHeardPlayer = heardPlayer;
 
         if (!sawPlayer && !heardPlayer)
             return;
 
         canDetectPlayer = true;
-        lastKnownPosition = player.position;
+        targetLostActive = false;
+
+        if (player != null)
+            lastKnownPosition = player.position;
+        else
+            lastKnownPosition = DetectPlayerPosition();
+
         lastDetectTime = Time.time;
-        reachedLastKnownPosition = false;
+
+        if (sawPlayer && heardPlayer)
+            LogSense("시야 + 소리 둘 다 감지");
+        else if (sawPlayer)
+            LogSense("시야만 감지");
+        else if (heardPlayer)
+            LogSense("소리만 감지");
 
         if (currentState != State.Chase)
             ChangeState(State.Chase);
@@ -279,54 +266,53 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual bool CheckVision()
     {
-        if (eyePoint == null || player == null)
-            return false;
+        if (player == null) return false;
+        if (eyePoint == null) return false;
 
         Vector3 eyePos = eyePoint.position;
-        Vector3 targetPos = GetPlayerTargetPosition();
-        Vector3 toTarget = targetPos - eyePos;
-        float dist = toTarget.magnitude;
+        Vector3 targetPos = GetPlayerAimPosition();
+        Vector3 toPlayer = targetPos - eyePos;
 
-        if (dist > data.detectRange)
+        float dist = toPlayer.magnitude;
+        if (dist > data.detectRange) return false;
+        if (dist <= 0.01f) return false;
+
+        Vector3 dirToPlayer = toPlayer.normalized;
+        float angle = Vector3.Angle(eyePoint.forward, dirToPlayer);
+
+        if (angle > viewAngle * 0.5f)
             return false;
 
-        Vector3 dir = toTarget.normalized;
-        float angle = Vector3.Angle(eyePoint.forward, dir);
+        int blockMask = obstacleLayer.value | doorLayer.value;
 
-        if (angle > data.viewAngle * 0.5f)
-            return false;
-
-        int mask = data.obstacleLayer.value | data.playerLayer.value;
-
-        if (Physics.Raycast(eyePos, dir, out RaycastHit hit, dist, mask, QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(eyePos, playerDetectRadius, dirToPlayer, out RaycastHit blockHit, dist, blockMask, QueryTriggerInteraction.Ignore))
         {
-            bool seen = IsPlayerTransform(hit.transform);
-
             if (drawVisionDebug)
-            {
-                Color c = seen ? Color.green : Color.red;
-                Debug.DrawLine(eyePos, hit.point, c, data.checkInterval);
-            }
+                Debug.DrawLine(eyePos, blockHit.point, Color.red, data.checkInterval);
 
-            return seen;
+            return false;
         }
 
         if (drawVisionDebug)
-            Debug.DrawRay(eyePos, dir * dist, Color.yellow, data.checkInterval);
+            Debug.DrawLine(eyePos, targetPos, Color.green, data.checkInterval);
 
-        return false;
+        return true;
+    }
+
+    protected Vector3 GetPlayerAimPosition()
+    {
+        if (playerCharacterController != null)
+            return player.transform.position + Vector3.up * Mathf.Max(0.8f, playerCharacterController.height * 0.5f);
+
+        return player.position + Vector3.up * 1.0f;
     }
 
     protected virtual bool CheckHearing()
     {
-        if (playerFootstepSource == null)
-            return false;
-
-        if (!playerFootstepSource.isPlaying)
-            return false;
-
-        if (!IsPlayerActuallyMoving())
-            return false;
+        if (player == null) return false;
+        if (playerFootstepSource == null) return false;
+        if (!playerFootstepSource.isPlaying) return false;
+        if (!IsPlayerActuallyMoving()) return false;
 
         float dist = Vector3.Distance(transform.position, player.position);
         return dist <= data.hearingRange;
@@ -351,90 +337,136 @@ public abstract class EnemyBase : MonoBehaviour
         return false;
     }
 
-    protected virtual Vector3 GetPlayerTargetPosition()
+    protected virtual Vector3 DetectPlayerPosition()
     {
-        Collider c = player.GetComponentInChildren<Collider>();
-        if (c != null)
-            return c.bounds.center;
+        if (player != null)
+            return player.position;
 
-        return player.position + Vector3.up * 0.9f;
-    }
-
-    protected bool IsPlayerTransform(Transform target)
-    {
-        if (target == null || player == null)
-            return false;
-
-        return target == player || target.IsChildOf(player) || player.IsChildOf(target);
+        return lastKnownPosition;
     }
 
     protected void UpdatePatrol()
     {
-        if (isBusy)
-            return;
+        if (isBusy) return;
+
+        LogAIThrottled("순찰 중");
 
         agent.speed = GetPatrolSpeed();
         agent.isStopped = false;
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
-            SetNextGlobalPatrolDestination();
+            LogAI("순찰 중 닫힌 문 감지 → 새 순찰 목적지 선택");
+            SetNextGlobalPatDestination();
             return;
         }
 
-        if (!hasPatrolDestination)
+        if (!hasPatDestination)
         {
-            SetNextGlobalPatrolDestination();
+            LogAI("순찰 목적지 없음 → 새 순찰 목적지 선택");
+            SetNextGlobalPatDestination();
             return;
         }
 
-        agent.SetDestination(currentPatrolDestination);
+        SafeSetDestination(currentPatrolDestination);
 
         if (!HasReachedDestination(patrolReachDistance))
             return;
 
-        SetNextGlobalPatrolDestination();
+        LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
+        SetNextGlobalPatDestination();
     }
 
     protected void UpdateChase()
     {
-        if (isBusy)
-            return;
+        if (isBusy) return;
+
+        LogAIThrottled("추적 중");
 
         agent.speed = GetChaseSpeed();
 
         HandleChaseSpecial();
 
-        if (isBusy)
-            return;
+        if (isBusy) return;
 
         agent.isStopped = false;
 
         if (canDetectPlayer)
         {
-            agent.SetDestination(player.position);
+            if (player != null)
+                lastKnownPosition = player.position;
+
+            SetChaseDestination(lastKnownPosition);
+
+            if (lastSawPlayer && lastHeardPlayer)
+                LogSenseThrottled("시야 + 소리 둘 다 감지 CHASE 중");
+            else if (lastSawPlayer)
+                LogSenseThrottled("시야만 감지 CHASE 중");
+            else if (lastHeardPlayer)
+                LogSenseThrottled("소리만 감지 CHASE 중");
+
             return;
         }
 
         float lostTime = Time.time - lastDetectTime;
 
-        if (lostTime < 10f)
+        if (lostTime < data.targetLostTIme)
         {
-            agent.SetDestination(lastKnownPosition);
+            if (!targetLostActive)
+            {
+                targetLostActive = true;
+                LogAI("시야/소리 감지 X → targetLostTime 발동");
+            }
+
+            if (player != null)
+                lastKnownPosition = player.position;
+
+            float distToPlayerPosition = Vector3.Distance(transform.position, lastKnownPosition);
+
+            if (distToPlayerPosition <= investigateStartDistance)
+            {
+                LogAI("targetLostTime 중 플레이어 위치 도달 → 수색 시작");
+
+                if (!investigateRoutineRunning)
+                    StartCoroutine(StartInvestigate());
+
+                return;
+            }
+
+            SetChaseDestination(lastKnownPosition);
+
+            LogAIThrottled($"시야/소리 감지 X → targetLostTime 진행 중, 남은 시간 {data.targetLostTIme - lostTime:F1}초");
             return;
         }
 
-        float distToLastKnown = Vector3.Distance(transform.position, lastKnownPosition);
+        float finalDist = Vector3.Distance(transform.position, lastKnownPosition);
 
-        if (distToLastKnown <= investigateStartDistance)
+        if (finalDist <= investigateStartDistance)
         {
+            LogAI("targetLostTime 종료 시 플레이어 위치 도달 → 수색 시작");
+
             if (!investigateRoutineRunning)
                 StartCoroutine(StartInvestigate());
+
+            return;
         }
-        else
-        {
-            ReturnToPatrolRoute();
-        }
+
+        LogAI("targetLostTime 종료 + 플레이어 위치 도달 실패 → 순찰 복귀");
+        ReturnToPatrolRoute();
+    }
+
+    protected void SetChaseDestination(Vector3 target)
+    {
+        if (Time.time < nextChaseRepathTime)
+            return;
+
+        if (Vector3.Distance(lastChaseDestination, target) < chaseRepathDistance)
+            return;
+
+        nextChaseRepathTime = Time.time + chaseDestinationUpdateInterval;
+        lastChaseDestination = target;
+
+        SafeSetDestination(target);
     }
 
     protected IEnumerator StartInvestigate()
@@ -443,15 +475,19 @@ public abstract class EnemyBase : MonoBehaviour
         isBusy = true;
 
         agent.isStopped = true;
+        agent.ResetPath();
+
         yield return new WaitForSeconds(0.15f);
 
         ChangeState(State.Investigate);
+
         reachedLastKnownPosition = false;
-        investigateTimer = investigateDuration;
+        investigateTimer = data.targetLostTIme;
 
         agent.speed = GetPatrolSpeed();
         agent.isStopped = false;
-        agent.SetDestination(lastKnownPosition);
+
+        SetRandomInvestigatePointAround(lastKnownPosition, investigateRadius);
 
         isBusy = false;
         investigateRoutineRunning = false;
@@ -459,14 +495,16 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected void UpdateInvestigate()
     {
-        if (isBusy)
-            return;
+        if (isBusy) return;
+
+        LogAIThrottled("수색 중");
 
         agent.speed = GetPatrolSpeed();
         agent.isStopped = false;
 
         if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
         {
+            LogAI("수색 중 닫힌 문 감지 → 순찰 복귀");
             ReturnToPatrolRoute();
             return;
         }
@@ -475,18 +513,22 @@ public abstract class EnemyBase : MonoBehaviour
         {
             if (HasClosedDoorBetween(transform.position, lastKnownPosition))
             {
+                LogAI("수색 위치까지 닫힌 문 존재 → 순찰 복귀");
                 ReturnToPatrolRoute();
                 return;
             }
 
-            agent.SetDestination(lastKnownPosition);
+            SafeSetDestination(lastKnownPosition);
 
             if (!HasReachedDestination(investigateReachDistance))
                 return;
 
             reachedLastKnownPosition = true;
-            investigateTimer = investigateDuration;
-            SetRandomInvestigatePoint();
+            investigateTimer = data.targetLostTIme;
+
+            LogAI("마지막 위치 도착 완료 → 주변 랜덤 수색 시작");
+
+            SetRandomInvestigatePointAround(lastKnownPosition, investigateRadius);
             return;
         }
 
@@ -494,6 +536,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (investigateTimer <= 0f)
         {
+            LogAI("수색 실패 → 순찰 복귀");
             ReturnToPatrolRoute();
             return;
         }
@@ -501,77 +544,137 @@ public abstract class EnemyBase : MonoBehaviour
         if (!HasReachedDestination(investigateReachDistance))
             return;
 
-        SetRandomInvestigatePoint();
+        LogAI($"수색 중 → 남은 시간 {investigateTimer:F1}초, 다음 수색 지점 선택");
+        SetRandomInvestigatePointAround(lastKnownPosition, investigateRadius);
     }
 
     protected void ReturnToPatrolRoute()
     {
+        targetLostActive = false;
+
         ChangeState(State.Patrol);
 
-        if (hasPatrolDestination)
+        if (hasPatDestination)
         {
             agent.isStopped = false;
             agent.speed = GetPatrolSpeed();
-            agent.SetDestination(currentPatrolDestination);
+            SafeSetDestination(currentPatrolDestination);
         }
         else
         {
-            SetNextGlobalPatrolDestination();
+            SetNextGlobalPatDestination();
         }
     }
 
-    protected void SetNextGlobalPatrolDestination()
+    protected void SetNextGlobalPatDestination()
     {
-        if (!agent.isOnNavMesh)
-            return;
+        if (!agent.isOnNavMesh) return;
 
         CacheTriangulation();
 
-        for (int i = 0; i < 40; i++)
+        for (int i = 0; i < 80; i++)
         {
             if (!TryGetRandomGlobalNavMeshPoint(out Vector3 point))
+                continue;
+
+            if (!IsValidDestination(point, minWallClearance))
+                continue;
+
+            if (Vector3.Distance(transform.position, point) < minPatrolPointDistance)
                 continue;
 
             if (HasClosedDoorBetween(transform.position, point))
                 continue;
 
+            if (!HasCompletePath(point))
+                continue;
+
             currentPatrolDestination = point;
-            hasPatrolDestination = true;
+            hasPatDestination = true;
 
             agent.isStopped = false;
-            agent.SetDestination(currentPatrolDestination);
+            SafeSetDestination(currentPatrolDestination);
             return;
         }
 
-        hasPatrolDestination = false;
+        hasPatDestination = false;
         agent.isStopped = true;
     }
 
-    protected void SetRandomInvestigatePoint()
+    protected void SetRandomInvestigatePointAround(Vector3 center, float radius)
     {
-        if (!agent.isOnNavMesh)
-            return;
+        if (!agent.isOnNavMesh) return;
 
-        for (int i = 0; i < 20; i++)
+        if (radius <= 0f)
+            radius = 0.05f;
+
+        for (int i = 0; i < 30; i++)
         {
-            Vector3 randomDir = Random.insideUnitSphere * investigateRadius;
+            Vector3 randomDir = Random.insideUnitSphere * radius;
             randomDir.y = 0f;
 
-            Vector3 randomPos = lastKnownPosition + randomDir;
+            Vector3 pos = center + randomDir;
 
-            if (!NavMesh.SamplePosition(randomPos, out NavMeshHit hit, investigateRadius, NavMesh.AllAreas))
+            if (!NavMesh.SamplePosition(pos, out NavMeshHit hit, radius, NavMesh.AllAreas))
+                continue;
+
+            if (!IsValidDestination(hit.position, minWallClearance * 0.5f))
                 continue;
 
             if (HasClosedDoorBetween(transform.position, hit.position))
                 continue;
 
-            agent.isStopped = false;
-            agent.SetDestination(hit.position);
+            if (!HasCompletePath(hit.position))
+                continue;
+
+            SafeSetDestination(hit.position);
+            currentPatrolDestination = hit.position;
+            hasPatDestination = true;
             return;
         }
 
-        agent.isStopped = false;
-        agent.SetDestination(lastKnownPosition);
+        SafeSetDestination(center);
+        currentPatrolDestination = center;
+        hasPatDestination = false;
+    }
+
+    protected bool IsValidDestination(Vector3 point, float clearance)
+    {
+        if (!NavMesh.SamplePosition(point, out NavMeshHit sampleHit, 1.0f, NavMesh.AllAreas))
+            return false;
+
+        if (NavMesh.FindClosestEdge(sampleHit.position, out NavMeshHit edgeHit, NavMesh.AllAreas))
+        {
+            if (edgeHit.distance < clearance)
+                return false;
+        }
+
+        return true;
+    }
+
+    protected bool HasCompletePath(Vector3 target)
+    {
+        NavMeshPath path = new NavMeshPath();
+
+        if (!agent.CalculatePath(target, path))
+            return false;
+
+        return path.status == NavMeshPathStatus.PathComplete;
+    }
+
+    protected bool SafeSetDestination(Vector3 target)
+    {
+        if (!agent.isOnNavMesh)
+            return false;
+
+        if (!NavMesh.SamplePosition(target, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+            return false;
+
+        if (!HasCompletePath(hit.position))
+            return false;
+
+        agent.SetDestination(hit.position);
+        return true;
     }
 
     protected void CacheTriangulation()
@@ -583,10 +686,10 @@ public abstract class EnemyBase : MonoBehaviour
     {
         result = transform.position;
 
-        if (cachedTriangulation.vertices == null || cachedTriangulation.vertices.Length < 3)
+        if (cachedTriangulation.vertices == null || cachedTriangulation.vertices.Length == 0)
             return false;
 
-        for (int attempt = 0; attempt < 20; attempt++)
+        for (int i = 0; i < 30; i++)
         {
             int idx = Random.Range(0, cachedTriangulation.vertices.Length);
             Vector3 basePoint = cachedTriangulation.vertices[idx];
@@ -611,11 +714,8 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected bool HasReachedDestination(float extraDistance)
     {
-        if (agent.pathPending)
-            return false;
-
-        if (!agent.hasPath)
-            return true;
+        if (agent.pathPending) return false;
+        if (!agent.hasPath) return true;
 
         float reachDistance = agent.stoppingDistance + extraDistance;
         return agent.remainingDistance <= reachDistance;
@@ -625,6 +725,7 @@ public abstract class EnemyBase : MonoBehaviour
     {
         Vector3 start = from + Vector3.up * doorCheckHeight;
         Vector3 end = to + Vector3.up * 0.2f;
+
         Vector3 dir = end - start;
         float dist = dir.magnitude;
 
@@ -645,8 +746,7 @@ public abstract class EnemyBase : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick door = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (door == null)
-                continue;
+            if (door == null) continue;
 
             if (!door.IsOpen() && !door.IsBroken())
                 return true;
@@ -664,41 +764,23 @@ public abstract class EnemyBase : MonoBehaviour
             return false;
 
         DoorClick door = hit.collider.GetComponentInParent<DoorClick>();
-        if (door == null)
-            return false;
+        if (door == null) return false;
 
         return !door.IsOpen() && !door.IsBroken();
     }
 
     protected DoorBrokenTest GetClosedDoorOnChasePath(float distance)
     {
-        DoorBrokenTest door = FindClosedDoor(GetChaseMoveDirection(), distance);
-        if (door != null)
-            return door;
-
-        if (player == null)
-            return null;
-
-        Vector3 toPlayer = player.position - transform.position;
-        toPlayer.y = 0f;
-
-        if (toPlayer.sqrMagnitude <= 0.0001f)
-            return null;
-
-        return FindClosedDoor(toPlayer.normalized, distance);
-    }
-
-    protected DoorBrokenTest FindClosedDoor(Vector3 direction, float distance)
-    {
-        if (direction.sqrMagnitude <= 0.0001f)
-            return null;
-
         Vector3 origin = transform.position + Vector3.up * doorCheckHeight;
+        Vector3 dir = GetChaseMoveDirection();
+
+        if (dir.sqrMagnitude <= 0.0001f)
+            return null;
 
         RaycastHit[] hits = Physics.SphereCastAll(
             origin,
             0.25f,
-            direction.normalized,
+            dir,
             distance,
             doorLayer,
             QueryTriggerInteraction.Collide
@@ -710,15 +792,11 @@ public abstract class EnemyBase : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick click = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (click == null)
-                continue;
-
-            if (click.IsOpen() || click.IsBroken())
-                continue;
+            if (click == null) continue;
+            if (click.IsOpen() || click.IsBroken()) continue;
 
             DoorBrokenTest broken = hits[i].collider.GetComponentInParent<DoorBrokenTest>();
-            if (broken == null || broken.IsBroken())
-                continue;
+            if (broken == null || broken.IsBroken()) continue;
 
             if (hits[i].distance < nearest)
             {
@@ -737,7 +815,7 @@ public abstract class EnemyBase : MonoBehaviour
             Vector3 dir = agent.steeringTarget - transform.position;
             dir.y = 0f;
 
-            if (dir.sqrMagnitude > 0.01f)
+            if (dir.sqrMagnitude > 0.0001f)
                 return dir.normalized;
         }
 
@@ -746,7 +824,7 @@ public abstract class EnemyBase : MonoBehaviour
             Vector3 dir = player.position - transform.position;
             dir.y = 0f;
 
-            if (dir.sqrMagnitude > 0.01f)
+            if (dir.sqrMagnitude > 0.0001f)
                 return dir.normalized;
         }
 
@@ -760,6 +838,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (currentState == nextState)
             return;
 
+        State prevState = currentState;
         currentState = nextState;
 
         switch (currentState)
@@ -777,14 +856,15 @@ public abstract class EnemyBase : MonoBehaviour
                 break;
         }
 
+        LogAI($"상태 변경: {prevState} → {currentState}");
+
         if (!lockAnimator)
             SetAnimatorByState();
     }
 
     protected void SetAnimatorByState()
     {
-        if (anim == null)
-            return;
+        if (anim == null) return;
 
         switch (currentState)
         {
@@ -810,6 +890,36 @@ public abstract class EnemyBase : MonoBehaviour
     protected float GetChaseSpeed()
     {
         return data.moveSpeed;
+    }
+
+    protected void LogAI(string message)
+    {
+        if (!debugStateLog) return;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    protected void LogSense(string message)
+    {
+        if (!debugSenseLog) return;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    protected void LogAIThrottled(string message)
+    {
+        if (!debugStateLog) return;
+        if (Time.time < nextLogTime) return;
+
+        nextLogTime = Time.time + logInterval;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    protected void LogSenseThrottled(string message)
+    {
+        if (!debugSenseLog) return;
+        if (Time.time < nextLogTime) return;
+
+        nextLogTime = Time.time + logInterval;
+        Debug.Log($"[{name}] {message}");
     }
 
     protected virtual void HandleChaseSpecial()

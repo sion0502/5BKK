@@ -12,6 +12,7 @@ public class SelectedItemUseController : MonoBehaviour
     private EquipmentViewController equipmentView;
     private FlashlightEnergyController flashlightEnergy;
     private CamcorderEnergyController camcorderEnergy;
+    private PassiveLanternController passiveLantern;
     private ActiveItem holdingActiveItem;
     private float holdTimer;
 
@@ -33,6 +34,8 @@ public class SelectedItemUseController : MonoBehaviour
         {
             camcorderEnergy = gameObject.AddComponent<CamcorderEnergyController>();
         }
+
+        passiveLantern = GetComponent<PassiveLanternController>();
     }
 
     void Update()
@@ -44,8 +47,25 @@ public class SelectedItemUseController : MonoBehaviour
         }
 
         HandleFlashlightBatteryRecharge();
+        HandlePassiveLampToggle();
         HandleEquipmentUse();
         HandleActiveItemHoldUse();
+    }
+
+    private void HandlePassiveLampToggle()
+    {
+        if (!Input.GetKeyDown(KeyCode.Mouse1) || passiveLantern == null || !passiveLantern.HasToggleableLamp())
+        {
+            return;
+        }
+
+        Items selectedItem = inventory != null ? inventory.GetSelectedItem() : null;
+        if (selectedItem is ActiveItem)
+        {
+            return;
+        }
+
+        passiveLantern.ToggleLamp();
     }
 
     private void HandleFlashlightBatteryRecharge()
@@ -149,6 +169,13 @@ public class SelectedItemUseController : MonoBehaviour
         }
 
         light.enabled = turningOn;
+
+        if (flashlightEnergy != null && flashlightEnergy.IsFlashlightEquipment(equipment))
+        {
+            flashlightEnergy.PlayToggleSound(turningOn, currentView.transform.position);
+            flashlightEnergy.OnFlashlightToggled(turningOn);
+        }
+
         return true;
     }
 
