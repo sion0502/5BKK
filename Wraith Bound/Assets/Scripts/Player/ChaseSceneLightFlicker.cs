@@ -197,8 +197,13 @@ public class ChaseSceneLightFlicker : MonoBehaviour
                 continue;
             }
 
-            originalIntensities[i] = light.intensity;
+            // FlickeringLamp과 같이 NaN/Infinity intensity는 캐시 단계에서 걸러둠
+            originalIntensities[i] = SanitizeIntensity(light.intensity, 1f);
             originalEnabled[i] = light.enabled;
+            if (!IsValidIntensity(light.intensity))
+            {
+                light.intensity = originalIntensities[i];
+            }
             lightPhaseOffsets[i] = SampleLightPhaseOffset(light, i);
             perLightBlackoutTimers[i] = 0f;
         }
@@ -240,14 +245,23 @@ public class ChaseSceneLightFlicker : MonoBehaviour
                 continue;
             }
 
-            float multiplier = chaseEffects.GetFlickerMultiplier(lightPhaseOffsets[i]);
+            float multiplier = SanitizeMultiplier(
+                chaseEffects.GetFlickerMultiplier(lightPhaseOffsets[i]),
+                1f
+            );
             if (allowHardBlackout && multiplier <= hardThreshold)
             {
                 light.enabled = false;
                 continue;
             }
 
-            float targetIntensity = originalIntensities[i] * multiplier;
+            float baseIntensity = SanitizeIntensity(originalIntensities[i], 1f);
+            if (!IsValidIntensity(originalIntensities[i]))
+            {
+                originalIntensities[i] = baseIntensity;
+            }
+
+            float targetIntensity = baseIntensity * multiplier;
             light.enabled = true;
             light.intensity = SmoothLightIntensity(light.intensity, targetIntensity);
         }
@@ -257,7 +271,34 @@ public class ChaseSceneLightFlicker : MonoBehaviour
     {
         float smoothing = Mathf.Max(0.01f, lightIntensitySmoothing);
         float blend = Mathf.Clamp01(Time.deltaTime * smoothing);
-        return Mathf.Lerp(current, target, blend);
+        float safeCurrent = SanitizeIntensity(current, target);
+        float safeTarget = SanitizeIntensity(target, safeCurrent);
+        return SanitizeIntensity(Mathf.Lerp(safeCurrent, safeTarget, blend), safeTarget);
+    }
+
+    private static bool IsValidIntensity(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f;
+    }
+
+    private static float SanitizeIntensity(float value, float fallback)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
+        {
+            return Mathf.Max(fallback, 0f);
+        }
+
+        return value;
+    }
+
+    private static float SanitizeMultiplier(float value, float fallback)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Mathf.Max(value, 0f);
     }
 
     private void UpdatePerLightBlackout(int index, float strobeBlend)
@@ -302,7 +343,7 @@ public class ChaseSceneLightFlicker : MonoBehaviour
                 continue;
             }
 
-            light.intensity = originalIntensities[i];
+            light.intensity = SanitizeIntensity(originalIntensities[i], 1f);
             light.enabled = originalEnabled[i];
         }
     }
