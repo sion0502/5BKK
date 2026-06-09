@@ -18,9 +18,9 @@ public class PlayerController : MonoBehaviour
     public float runSpeed; // 달리기 속도
     public float staminaDrainRate; // 달리기 시 소비할 스태미나
     public float gravity = -10.0f; // 중력
-    public bool isGrounded = true;
-    public bool hitCeiling = false;
-    public bool isRun = false;
+    public bool isGrounded = true; // 지상 판정
+    public bool hitCeiling = false; // 천장 판정
+    public bool isRun = false; // 달리기 판정
 
     [Header("Falling Settings")]
     public float damagePerMeter = 3f; // 1미터 당 3 데미지
@@ -36,13 +36,13 @@ public class PlayerController : MonoBehaviour
     public float normalHeight = 1.8f;
     public float crouchHeight = 0.9f;
     private float normalCameraHeight; // 캐릭터 중심 기준 카메라 로컬 Y 위치
-    private float crouchCameraHeight;
+    private float crouchCameraHeight; // 웅크리기 시 카메라 높이
     public float crouchTransitionSpeed = 10f; // 웅크리기 전환 속도
     public bool isCrouching = false; // 웅크리기 상태
 
     // 숨기 관련 변수
-    private float targetHeight;
-    private float targetCameraHeight;
+    private float targetHeight; // 목표 플레이어 키
+    private float targetCameraHeight; // 목표 카메라 높이
 
     [Header("Ground Check Settings")]
     [SerializeField] private float groundCheckOffset = 0.05f; // 캐릭터 컨트롤러 하단에서 시작할 오프셋
@@ -58,9 +58,8 @@ public class PlayerController : MonoBehaviour
     private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
     private CharacterController controller; // CharacterController 컴포넌트 가져오기
     public Transform cameraTransform; // 1인칭 카메라 할당
-    private AudioSource playerAudio;
-    private Vector3 velocity;
-    private Vector3 horizontalVelocity;
+    private Vector3 velocity; // 평면 플레이어 속도
+    private Vector3 horizontalVelocity; // 수직 플레이어 속도(낙하 속도)
     public LayerMask ceilingCheckLayer; // 천장 충돌을 체크할 레이어
     public LayerMask groundMask; // 지면 검사를 체크할 레이어
 
@@ -73,10 +72,11 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        // 컴포넌트 가져오기
         conditions = GetComponent<PlayerConditions>();
         controller = GetComponent<CharacterController>();
-        playerAudio = GetComponent<AudioSource>();
 
+        // 원래의 카메라 높이 저장
         normalCameraHeight = cameraTransform.localPosition.y;
         // 웅크렸을 때의 카메라 높이는 기본 눈높이에서 일정 값(예: 1.0f)을 뺀 값으로 자동 설정
         crouchCameraHeight = normalCameraHeight - 1.0f;
@@ -91,6 +91,7 @@ public class PlayerController : MonoBehaviour
         HandleMovement();
         HandleGravity();
 
+        // 최종 이동 방향 및 속도
         Vector3 finalMovement = horizontalVelocity + velocity;
         controller.Move(finalMovement * Time.deltaTime);
 
