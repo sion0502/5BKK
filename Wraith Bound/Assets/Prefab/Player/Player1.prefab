@@ -471,6 +471,9 @@ GameObject:
   - component: {fileID: 2080873284384539201}
   - component: {fileID: 2554555430631095888}
   - component: {fileID: 3481226695109432382}
+  - component: {fileID: 8847291056382749153}
+  - component: {fileID: 7758291046382749154}
+  - component: {fileID: 6657180935271638043}
   - component: {fileID: 2270909458046186624}
   m_Layer: 8
   m_Name: Player1
@@ -945,6 +948,176 @@ MonoBehaviour:
   animatedChildName: SmartPhone
   hiddenAnchoredOffset: {x: 0, y: -620}
   animationDuration: 0.45
+--- !u!114 &8847291056382749153
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9002960277034049064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8e4f1a92b3d4e6f9a0b1c2d3e4f5a6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerChaseEffectController
+  volumePriority: 20
+  impactDuration: 0.55
+  impactRedColor: {r: 1, g: 0.22, b: 0.22, a: 1}
+  impactRedVignette: 0.85
+  impactVignetteColor: {r: 0.9, g: 0, b: 0, a: 1}
+  impactFovPunch: -12
+  impactShakeDuration: 0.65
+  impactShakePos: 0.09
+  impactShakeRot: 4.5
+  impactFalloff:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  burstDuration: 1.5
+  burstGrainPeak: 1
+  burstChromaticPeak: 1
+  burstPostExposurePeak: 1.2
+  burstVolumeWeight: 1
+  burstFalloff:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.12
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.35
+      value: 0.75
+      inSlope: -2
+      outSlope: -2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.7
+      value: 0.2
+      inSlope: -1.5
+      outSlope: -1.5
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  sustainFadeIn: 0.25
+  sustainFadeOut: 0.7
+  sustainVolumeWeight: 0.75
+  sustainGrain: 0.52
+  sustainChromatic: 0.08
+  flickerMin: 0.15
+  flickerMax: 1
+  flickerExposureAmp: 0.4
+  flickerBlackoutChance: 0.45
+  flickerBlackoutDuration: {x: 0.1, y: 0.18}
+  flickerBlackoutMultiplier: 0
+  hardBlackoutThreshold: 0.1
+  useHybridFlicker: 1
+  flickerStrobeHz: 3.5
+  flickerDutyCycle: 0.45
+  flickerBlendWeight: 0.65
+  flickerBlendSpeed: 0.4
+  flickerBlendSharpness: 1.4
+  flickerSpeed: 12
+  flickerSharpness: 2.2
+  sceneLightFlicker: {fileID: 7758291046382749154}
+  enableDebugKeys: 1
+  debugBurstKey: 291
+  debugChaseToggleKey: 292
+--- !u!114 &7758291046382749154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9002960277034049064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e5f6a7b8c9401e9f0a1b2c3d4e5f6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChaseSceneLightFlicker
+  chaseEffects: {fileID: 8847291056382749153}
+  playerRoot: {fileID: 6188656915143997687}
+  autoCollectOnChaseStart: 1
+  manualLights: []
+  maxLightRange: 50
+  maxDirectionalIntensity: 2.5
+  lightPhaseSpread: 2.5
+  lightIntensitySmoothing: 10
+  hardBlackoutBlendMin: 0.45
+  perLightBlackoutChance: 0.22
+  perLightBlackoutDuration: {x: 0.06, y: 0.14}
+--- !u!114 &6657180935271638043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9002960277034049064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2b6021ab6b13d84997fd2987ddf5c7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PassiveLanternController
+  inventory: {fileID: 4514866609861408290}
+  lightLocalOffset: {x: 0, y: 1.15, z: 0.2}
+  minIntensityMultiplier: 0.82
+  maxIntensityMultiplier: 1.08
+  flickerSpeed: 12
+  flickerSharpness: 2.2
+  smoothing: 14
+  blackoutChancePerSecond: 0.18
+  blackoutDuration: {x: 0.02, y: 0.08}
+  blackoutIntensityMultiplier: 0.35
 --- !u!82 &2270909458046186624
 AudioSource:
   m_ObjectHideFlags: 0
