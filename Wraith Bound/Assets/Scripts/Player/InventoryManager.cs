@@ -12,6 +12,7 @@ public enum HeldItemSource
 public class InventoryManager : MonoBehaviour
 {
     private const string CamcorderResourcePath = "ItemDatas/Equipment/Camcorder";
+    private const string PickupClipPath = "Sound/PickUp_Generic-003";
 
     [Header("Capacity")]
     [SerializeField] private int baseCapacity = 3;
@@ -25,6 +26,10 @@ public class InventoryManager : MonoBehaviour
 
     [Header("Passive Slot")]
     [SerializeField] private PassiveItem passiveSlot;
+
+    [Header("Pickup Sound")]
+    [SerializeField] private AudioClip pickupClip;
+    [SerializeField] private float pickupSoundVolume = 0.8f;
 
     private bool ownsCamcorder;
     private HeldItemSource heldSource = HeldItemSource.QuickSlot;
@@ -223,38 +228,59 @@ public class InventoryManager : MonoBehaviour
             return TryAcquireCamcorder(out droppedFromInventory, out droppedInventoryAmount);
         }
 
+        bool acquired;
+
         // PassiveItem은 일반 인벤토리 slots를 사용하지 않고 passiveSlot으로만 들어갑니다.
         if (itemToAcquire is PassiveItem passiveItem)
         {
-            if (passiveSlot == null)
-            {
-                return AddPassiveItem(passiveItem);
-            }
-
-            return TrySwapPassiveWithIncoming(passiveItem, out droppedFromInventory, out droppedInventoryAmount);
+            acquired = passiveSlot == null
+                ? AddPassiveItem(passiveItem)
+                : TrySwapPassiveWithIncoming(passiveItem, out droppedFromInventory, out droppedInventoryAmount);
         }
-
-        // item.type이 Passive로 설정되어 있는데 실제 클래스가 PassiveItem이 아니면 잘못된 데이터로 보고 실패시킵니다.
-        if (itemToAcquire.type == ItemType.Passive)
+        else if (itemToAcquire.type == ItemType.Passive)
         {
             Debug.LogWarning($"[Inventory] {itemToAcquire.itemName}은(는) Passive 타입이지만 PassiveItem 클래스가 아닙니다.");
             return false;
         }
-
-        // ActiveItem과 Equipment만 일반 인벤토리 slots에 들어갈 수 있습니다.
-        if (itemToAcquire is ActiveItem || itemToAcquire is Equipment)
+        else if (itemToAcquire is ActiveItem || itemToAcquire is Equipment)
         {
-            return AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
+            acquired = AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
+        }
+        else if (itemToAcquire.type == ItemType.Active || itemToAcquire.type == ItemType.Equip)
+        {
+            acquired = AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
+        }
+        else
+        {
+            Debug.LogWarning($"[Inventory] 획득할 수 없는 아이템 타입입니다: {itemToAcquire.itemName}");
+            return false;
         }
 
-        // 클래스 판별이 애매한 경우에도 ItemType이 Active 또는 Equip이면 기존 흐름을 유지하기 위해 일반 아이템으로 처리합니다.
-        if (itemToAcquire.type == ItemType.Active || itemToAcquire.type == ItemType.Equip)
+        if (acquired)
         {
-            return AddItem(itemToAcquire, amount, out droppedFromInventory, out droppedInventoryAmount);
+            PlayItemPickupSound();
         }
 
-        Debug.LogWarning($"[Inventory] 획득할 수 없는 아이템 타입입니다: {itemToAcquire.itemName}");
-        return false;
+        return acquired;
+    }
+
+    private void EnsurePickupClip()
+    {
+        if (pickupClip == null)
+        {
+            pickupClip = Resources.Load<AudioClip>(PickupClipPath);
+        }
+    }
+
+    private void PlayItemPickupSound()
+    {
+        EnsurePickupClip();
+        if (pickupClip == null)
+        {
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(pickupClip, transform.position, pickupSoundVolume);
     }
 
     public bool AddItem(Items itemToAdd, int amount = 1)
