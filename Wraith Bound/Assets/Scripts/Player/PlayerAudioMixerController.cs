@@ -65,15 +65,18 @@ public class PlayerAudioMixerController : MonoBehaviour
     // 입력값이나 피지컬 속도에 기초하여 현재 이동 상태 판정
     private void EvaluateMovementState()
     {
-        // 예시용 판정 로직 (실제 프로젝트의 입력/상태 변수에 맞춰 매핑)
+        // 각 움직임 상태에 따른 MovementState 업데이트
+        // 웅크리기  
         if (Input.GetKey(KeyCode.LeftControl) && playerController.isCrouching && !playerHidingController.isHiding) // 웅크리기 키
         {
             UpdateMovementState(MovementState.Crouch);
         }
+        // 달리기
         else if (Input.GetKey(KeyCode.LeftShift) && playerController.isRun && !playerController.isCrouching && !playerHidingController.isHiding) // 달리기 키
         {
             UpdateMovementState(MovementState.Run);
         }
+        // 걷기
         else
         {
             if(!playerHidingController.isHiding)

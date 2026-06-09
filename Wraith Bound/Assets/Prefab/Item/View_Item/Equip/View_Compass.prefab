@@ -462,6 +462,9 @@ MonoBehaviour:
   rotationSpeed: 8
   directionReference: {fileID: 0}
   needleYawOffset: 90
+  applyNeedleEmission: 1
+  needleEmissionMapOverride: {fileID: 0}
+  needleEmissionColor: {r: 0.45, g: 0.45, b: 0.45, a: 1}
 --- !u!114 &5754776387894602762
 MonoBehaviour:
   m_ObjectHideFlags: 0

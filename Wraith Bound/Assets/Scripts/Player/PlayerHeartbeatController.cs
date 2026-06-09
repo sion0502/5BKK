@@ -19,7 +19,7 @@ public class PlayerHeartbeatController : MonoBehaviour
     [SerializeField] private float maxInterval = 1.8f;  // 스태미나 0일 때 속도 (매우 빠름)
 
     [Header("Double Beat Micro-timing")]
-    [SerializeField] private float doubleBeatDelay = 0.15f; // "쿵"과 다음 "쿵" 사이의 내부 지연 시간 (0.12s ~ 0.18s 추천)
+    [SerializeField] private float doubleBeatDelay = 0.15f; // "쿵"과 다음 "쿵" 사이의 내부 지연 시간
     [Range(0.5f, 1.0f)][SerializeField] private float secondBeatVolumeScale = 0.7f; // 두 번째 박동의 감쇄 비율
     [Range(0.8f, 1.0f)][SerializeField] private float secondBeatPitchScale = 0.9f;  // 두 번째 박동의 피치 비율 (더 낮게)
 
@@ -36,6 +36,7 @@ public class PlayerHeartbeatController : MonoBehaviour
         heartbeatSource.pitch = 1.0f;
         // 스태미나 가져오기
         playerConditions = GetComponent<PlayerConditions>();
+        // 타이머 초기 설정
         timer = 0f;
     }
 
@@ -76,7 +77,7 @@ public class PlayerHeartbeatController : MonoBehaviour
         heartbeatSource.pitch = 1.0f; // 기준 피치
         heartbeatSource.PlayOneShot(heartbeatClip, volume);
 
-        // 정해진 미세 지연 시간만큼 물리 대기
+        // 정해진 미세 지연 시간만큼 대기
         yield return new WaitForSeconds(doubleBeatDelay);
 
         // 2. 두 번째 박동 (약간 작고 무겁게) 

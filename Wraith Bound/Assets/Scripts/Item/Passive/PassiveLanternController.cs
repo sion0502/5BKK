@@ -24,6 +24,25 @@ public class PassiveLanternController : MonoBehaviour
     private float baseIntensity;
     private float noiseSeed;
     private float blackoutTimer;
+    private bool isLampOn = true;
+
+    public bool IsLampOn => isLampOn;
+
+    public bool HasToggleableLamp()
+    {
+        PassiveItem passive = inventory != null ? inventory.GetPassiveItem() : null;
+        return passive != null && passive.providesAmbientLight;
+    }
+
+    public void ToggleLamp()
+    {
+        if (!HasToggleableLamp())
+        {
+            return;
+        }
+
+        isLampOn = !isLampOn;
+    }
 
     private void Awake()
     {
@@ -69,7 +88,10 @@ public class PassiveLanternController : MonoBehaviour
         }
 
         PassiveItem passive = inventory != null ? inventory.GetPassiveItem() : null;
-        bool wantsLight = passive != null && passive.providesAmbientLight;
+        bool wantsLight = passive != null
+            && passive.providesAmbientLight
+            && isLampOn
+            && (inventory == null || !inventory.IsCamcorderViewfinderActive());
 
         if (!wantsLight)
         {
