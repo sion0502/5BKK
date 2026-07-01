@@ -8,6 +8,7 @@ public class GhostEnemy : EnemyBase
     protected override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;
+        if (!doorSpecialAllowed) return;
         if (!canPassThroughDoors) return;
 
         DoorBrokenTest door = GetClosedDoorOnChasePath(chaseDoorDetectDistance);
