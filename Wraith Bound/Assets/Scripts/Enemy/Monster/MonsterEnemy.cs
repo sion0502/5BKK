@@ -13,6 +13,9 @@ public class MonsterEnemy : EnemyBase
     [SerializeField] private float postAttackCooldown = 0.2f;
     [SerializeField] private float attackFaceAngle = 6f;
     [SerializeField] private float approachTimeout = 3f;
+    [SerializeField] private float finalAttackDistance = 0.8f;
+    [SerializeField] private float finalAttackFaceAngle = 2.5f;
+    [SerializeField] private float finalAlignTimeout = 1.5f;
 
     private bool attacking;
     private float nextPossibleAttackTime;
@@ -74,6 +77,13 @@ public class MonsterEnemy : EnemyBase
             yield break;
         }
 
+        if (!IsReadyToAttackDoor(door, doorAttackStartDistance, attackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         agent.isStopped = true;
         agent.ResetPath();
 
@@ -105,6 +115,38 @@ public class MonsterEnemy : EnemyBase
             yield break;
         }
 
+        float finalAlignTimer = 0f;
+
+        while (finalAlignTimer < finalAlignTimeout)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            FaceDoorCollider(door);
+
+            if (IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+                break;
+
+            agent.isStopped = false;
+            SafeSetDestination(GetDoorAttackPosition(door));
+
+            finalAlignTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         anim.SetInteger(AnimState, 0);
 
         float idleTimer = 0f;
@@ -131,13 +173,20 @@ public class MonsterEnemy : EnemyBase
 
         FaceDoorCollider(door);
 
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         anim.SetTrigger(AnimAttack);
 
         yield return new WaitForSeconds(doorHitDelay);
 
-        if (door != null && !door.IsBroken())
+        if (door != null && !door.IsBroken() && IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
         {
-            Debug.Log("Monster Force Hit Without Condition");
+            Debug.Log("Monster Door Hit");
             door.BreakByEnemy(transform.position);
         }
 
@@ -159,6 +208,16 @@ public class MonsterEnemy : EnemyBase
         if (door.IsBroken()) return false;
 
         return true;
+    }
+
+    private bool IsReadyToAttackDoor(DoorBrokenTest door, float maxDistance, float maxAngle)
+    {
+        if (!IsDoorStillAttackable(door)) return false;
+
+        float dist = GetDistanceToDoorCollider(door);
+        float angle = GetAngleToDoorCollider(door);
+
+        return dist <= maxDistance && angle <= maxAngle;
     }
 
     private Vector3 GetDoorAttackPosition(DoorBrokenTest door)
