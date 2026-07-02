@@ -246,8 +246,6 @@ public abstract class EnemyBase : MonoBehaviour
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
         agent.avoidancePriority = Random.Range(30, 60);
 
-        if (agent.radius < 0.35f)
-            agent.radius = 0.35f;
     }
 
     protected void AutoFindPlayerReferences()
