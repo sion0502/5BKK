@@ -46,6 +46,8 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected float chaseDoorDetectDistance = 2.2f;
     [SerializeField] protected float chaseDoorSearchRadius = 18f;
     [SerializeField] protected float patrolDoorSearchRadius = 10f;
+    [SerializeField] protected float patrolDoorOpenDistance = 0.75f;
+    [SerializeField] protected float patrolDoorOpenFaceAngle = 20f;
     [SerializeField] protected bool autoOpenDoorsOnPatrol = true;
 
     [Header("Patrol")]
@@ -73,6 +75,7 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Hiding")]
     [SerializeField] protected float hidingSeenMemoryTime = 0.75f;
     [SerializeField] protected float playerCatchDistance = 1.1f;
+    [SerializeField] protected float playerContactKillDistance = 0.15f;
 
     [Header("Sense Timing")]
     [SerializeField] protected float senseStartDelay = 0.5f;
@@ -327,7 +330,9 @@ public abstract class EnemyBase : MonoBehaviour
         if (eyePoint == null) return false;
 
         Vector3 eyePos = eyePoint.position;
-        Vector3 targetPos = GetPlayerAimPosition();
+        Vector3 targetPos = GetBestVisiblePlayerPosition(eyePos, out bool hasCandidate);
+        if (!hasCandidate) return false;
+
         Vector3 toPlayer = targetPos - eyePos;
 
         float dist = toPlayer.magnitude;
@@ -340,9 +345,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (angle > viewAngle * 0.5f)
             return false;
 
-        int blockMask = obstacleLayer.value | doorLayer.value;
-
-        if (Physics.SphereCast(eyePos, playerDetectRadius, dirToPlayer, out RaycastHit blockHit, dist, blockMask, QueryTriggerInteraction.Ignore))
+        if (IsVisionBlockedByObstacle(eyePos, dirToPlayer, dist, out RaycastHit blockHit))
         {
             if (drawVisionDebug)
                 Debug.DrawLine(eyePos, blockHit.point, Color.red, data.checkInterval);
@@ -354,6 +357,96 @@ public abstract class EnemyBase : MonoBehaviour
             Debug.DrawLine(eyePos, targetPos, Color.green, data.checkInterval);
 
         return true;
+    }
+
+    protected Vector3 GetBestVisiblePlayerPosition(Vector3 eyePos, out bool hasCandidate)
+    {
+        hasCandidate = true;
+
+        Vector3 fallback = GetPlayerAimPosition();
+        float bestDistance = Vector3.Distance(eyePos, fallback);
+        Vector3 bestPosition = fallback;
+
+        if (data == null || data.playerLayer.value == 0)
+            return bestPosition;
+
+        Collider[] playerColliders = Physics.OverlapSphere(eyePos, data.detectRange, data.playerLayer, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider col = playerColliders[i];
+            if (col == null) continue;
+
+            Vector3 candidate = col.bounds.center;
+            float distance = Vector3.Distance(eyePos, candidate);
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestPosition = candidate;
+            }
+        }
+
+        return bestPosition;
+    }
+
+    protected bool IsVisionBlockedByObstacle(Vector3 eyePos, Vector3 dirToPlayer, float distanceToPlayer, out RaycastHit blockingHit)
+    {
+        blockingHit = default;
+
+        int mask = obstacleLayer.value | doorLayer.value | data.playerLayer.value;
+
+        RaycastHit[] hits = Physics.SphereCastAll(
+            eyePos,
+            playerDetectRadius,
+            dirToPlayer,
+            distanceToPlayer,
+            mask,
+            QueryTriggerInteraction.Ignore
+        );
+
+        if (hits.Length == 0)
+            return false;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null) continue;
+            if (IsSelfCollider(hitCollider)) continue;
+
+            if (IsPlayerCollider(hitCollider))
+                return false;
+
+            blockingHit = hits[i];
+            return true;
+        }
+
+        return false;
+    }
+
+    protected bool IsPlayerCollider(Collider col)
+    {
+        if (col == null) return false;
+
+        Transform hitTransform = col.transform;
+
+        if (player != null && (hitTransform == player || hitTransform.IsChildOf(player) || player.IsChildOf(hitTransform)))
+            return true;
+
+        if (col.CompareTag(playerTag))
+            return true;
+
+        return data != null && (data.playerLayer.value & (1 << col.gameObject.layer)) != 0;
+    }
+
+    protected bool IsSelfCollider(Collider col)
+    {
+        if (col == null) return false;
+
+        Transform hitTransform = col.transform;
+        return hitTransform == transform || hitTransform.IsChildOf(transform);
     }
 
     protected Vector3 GetPlayerAimPosition()
@@ -1056,6 +1149,12 @@ public abstract class EnemyBase : MonoBehaviour
         if (!TryGetClosedDoorOnCurrentPath(distance, out DoorClick door, out _))
             return false;
 
+        if (!IsReadyToPushOpenDoor(door))
+        {
+            MoveToPushDoorPosition(door);
+            return true;
+        }
+
         return TryOpenDoorForEnemy(door);
     }
 
@@ -1116,11 +1215,26 @@ public abstract class EnemyBase : MonoBehaviour
         FieldInfo openField = doorType.GetField("open", BindingFlags.Instance | BindingFlags.NonPublic);
         if (openField == null) return false;
 
-        MethodInfo setDirectionMethod = doorType.GetMethod("SetDoorDirection", BindingFlags.Instance | BindingFlags.NonPublic);
         MethodInfo playSoundMethod = doorType.GetMethod("PlayDoorSound", BindingFlags.Instance | BindingFlags.NonPublic);
         MethodInfo syncNavMethod = doorType.GetMethod("SyncNavMeshObstacle", BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo openRotField = doorType.GetField("openRot", BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo doorOpenAngleField = doorType.GetField("DoorOpenAngle", BindingFlags.Instance | BindingFlags.Public);
 
-        setDirectionMethod?.Invoke(door, null);
+        if (openRotField != null && doorOpenAngleField != null)
+        {
+            float openAngle = (float)doorOpenAngleField.GetValue(door);
+            Vector3 enemyDir = transform.position - door.transform.position;
+            float dot = Vector3.Dot(door.transform.right, enemyDir);
+            float angle = dot > 0f ? openAngle : -openAngle;
+            Quaternion enemySideOpenRot = Quaternion.Euler(
+                door.transform.eulerAngles.x,
+                door.transform.eulerAngles.y + angle,
+                door.transform.eulerAngles.z
+            );
+
+            openRotField.SetValue(door, enemySideOpenRot);
+        }
+
         openField.SetValue(door, true);
         playSoundMethod?.Invoke(door, null);
         syncNavMethod?.Invoke(door, new object[] { true });
@@ -1229,9 +1343,70 @@ public abstract class EnemyBase : MonoBehaviour
 
         Vector3 doorPos = GetDoorWorldPosition(door.transform);
         if (Vector3.Distance(transform.position, doorPos) <= patrolDoorFrontCheckDistance + 0.4f)
-            return TryOpenDoorForEnemy(door);
+        {
+            if (!IsReadyToPushOpenDoor(door))
+            {
+                MoveToPushDoorPosition(door);
+                return true;
+            }
 
-        return SetPatrolDestination(doorPos);
+            return TryOpenDoorForEnemy(door);
+        }
+
+        return MoveToPushDoorPosition(door);
+    }
+
+    protected bool IsReadyToPushOpenDoor(DoorClick door)
+    {
+        if (door == null) return false;
+
+        Vector3 doorPos = GetDoorWorldPosition(door.transform);
+        Vector3 toDoor = doorPos - transform.position;
+        toDoor.y = 0f;
+
+        if (toDoor.magnitude > patrolDoorOpenDistance)
+            return false;
+
+        if (toDoor.sqrMagnitude <= 0.0001f)
+            return true;
+
+        float angle = Vector3.Angle(transform.forward, toDoor.normalized);
+        return angle <= patrolDoorOpenFaceAngle;
+    }
+
+    protected bool MoveToPushDoorPosition(DoorClick door)
+    {
+        if (door == null) return false;
+
+        Vector3 doorPos = GetDoorWorldPosition(door.transform);
+        Vector3 fromDoor = transform.position - doorPos;
+        fromDoor.y = 0f;
+
+        if (fromDoor.sqrMagnitude <= 0.001f)
+            fromDoor = -GetAgentMoveDirection();
+
+        if (fromDoor.sqrMagnitude <= 0.001f)
+            fromDoor = -transform.forward;
+
+        Vector3 pushPosition = doorPos + fromDoor.normalized * Mathf.Max(0.35f, patrolDoorOpenDistance * 0.8f);
+        pushPosition.y = transform.position.y;
+
+        if (Vector3.Distance(transform.position, doorPos) <= patrolDoorOpenDistance + 0.25f)
+            RotateTowardPoint(doorPos);
+
+        return SetPatrolDestination(pushPosition);
+    }
+
+    protected void RotateTowardPoint(Vector3 point)
+    {
+        Vector3 dir = point - transform.position;
+        dir.y = 0f;
+
+        if (dir.sqrMagnitude <= 0.0001f)
+            return;
+
+        Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, 360f * Time.deltaTime);
     }
 
     protected DoorClick FindBestClosedDoorTowardTarget(Vector3 target, float searchRadius)
@@ -1439,14 +1614,57 @@ public abstract class EnemyBase : MonoBehaviour
     {
         if (playerDeadLogged) return;
         if (player == null) return;
+
+        float distance = GetDistanceToPlayerCollider();
+
+        if (distance <= Mathf.Max(0.01f, playerContactKillDistance))
+        {
+            LogAI($"플레이어와 직접 접촉({distance:F2}m) → Player Dead");
+            KillPlayer();
+            return;
+        }
+
         if (currentState != State.Chase) return;
 
         float catchDistance = Mathf.Max(0.1f, playerCatchDistance);
-        if (Vector3.Distance(transform.position, player.position) > catchDistance)
+
+        if (distance > catchDistance)
             return;
 
-        LogAI("플레이어와 접촉 거리 도달 → Player Dead");
+        LogAI($"플레이어와 접촉 거리 도달({distance:F2}m) → Player Dead");
         KillPlayer();
+    }
+
+    protected float GetDistanceToPlayerCollider()
+    {
+        float bestDistance = Vector3.Distance(transform.position, player.position);
+
+        Collider[] enemyColliders = GetComponentsInChildren<Collider>();
+        Collider[] playerColliders = player.GetComponentsInChildren<Collider>();
+
+        if (enemyColliders == null || playerColliders == null || enemyColliders.Length == 0 || playerColliders.Length == 0)
+            return bestDistance;
+
+        for (int i = 0; i < enemyColliders.Length; i++)
+        {
+            Collider enemyCol = enemyColliders[i];
+            if (enemyCol == null || !enemyCol.enabled) continue;
+
+            for (int j = 0; j < playerColliders.Length; j++)
+            {
+                Collider playerCol = playerColliders[j];
+                if (playerCol == null || !playerCol.enabled) continue;
+
+                Vector3 pointOnEnemy = enemyCol.ClosestPoint(playerCol.bounds.center);
+                Vector3 pointOnPlayer = playerCol.ClosestPoint(pointOnEnemy);
+                float distance = Vector3.Distance(pointOnEnemy, pointOnPlayer);
+
+                if (distance < bestDistance)
+                    bestDistance = distance;
+            }
+        }
+
+        return bestDistance;
     }
 
     protected bool IsPlayerContact(Collider other)
