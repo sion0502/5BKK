@@ -23,6 +23,7 @@ public class MonsterEnemy : EnemyBase
     protected override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;
+        if (!doorSpecialAllowed) return;
         if (attacking) return;
         if (Time.time < nextPossibleAttackTime) return;
 

@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -48,13 +47,14 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected float patrolDoorSearchRadius = 10f;
     [SerializeField] protected float patrolDoorOpenDistance = 0.75f;
     [SerializeField] protected float patrolDoorOpenFaceAngle = 20f;
+    [SerializeField] protected float patrolDoorPassThroughDistance = 1.5f;
     [SerializeField] protected bool autoOpenDoorsOnPatrol = true;
 
     [Header("Patrol")]
     [SerializeField] protected float patrolReachDistance = 0.5f;
     [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
     [SerializeField] protected float minWallClearance = 0.8f;
-    [SerializeField] protected float minPatrolPointDistance = 4f;
+    [SerializeField] protected int patrolDestinationPickAttempts = 100;
 
     [Header("Obstacle Avoidance")]
     [SerializeField] protected float obstacleCheckDistance = 1.2f;
@@ -90,6 +90,9 @@ public abstract class EnemyBase : MonoBehaviour
     protected NavMeshAgent agent;
     protected Animator anim;
 
+    NavMotor _navMotor;
+    PatrolBehavior _patrol;
+
     protected State currentState;
     protected Vector3 lastKnownPosition;
     protected Vector3 lastChaseDestination;
@@ -122,7 +125,6 @@ public abstract class EnemyBase : MonoBehaviour
     protected bool targetLostActive;
 
     protected Vector3 currentPatrolDestination;
-    protected NavMeshTriangulation cachedTriangulation;
     protected Vector3 lastObstacleCheckPosition;
 
     protected virtual void Awake()
@@ -182,11 +184,42 @@ public abstract class EnemyBase : MonoBehaviour
         ApplyDataSettings();
         AutoAssignDoorLayer();
         SetupAgent();
-        CacheTriangulation();
+        InitPatrolRuntime();
         SetAnimatorByState();
         SetNextGlobalPatDestination();
 
         LogAI("초기 상태: Patrol");
+    }
+
+    void InitPatrolRuntime()
+    {
+        _navMotor = new NavMotor(agent);
+
+        PatrolPlanner planner = new PatrolPlanner(
+            transform,
+            _navMotor,
+            patrolDestinationPickAttempts,
+            autoOpenDoorsOnPatrol,
+            doorLayer,
+            doorCheckHeight,
+            pathDoorCheckRadius
+        );
+
+        PatrolDoorService doorService = new PatrolDoorService(
+            transform,
+            _navMotor,
+            planner,
+            doorLayer,
+            doorCheckHeight,
+            pathDoorCheckRadius,
+            patrolDoorFrontCheckDistance,
+            patrolDoorOpenDistance,
+            patrolDoorSearchRadius,
+            patrolDoorPassThroughDistance,
+            patrolReachDistance
+        );
+
+        _patrol = new PatrolBehavior(_navMotor, planner, doorService, patrolReachDistance);
     }
 
     protected virtual void Update()
@@ -499,42 +532,39 @@ public abstract class EnemyBase : MonoBehaviour
 
         LogAIThrottled("순찰 중");
 
-        agent.speed = GetPatrolSpeed();
-        agent.isStopped = false;
-
-        if (autoOpenDoorsOnPatrol && TryOpenClosedDoorOnCurrentPath(patrolDoorFrontCheckDistance))
+        switch (_patrol.Update(GetPatrolSpeed()))
         {
-            LogAI("순찰 목적지가 문 너머에 있음 → 닫힌 문 자동 열기");
-            return;
+            case PatrolBehavior.PatrolUpdateResult.ReachedDestination:
+                LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
+                SetNextGlobalPatDestination();
+                break;
+
+            case PatrolBehavior.PatrolUpdateResult.NeedDestination:
+                LogAI("순찰 목적지 선택");
+                SetNextGlobalPatDestination();
+                break;
+
+            case PatrolBehavior.PatrolUpdateResult.HandlingDoor:
+                LogAI("순찰 중 닫힌 문 자동 열기");
+                break;
+
+            case PatrolBehavior.PatrolUpdateResult.ThroughDoor:
+                LogAI("순찰 문 통과 중");
+                break;
+
+            case PatrolBehavior.PatrolUpdateResult.StuckNeedRepath:
+                LogAI("벽/코너 막힘 → 새 순찰 목적지 선택");
+                SetNextGlobalPatDestination();
+                break;
         }
 
-        if (IsClosedDoorOnCurrentPath(patrolDoorFrontCheckDistance))
-        {
-            LogAI("순찰 중 닫힌 문 감지 → 새 순찰 목적지 선택");
-            SetNextGlobalPatDestination();
-            return;
-        }
+        SyncPatrolDestinationFromRuntime();
+    }
 
-        if (!hasPatDestination)
-        {
-            LogAI("순찰 목적지 없음 → 새 순찰 목적지 선택");
-            SetNextGlobalPatDestination();
-            return;
-        }
-
-        if (autoOpenDoorsOnPatrol && TryMoveTowardClosedDoorToTarget(currentPatrolDestination, patrolDoorSearchRadius))
-        {
-            LogAI("순찰 목적지 방향의 닫힌 문으로 이동");
-            return;
-        }
-
-        SetPatrolDestination(currentPatrolDestination);
-
-        if (!HasReachedDestination(patrolReachDistance))
-            return;
-
-        LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
-        SetNextGlobalPatDestination();
+    void SyncPatrolDestinationFromRuntime()
+    {
+        hasPatDestination = _patrol.HasDestination;
+        currentPatrolDestination = _patrol.CurrentDestination;
     }
 
     protected void UpdateChase()
@@ -762,7 +792,8 @@ public abstract class EnemyBase : MonoBehaviour
         {
             agent.isStopped = false;
             agent.speed = GetPatrolSpeed();
-            SetPatrolDestination(currentPatrolDestination);
+            _patrol.RestoreDestination(currentPatrolDestination);
+            SyncPatrolDestinationFromRuntime();
         }
         else
         {
@@ -774,28 +805,16 @@ public abstract class EnemyBase : MonoBehaviour
     {
         if (!agent.isOnNavMesh) return;
 
-        CacheTriangulation();
-
-        for (int i = 0; i < 80; i++)
+        hasPatDestination = _patrol.PickRandomDestination();
+        if (hasPatDestination)
         {
-            if (!TryGetRandomGlobalNavMeshPoint(out Vector3 point))
-                continue;
-
-            if (!IsValidDestination(point, minWallClearance))
-                continue;
-
-            if (Vector3.Distance(transform.position, point) < minPatrolPointDistance)
-                continue;
-
-            currentPatrolDestination = point;
-            hasPatDestination = true;
-
+            currentPatrolDestination = _patrol.CurrentDestination;
             agent.isStopped = false;
-            SetPatrolDestination(currentPatrolDestination);
+            _navMotor?.ResetProgressTracking();
             return;
         }
 
-        hasPatDestination = false;
+        agent.ResetPath();
         agent.isStopped = true;
     }
 
@@ -852,16 +871,20 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected bool HasCompletePath(Vector3 target)
     {
-        NavMeshPath path = new NavMeshPath();
+        if (_navMotor != null)
+            return _navMotor.HasCompletePath(target);
 
+        NavMeshPath path = new NavMeshPath();
         if (!agent.CalculatePath(target, path))
             return false;
-
         return path.status == NavMeshPathStatus.PathComplete;
     }
 
     protected bool SafeSetDestination(Vector3 target)
     {
+        if (_navMotor != null)
+            return _navMotor.TrySetDestinationWithCompletePath(target);
+
         if (!agent.isOnNavMesh)
             return false;
 
@@ -877,6 +900,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected bool SetPatrolDestination(Vector3 target)
     {
+        if (_navMotor != null)
+            return _navMotor.SetDestination(target);
+
         if (!agent.isOnNavMesh)
             return false;
 
@@ -885,41 +911,6 @@ public abstract class EnemyBase : MonoBehaviour
 
         agent.SetDestination(hit.position);
         return true;
-    }
-
-    protected void CacheTriangulation()
-    {
-        cachedTriangulation = NavMesh.CalculateTriangulation();
-    }
-
-    protected bool TryGetRandomGlobalNavMeshPoint(out Vector3 result)
-    {
-        result = transform.position;
-
-        if (cachedTriangulation.vertices == null || cachedTriangulation.vertices.Length == 0)
-            return false;
-
-        for (int i = 0; i < 30; i++)
-        {
-            int idx = Random.Range(0, cachedTriangulation.vertices.Length);
-            Vector3 basePoint = cachedTriangulation.vertices[idx];
-
-            Vector3 randomOffset = new Vector3(
-                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius),
-                0f,
-                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius)
-            );
-
-            Vector3 samplePoint = basePoint + randomOffset;
-
-            if (NavMesh.SamplePosition(samplePoint, out NavMeshHit hit, globalPatrolSampleRadius + 1f, NavMesh.AllAreas))
-            {
-                result = hit.position;
-                return true;
-            }
-        }
-
-        return false;
     }
 
     protected bool HasReachedDestination(float extraDistance)
@@ -1047,6 +1038,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected Vector3 GetAgentMoveDirection()
     {
+        if (_navMotor != null)
+            return _navMotor.GetMoveDirection();
+
         if (agent != null && agent.hasPath)
         {
             Vector3 dir = agent.steeringTarget - transform.position;
@@ -1105,36 +1099,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected bool HasClosedDoorBetween(Vector3 from, Vector3 to)
     {
-        Vector3 start = from + Vector3.up * doorCheckHeight;
-        Vector3 end = to + Vector3.up * 0.2f;
-
-        Vector3 dir = end - start;
-        float dist = dir.magnitude;
-
-        if (dist <= 0.1f)
-            return false;
-
-        dir.Normalize();
-
-        RaycastHit[] hits = Physics.SphereCastAll(
-            start,
-            pathDoorCheckRadius,
-            dir,
-            dist,
-            doorLayer,
-            QueryTriggerInteraction.Collide
-        );
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            DoorClick door = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (door == null) continue;
-
-            if (!door.IsOpen() && !door.IsBroken())
-                return true;
-        }
-
-        return false;
+        return EnemyDoorUtility.HasClosedDoorBetween(from, to, doorLayer, doorCheckHeight, pathDoorCheckRadius);
     }
 
     protected bool IsClosedDoorOnCurrentPath(float distance)
@@ -1207,37 +1172,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected bool TryOpenDoorForEnemy(DoorClick door)
     {
-        if (door == null) return false;
-
-        System.Type doorType = typeof(DoorClick);
-        FieldInfo openField = doorType.GetField("open", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (openField == null) return false;
-
-        MethodInfo playSoundMethod = doorType.GetMethod("PlayDoorSound", BindingFlags.Instance | BindingFlags.NonPublic);
-        MethodInfo syncNavMethod = doorType.GetMethod("SyncNavMeshObstacle", BindingFlags.Instance | BindingFlags.NonPublic);
-        FieldInfo openRotField = doorType.GetField("openRot", BindingFlags.Instance | BindingFlags.NonPublic);
-        FieldInfo doorOpenAngleField = doorType.GetField("DoorOpenAngle", BindingFlags.Instance | BindingFlags.Public);
-
-        if (openRotField != null && doorOpenAngleField != null)
-        {
-            float openAngle = (float)doorOpenAngleField.GetValue(door);
-            Vector3 enemyDir = transform.position - door.transform.position;
-            float dot = Vector3.Dot(door.transform.right, enemyDir);
-            float angle = dot > 0f ? openAngle : -openAngle;
-            Quaternion enemySideOpenRot = Quaternion.Euler(
-                door.transform.eulerAngles.x,
-                door.transform.eulerAngles.y + angle,
-                door.transform.eulerAngles.z
-            );
-
-            openRotField.SetValue(door, enemySideOpenRot);
-        }
-
-        openField.SetValue(door, true);
-        playSoundMethod?.Invoke(door, null);
-        syncNavMethod?.Invoke(door, new object[] { true });
-
-        return true;
+        return EnemyDoorUtility.TryOpenDoor(door, transform.position);
     }
 
     protected DoorBrokenTest GetClosedDoorOnChasePath(float distance)
@@ -1409,59 +1344,17 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected DoorClick FindBestClosedDoorTowardTarget(Vector3 target, float searchRadius)
     {
-        if (doorLayer.value == 0)
-            return null;
-
-        Collider[] hits = Physics.OverlapSphere(transform.position, searchRadius, doorLayer, QueryTriggerInteraction.Collide);
-        DoorClick bestDoor = null;
-        float bestScore = float.MaxValue;
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            DoorClick door = hits[i].GetComponentInParent<DoorClick>();
-            if (door == null) continue;
-            if (door.IsOpen() || door.IsBroken()) continue;
-
-            Vector3 doorPos = GetDoorWorldPosition(door.transform);
-            if (!IsDoorUsefulForTarget(doorPos, target))
-                continue;
-
-            float score = Vector3.Distance(transform.position, doorPos) + Vector3.Distance(doorPos, target);
-            if (score < bestScore)
-            {
-                bestScore = score;
-                bestDoor = door;
-            }
-        }
-
-        return bestDoor;
+        return EnemyDoorUtility.FindBestClosedDoorTowardTarget(transform.position, target, searchRadius, doorLayer);
     }
 
     protected bool IsDoorUsefulForTarget(Vector3 doorPos, Vector3 target)
     {
-        Vector3 toTarget = target - transform.position;
-        Vector3 toDoor = doorPos - transform.position;
-
-        toTarget.y = 0f;
-        toDoor.y = 0f;
-
-        if (toTarget.sqrMagnitude <= 0.01f || toDoor.sqrMagnitude <= 0.01f)
-            return false;
-
-        float dot = Vector3.Dot(toTarget.normalized, toDoor.normalized);
-        if (dot < 0.15f)
-            return false;
-
-        return Vector3.Distance(doorPos, target) < Vector3.Distance(transform.position, target);
+        return EnemyDoorUtility.IsDoorUsefulForTarget(transform.position, doorPos, target);
     }
 
     protected Vector3 GetDoorWorldPosition(Transform doorTransform)
     {
-        Collider col = doorTransform.GetComponentInChildren<Collider>();
-        if (col != null)
-            return col.bounds.center;
-
-        return doorTransform.position;
+        return EnemyDoorUtility.GetDoorWorldPosition(doorTransform);
     }
 
     protected Vector3 GetChaseTargetDirection()
@@ -1541,7 +1434,7 @@ public abstract class EnemyBase : MonoBehaviour
         switch (currentState)
         {
             case State.Patrol:
-                anim.SetInteger(AnimState, 1);
+                anim.SetInteger(AnimState, IsAgentVisuallyMoving() ? 1 : 0);
                 break;
 
             case State.Chase:
@@ -1549,9 +1442,20 @@ public abstract class EnemyBase : MonoBehaviour
                 break;
 
             case State.Investigate:
-                anim.SetInteger(AnimState, 1);
+                anim.SetInteger(AnimState, IsAgentVisuallyMoving() ? 1 : 0);
                 break;
         }
+    }
+
+    protected bool IsAgentVisuallyMoving()
+    {
+        if (agent == null)
+            return false;
+
+        if (agent.isStopped)
+            return false;
+
+        return agent.velocity.sqrMagnitude > 0.05f;
     }
 
     protected float GetPatrolSpeed()
