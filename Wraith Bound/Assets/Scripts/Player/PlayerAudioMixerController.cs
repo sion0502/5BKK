@@ -30,6 +30,7 @@ public class PlayerAudioMixerController : MonoBehaviour
     private MovementState currentState = MovementState.Walk;
     private FootstepData currentData;
     private float stepTimer;
+    public float LastFootstepPlayTime { get; private set; } = -999f;
 
     private void Start()
     {
@@ -128,8 +129,8 @@ public class PlayerAudioMixerController : MonoBehaviour
         audioSource.pitch = currentData.playbackSpeed + speedOffset;
         audioMixer.SetFloat(MIXER_PITCH_PARAM, 1.0f / (currentData.playbackSpeed + speedOffset));
 
-        // 최종 플레이원샷 호출
         float finalVolume = Mathf.Clamp01(currentData.volume + volumeOffset);
+        LastFootstepPlayTime = Time.time;
         audioSource.PlayOneShot(clip, finalVolume);
     }
 }

@@ -5,7 +5,7 @@ public class GhostEnemy : EnemyBase
     [Header("Door Pass-Through")]
     [SerializeField] private bool canPassThroughDoors = true;
 
-    protected override void HandleChaseSpecial()
+    protected internal override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;
         if (!doorSpecialAllowed) return;
@@ -23,7 +23,7 @@ public class GhostEnemy : EnemyBase
         }
     }
 
-    protected override Vector3 DetectPlayerPosition()
+    protected internal override Vector3 DetectPlayerPosition()
     {
         if (player != null)
             return player.position;
