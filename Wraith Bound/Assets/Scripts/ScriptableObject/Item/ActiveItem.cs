@@ -17,6 +17,11 @@ public class ActiveItem : Items
     public bool isInstantUse; // 랜덤박스 맵에서 즉시실행
     public GameObject deployPrefab; // 가시덤불, 라디오 등 설치 아이템 사용 시 생성될 모델
 
+    [Header("투척 (야광봉 등)")]
+    public bool isThrowable; // 포물선으로 던지는 아이템인지
+    public float throwForce = 9f; // 던지는 힘
+    public float throwUpwardAngle = 25f; // 던지는 각도(도)
+
     public override void Use(PlayerController player)
     {
         // 1. 설치형 아이템 로직
@@ -25,10 +30,16 @@ public class ActiveItem : Items
             Instantiate(deployPrefab, player.transform.position + player.transform.forward, Quaternion.identity);
         }
 
-        // 2. 효과 적용 (체력/스태미나 회복)
+        // 2. 투척형 아이템 로직
+        if (isThrowable)
+        {
+            GlowStickController.Throw(player, throwForce, throwUpwardAngle);
+        }
+
+        // 3. 효과 적용 (체력/스태미나 회복)
         ApplyRecoveryEffect(player);
 
-        // 3. 부모의 파괴/소모 로직 실행
+        // 4. 부모의 파괴/소모 로직 실행
         base.Use(player);
     }
 

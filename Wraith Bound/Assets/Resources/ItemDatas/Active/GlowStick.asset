@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40818d721ef80f64b82406346894cfed, type: 3}
+  m_Name: GlowStick
+  m_EditorClassIdentifier: Assembly-CSharp::ActiveItem
+  id: 1009
+  itemName: "야광봉"
+  type: 0
+  description: ""
+  icon: {fileID: 0}
+  maxCount: 10
+  destroyOnUse: 1
+  breakageChance: 0
+  itemPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 0}
+  showInHand: 0
+  spawnedInstance: {fileID: 0}
+  effectType: 0
+  value: 0
+  duration: 0
+  isInstantUse: 0
+  deployPrefab: {fileID: 0}
+  isThrowable: 1
+  throwForce: 9
+  throwUpwardAngle: 25

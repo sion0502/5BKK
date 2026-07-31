@@ -66,6 +66,7 @@ public class QuickInventoryHudUI : MonoBehaviour
         public Image icon;
         public TextMeshProUGUI slotNumberLabel;
         public TextMeshProUGUI itemNameLabel;
+        public TextMeshProUGUI itemCountLabel;
     }
 
     void Awake()
@@ -420,7 +421,7 @@ public class QuickInventoryHudUI : MonoBehaviour
         {
             for (int i = 0; i < slotViews.Count; i++)
             {
-                ApplyToView(slotViews[i], -1, null);
+                ApplyToView(slotViews[i], -1, null, 0);
             }
             ApplyCamcorderSlot();
             ApplyPassive(null);
@@ -433,12 +434,15 @@ public class QuickInventoryHudUI : MonoBehaviour
         {
             if (i >= capacity)
             {
-                ApplyToView(slotViews[i], -1, null);
+                ApplyToView(slotViews[i], -1, null, 0);
                 continue;
             }
 
             int logicalIndex = (selected + i) % capacity;
-            ApplyToView(slotViews[i], logicalIndex, GetItemAtSlotIndex(logicalIndex));
+            InventorySlot slot = GetSlotAtIndex(logicalIndex);
+            Items item = slot != null ? slot.item : null;
+            int amount = slot != null ? slot.amount : 0;
+            ApplyToView(slotViews[i], logicalIndex, item, amount);
         }
 
         ApplyCamcorderSlot();
@@ -469,7 +473,7 @@ public class QuickInventoryHudUI : MonoBehaviour
         }
     }
 
-    private Items GetItemAtSlotIndex(int slotIndex)
+    private InventorySlot GetSlotAtIndex(int slotIndex)
     {
         if (inventory == null || inventory.slots == null)
         {
@@ -481,11 +485,10 @@ public class QuickInventoryHudUI : MonoBehaviour
             return null;
         }
 
-        InventorySlot slot = inventory.slots[slotIndex];
-        return slot != null ? slot.item : null;
+        return inventory.slots[slotIndex];
     }
 
-    private void ApplyToView(SlotView view, int logicalIndex, Items item)
+    private void ApplyToView(SlotView view, int logicalIndex, Items item, int amount)
     {
         if (view == null || view.root == null)
         {
@@ -511,6 +514,19 @@ public class QuickInventoryHudUI : MonoBehaviour
             else
             {
                 view.slotNumberLabel.gameObject.SetActive(false);
+            }
+        }
+
+        if (view.itemCountLabel != null)
+        {
+            if (hasItem && amount > 1)
+            {
+                view.itemCountLabel.text = amount.ToString();
+                view.itemCountLabel.gameObject.SetActive(true);
+            }
+            else
+            {
+                view.itemCountLabel.gameObject.SetActive(false);
             }
         }
 
@@ -581,6 +597,16 @@ public class QuickInventoryHudUI : MonoBehaviour
                 width: size * 0.5f,
                 height: slotNumberFontSize + 4f,
                 fontSize: slotNumberFontSize,
+                alignment: TextAlignmentOptions.TopLeft);
+
+            view.itemCountLabel = CreateLabel(slotGo.transform, "ItemCount",
+                anchorMin: new Vector2(0f, 1f),
+                anchorMax: new Vector2(0f, 1f),
+                pivot: new Vector2(0f, 1f),
+                anchoredPos: new Vector2(4f, -10f),
+                width: size * 0.5f,
+                height: itemNameFontSize + 4f,
+                fontSize: itemNameFontSize,
                 alignment: TextAlignmentOptions.TopLeft);
 
             view.itemNameLabel = CreateLabel(slotGo.transform, "ItemName",
