@@ -1,9 +1,17 @@
 using UnityEngine;
 
+public enum ActiveEffectType
+{
+    None,
+    Health,
+    Stamina
+}
+
 [CreateAssetMenu(fileName = "NewActiveItem", menuName = "Custom/Items/ActiveItem")]
 public class ActiveItem : Items
 {
     [Header("소모/설치 데이터")]
+    public ActiveEffectType effectType; // value가 적용될 대상(체력/스태미나)
     public float value; // 회복량, 충전량 등
     public float duration; // 설치 아이템 지속시간
     public bool isInstantUse; // 랜덤박스 맵에서 즉시실행
@@ -17,10 +25,38 @@ public class ActiveItem : Items
             Instantiate(deployPrefab, player.transform.position + player.transform.forward, Quaternion.identity);
         }
 
-        // 2. 효과 적용 (여기서 value 등을 활용한 로직 수행)
-        Debug.Log($"{itemName} 사용함. 수치: {value}");
+        // 2. 효과 적용 (체력/스태미나 회복)
+        ApplyRecoveryEffect(player);
 
         // 3. 부모의 파괴/소모 로직 실행
         base.Use(player);
+    }
+
+    private void ApplyRecoveryEffect(PlayerController player)
+    {
+        if (effectType == ActiveEffectType.None)
+        {
+            Debug.Log($"{itemName} 사용함. 수치: {value}");
+            return;
+        }
+
+        PlayerConditions conditions = player.GetComponent<PlayerConditions>();
+        if (conditions == null)
+        {
+            return;
+        }
+
+        int amount = Mathf.RoundToInt(value);
+        switch (effectType)
+        {
+            case ActiveEffectType.Health:
+                conditions.RecoverHealth(amount);
+                break;
+            case ActiveEffectType.Stamina:
+                conditions.RecoverStamina(amount);
+                break;
+        }
+
+        Debug.Log($"{itemName} 사용함. {effectType} {amount} 회복.");
     }
 }
