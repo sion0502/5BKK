@@ -860,7 +860,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorClick
   smooth: 5
-  DoorOpenAngle: 87
+  DoorOpenAngle: -87
   isSlidingDoor: 0
   slideOffset: {x: 1, y: 0, z: 0}
   autoDirection: 1
