@@ -2767,6 +2767,12 @@ Transform:
   m_LocalScale: {x: 10, y: 10, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 6280925714015157008}
+  - {fileID: 4084268999483529685}
+  - {fileID: 8226185775718914437}
+  - {fileID: 5003314456309054079}
+  - {fileID: 993705664350105487}
+  - {fileID: 2843468131408585643}
   - {fileID: 9103734713375064175}
   - {fileID: 6998598185026378680}
   - {fileID: 8217134918862403959}
@@ -3335,6 +3341,80 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 1635219712074309703, guid: 5c4d13d43b0b695469594b3def8f4282, type: 3}
   m_PrefabInstance: {fileID: 56827669527431989}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &57551381284614923
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (19)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.9592
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.1217
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &8226185775718914437 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 57551381284614923}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &58414411287331857
 PrefabInstance:
@@ -26467,6 +26547,80 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 764485673844495377, guid: 16a858501e3b27b4eb1f11bd4d32c493, type: 3}
   m_PrefabInstance: {fileID: 2723793580835871265}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2724513283278688670
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (17)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.5388
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.7124
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &6280925714015157008 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 2724513283278688670}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2726718421402334097
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -37925,6 +38079,80 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 764485673844495377, guid: 16a858501e3b27b4eb1f11bd4d32c493, type: 3}
   m_PrefabInstance: {fileID: 3998632470931035583}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &4002126876372177137
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (20)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.831
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.347
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &5003314456309054079 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 4002126876372177137}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4002616851835558720
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -48877,6 +49105,80 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 764485673844495377, guid: 16a858501e3b27b4eb1f11bd4d32c493, type: 3}
   m_PrefabInstance: {fileID: 5347170442332403889}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &5353376747617170267
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (18)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.431
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.714
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &4084268999483529685 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 5353376747617170267}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &5363459841112126414
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -56140,6 +56442,80 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 6948383115638123794, guid: dc919a1cf96051f459e648738f66f181, type: 3}
   m_PrefabInstance: {fileID: 6163761134711486123}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &6166336081661069605
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (22)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.5406
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2.6866
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &2843468131408585643 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 6166336081661069605}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6169062127258062893
 PrefabInstance:
@@ -84411,6 +84787,80 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 1635219712074309703, guid: 5c4d13d43b0b695469594b3def8f4282, type: 3}
   m_PrefabInstance: {fileID: 9147344106457365835}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &9164654562671592705
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 4660874335345244466}
+    m_Modifications:
+    - target: {fileID: 7192388708527932250, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_Name
+      value: HH_Hospital_Corner_Panel (21)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.15000002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.451
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2.688
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+--- !u!4 &993705664350105487 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8279092543935064718, guid: 4105b45e319730c4d931a81d275247b7, type: 3}
+  m_PrefabInstance: {fileID: 9164654562671592705}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &9167820870091435787
 PrefabInstance:
