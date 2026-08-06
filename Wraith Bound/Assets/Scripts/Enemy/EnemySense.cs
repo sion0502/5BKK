@@ -4,6 +4,11 @@ public sealed class EnemySense
 {
     readonly EnemyBase _owner;
     PlayerAudioMixerController _playerFootsteps;
+    PlayerController _playerController;
+    InventoryManager _inventory;
+    EquipmentViewController _equipmentView;
+    FlashlightEnergyController _flashlightEnergy;
+    Equipment _flashlightEquipment;
 
     public EnemySense(EnemyBase owner)
     {
@@ -17,6 +22,7 @@ public sealed class EnemySense
         s.CanDetectPlayer = false;
         s.LastSawPlayer = false;
         s.LastHeardPlayer = false;
+        s.LastSawFlashlight = false;
 
         if (Time.time < s.SenseEnableTime) return;
         if (Time.time < s.NextSenseTime) return;
@@ -26,22 +32,24 @@ public sealed class EnemySense
         bool playerIsHiding = IsPlayerHiding();
         bool sawPlayer = playerIsHiding ? false : CheckVision();
         bool heardPlayer = playerIsHiding ? false : CheckHearing();
+        bool sawFlashlight = playerIsHiding ? false : CheckFlashlight();
 
         s.LastSawPlayer = sawPlayer;
         s.LastHeardPlayer = heardPlayer;
+        s.LastSawFlashlight = sawFlashlight;
 
         if (sawPlayer)
             s.LastVisionDetectTime = Time.time;
 
-        LogCurrentSenseState(sawPlayer, heardPlayer, playerIsHiding);
+        LogCurrentSenseState(sawPlayer, heardPlayer, sawFlashlight, playerIsHiding);
 
-        if (!sawPlayer && !heardPlayer)
+        if (!sawPlayer && !heardPlayer && !sawFlashlight)
             return;
 
         s.CanDetectPlayer = true;
         s.TargetLostActive = false;
         s.HiddenSearchTargetActive = false;
-        s.DoorSpecialAllowed = sawPlayer || heardPlayer;
+        s.DoorSpecialAllowed = sawPlayer || heardPlayer || sawFlashlight;
 
         if (_owner.Player != null)
             s.LastKnownPosition = _owner.Player.position;
@@ -59,6 +67,13 @@ public sealed class EnemySense
         EnemyState s = _owner.RuntimeState;
         bool isHiding = IsPlayerHiding();
 
+        if (isHiding && CheckFlashlight())
+        {
+            MarkPlayerDead();
+            s.WasPlayerHiding = isHiding;
+            return;
+        }
+
         if (isHiding && !s.WasPlayerHiding)
         {
             bool visibleAtHidingMoment = CheckVision();
@@ -73,7 +88,7 @@ public sealed class EnemySense
                 s.HiddenKillTargetActive = true;
                 s.HiddenSearchTargetActive = false;
                 s.TargetLostActive = false;
-                _owner.LogAI("플레이어가 시야 안에서 숨음 → 숨은 위치까지 추격 후 사망 처리");
+                LogHiddenCaught("들켰다");
 
                 if (s.CurrentState != EnemyBase.State.Chase)
                     _owner.Combat.ChangeState(EnemyBase.State.Chase);
@@ -101,8 +116,8 @@ public sealed class EnemySense
 
         if (distance <= Mathf.Max(0.01f, _owner.PlayerContactKillDistance))
         {
-            _owner.LogAI($"플레이어와 직접 접촉({distance:F2}m) → Player Dead");
-            KillPlayer();
+            _owner.LogAI($"플레이어와 직접 접촉({distance:F2}m) → Death");
+            MarkPlayerDead();
             return;
         }
 
@@ -113,8 +128,8 @@ public sealed class EnemySense
         if (distance > catchDistance)
             return;
 
-        _owner.LogAI($"플레이어와 접촉 거리 도달({distance:F2}m) → Player Dead");
-        KillPlayer();
+        _owner.LogAI($"플레이어와 접촉 거리 도달({distance:F2}m) → Death");
+        MarkPlayerDead();
     }
 
     public void AutoFindPlayerReferences()
@@ -147,6 +162,24 @@ public sealed class EnemySense
 
         if (_owner.PlayerRigidbody == null)
             _owner.PlayerRigidbody = _owner.Player.GetComponent<Rigidbody>();
+
+        if (_playerController == null)
+            _playerController = _owner.Player.GetComponent<PlayerController>();
+
+        if (_inventory == null)
+            _inventory = _owner.Player.GetComponent<InventoryManager>();
+
+        if (_equipmentView == null)
+            _equipmentView = _owner.Player.GetComponent<EquipmentViewController>();
+
+        if (_flashlightEnergy == null)
+            _flashlightEnergy = _owner.Player.GetComponent<FlashlightEnergyController>();
+
+        if (_flashlightEquipment == null && _flashlightEnergy != null)
+            _flashlightEquipment = _flashlightEnergy.FlashlightEquipment;
+
+        if (_flashlightEquipment == null)
+            _flashlightEquipment = Resources.Load<Equipment>("ItemDatas/Equipment/FlashLight");
 
         if (_owner.PlayerFootstepSource == null)
         {
@@ -223,6 +256,9 @@ public sealed class EnemySense
         if (_owner.Player == null) return false;
         if (!IsPlayerActuallyMoving()) return false;
 
+        if (IsCrouchWalking())
+            return false;
+
         float dist = Vector3.Distance(_owner.transform.position, _owner.Player.position);
         if (dist > _owner.Data.hearingRange) return false;
 
@@ -230,6 +266,63 @@ public sealed class EnemySense
             return false;
 
         return true;
+    }
+
+    bool CheckFlashlight()
+    {
+        if (_owner.EyePoint == null) return false;
+        if (!TryGetActiveFlashlightPosition(out Vector3 lightPos)) return false;
+
+        Vector3 eyePos = _owner.EyePoint.position;
+        Vector3 toLight = lightPos - eyePos;
+        float dist = toLight.magnitude;
+
+        if (dist > _owner.Data.detectRange) return false;
+        if (dist <= 0.01f) return false;
+
+        float halfArc = _owner.EyeFrontArcAngle * 0.5f;
+        if (Vector3.Angle(_owner.EyePoint.forward, toLight.normalized) > halfArc)
+            return false;
+
+        if (IsVisionBlockedByObstacle(eyePos, toLight.normalized, dist, out RaycastHit blockHit))
+        {
+            if (_owner.DrawVisionDebug)
+                Debug.DrawLine(eyePos, blockHit.point, Color.magenta, _owner.Data.checkInterval);
+            return false;
+        }
+
+        if (_owner.DrawVisionDebug)
+            Debug.DrawLine(eyePos, lightPos, Color.cyan, _owner.Data.checkInterval);
+
+        return true;
+    }
+
+    bool TryGetActiveFlashlightPosition(out Vector3 lightPos)
+    {
+        lightPos = default;
+
+        if (_inventory == null || _equipmentView == null || _flashlightEquipment == null)
+            return false;
+
+        if (_inventory.GetSelectedItem() != _flashlightEquipment)
+            return false;
+
+        if (!_equipmentView.TryGetEquipmentLight(_flashlightEquipment, out Light light))
+            return false;
+
+        if (light == null || !light.enabled)
+            return false;
+
+        lightPos = light.transform.position;
+        return true;
+    }
+
+    bool IsCrouchWalking()
+    {
+        if (_playerController == null || !_playerController.isCrouching)
+            return false;
+
+        return IsPlayerActuallyMoving();
     }
 
     bool HasAudibleFootstep()
@@ -279,7 +372,7 @@ public sealed class EnemySense
         return bestPosition;
     }
 
-    bool IsVisionBlockedByObstacle(Vector3 eyePos, Vector3 dirToPlayer, float distanceToPlayer, out RaycastHit blockingHit)
+    bool IsVisionBlockedByObstacle(Vector3 eyePos, Vector3 dirToTarget, float distanceToTarget, out RaycastHit blockingHit)
     {
         blockingHit = default;
         int mask = _owner.ObstacleLayer.value | _owner.DoorLayer.value | _owner.Data.playerLayer.value;
@@ -287,8 +380,8 @@ public sealed class EnemySense
         RaycastHit[] hits = Physics.SphereCastAll(
             eyePos,
             _owner.PlayerDetectRadius,
-            dirToPlayer,
-            distanceToPlayer,
+            dirToTarget,
+            distanceToTarget,
             mask,
             QueryTriggerInteraction.Ignore
         );
@@ -405,30 +498,49 @@ public sealed class EnemySense
         return bestDistance;
     }
 
-    void KillPlayer()
+    /// <summary>
+    /// 플레이어 사망 — Debug "Death"만 출력. 나중에 UI 담당이 이 로그 지점을 게임오버 UI로 교체.
+    /// </summary>
+    void MarkPlayerDead()
     {
         if (_owner.RuntimeState.PlayerDeadLogged) return;
 
         _owner.RuntimeState.PlayerDeadLogged = true;
-        DeathEndingUI.ShowDeathEnding("Player Dead");
+        PlayerDeathDebug.TriggerDeath();
     }
 
-    public void KillPlayerDirect() => KillPlayer();
+    public void KillPlayerFromHiddenCatch() => MarkPlayerDead();
 
-    void LogCurrentSenseState(bool sawPlayer, bool heardPlayer, bool playerIsHiding)
+    public void KillPlayerDirect() => MarkPlayerDead();
+
+    void LogHiddenCaught(string message)
+    {
+        Debug.Log($"[{_owner.name}] {message}");
+        _owner.LogAI(message);
+    }
+
+    void LogCurrentSenseState(bool sawPlayer, bool heardPlayer, bool sawFlashlight, bool playerIsHiding)
     {
         string senseState;
 
-        if (sawPlayer && heardPlayer)
-            senseState = "시야 + 소리 둘 다 감지";
+        if (sawPlayer && heardPlayer && sawFlashlight)
+            senseState = "시야 + 소리 + 손전등 감지";
+        else if (sawPlayer && heardPlayer)
+            senseState = "시야 + 소리 감지";
+        else if (sawPlayer && sawFlashlight)
+            senseState = "시야 + 손전등 감지";
+        else if (heardPlayer && sawFlashlight)
+            senseState = "소리 + 손전등 감지";
         else if (sawPlayer)
             senseState = "시야만 감지";
         else if (heardPlayer)
             senseState = "소리만 감지";
+        else if (sawFlashlight)
+            senseState = "손전등만 감지";
         else if (playerIsHiding)
-            senseState = "플레이어 숨음 상태 → 시야/소리 감지 X";
+            senseState = "플레이어 숨음 상태 → 시야/소리/손전등 감지 X";
         else
-            senseState = "시야/소리 감지 X";
+            senseState = "시야/소리/손전등 감지 X";
 
         _owner.LogSenseThrottled($"{senseState} | AI 상태: {_owner.RuntimeState.CurrentState}");
     }

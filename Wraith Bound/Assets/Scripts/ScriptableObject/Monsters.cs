@@ -27,4 +27,6 @@ public class Monsters : ScriptableObject
 
     public float targetLostTIme; // 플레이어가 시야에서 사라진 후 얼마나 더 추적하는 지
     public float hearingRange; // 청각 범위
+    [Range(0, 360)]
+    public float eyeFrontArcAngle = 180f; // EyePoint 기준 손전등 감지 각도 (좌90+우90)
 }

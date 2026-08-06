@@ -5,6 +5,12 @@ public class GhostEnemy : EnemyBase
     [Header("Door Pass-Through")]
     [SerializeField] private bool canPassThroughDoors = true;
 
+    protected override void Awake()
+    {
+        autoOpenDoorsOnPatrol = true;
+        base.Awake();
+    }
+
     protected internal override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;

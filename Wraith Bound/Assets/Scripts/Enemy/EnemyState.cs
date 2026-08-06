@@ -31,6 +31,7 @@ public sealed class EnemyState
 
     public bool LastSawPlayer;
     public bool LastHeardPlayer;
+    public bool LastSawFlashlight;
     public bool TargetLostActive;
 
     public Vector3 CurrentPatrolDestination;

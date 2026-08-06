@@ -1,15 +1,19 @@
 using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// 순찰 목적지 — PatrolPointZone 우선, 없으면 NavMesh 랜덤.
+/// </summary>
 public sealed class PatrolPlanner
 {
+    const float PatrolSnapRadius = 0.45f;
+
     readonly Transform _transform;
     readonly NavMotor _motor;
     readonly int _pickAttempts;
     readonly bool _autoOpenDoors;
     readonly LayerMask _doorLayer;
-    readonly float _doorCheckHeight;
-    readonly float _pathDoorCheckRadius;
+    readonly PatrolPointSelector _pointSelector;
 
     NavMeshTriangulation _triangulation;
 
@@ -23,23 +27,29 @@ public sealed class PatrolPlanner
         bool autoOpenDoors,
         LayerMask doorLayer,
         float doorCheckHeight,
-        float pathDoorCheckRadius)
+        float pathDoorCheckRadius,
+        PatrolPointSelector pointSelector = null)
     {
         _transform = transform;
         _motor = motor;
         _pickAttempts = pickAttempts;
         _autoOpenDoors = autoOpenDoors;
         _doorLayer = doorLayer;
-        _doorCheckHeight = doorCheckHeight;
-        _pathDoorCheckRadius = pathDoorCheckRadius;
-    }
-
-    public void CacheNavMesh()
-    {
-        _triangulation = NavMesh.CalculateTriangulation();
+        _pointSelector = pointSelector;
     }
 
     public bool PickRandomDestination()
+    {
+        if (_pointSelector != null && _pointSelector.TryPickRandomPoint(out Vector3 pointDestination))
+        {
+            ApplyDestination(pointDestination);
+            return true;
+        }
+
+        return PickRandomNavMeshDestination();
+    }
+
+    bool PickRandomNavMeshDestination()
     {
         CacheNavMesh();
 
@@ -50,7 +60,7 @@ public sealed class PatrolPlanner
             if (!TryGetRandomPoint(out Vector3 rawPoint))
                 continue;
 
-            if (!NavMesh.SamplePosition(rawPoint, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            if (!NavMesh.SamplePosition(rawPoint, out NavMeshHit hit, 2f, NavMesh.AllAreas))
                 continue;
 
             if (HasDestination && NavMotor.GetHorizontalDistance(hit.position, previous) < 1f)
@@ -59,25 +69,7 @@ public sealed class PatrolPlanner
             if (NavMotor.GetHorizontalDistance(_transform.position, hit.position) < 0.5f)
                 continue;
 
-            if (!IsReachablePatrolDestination(hit.position))
-                continue;
-
-            ApplyDestination(hit.position);
-            return true;
-        }
-
-        for (int i = 0; i < 40; i++)
-        {
-            if (!TryGetRandomPoint(out Vector3 rawPoint))
-                continue;
-
-            if (!NavMesh.SamplePosition(rawPoint, out NavMeshHit hit, 3f, NavMesh.AllAreas))
-                continue;
-
-            if (NavMotor.GetHorizontalDistance(_transform.position, hit.position) < 0.5f)
-                continue;
-
-            if (!IsReachablePatrolDestination(hit.position))
+            if (!IsDestinationReachable(hit.position))
                 continue;
 
             ApplyDestination(hit.position);
@@ -90,10 +82,14 @@ public sealed class PatrolPlanner
 
     public void ApplyDestination(Vector3 point)
     {
-        CurrentDestination = point;
+        Vector3 destination = point;
+        if (NavMesh.SamplePosition(point, out NavMeshHit hit, PatrolSnapRadius, NavMesh.AllAreas))
+            destination = hit.position;
+
+        CurrentDestination = destination;
         HasDestination = true;
         _motor.Agent.ResetPath();
-        _motor.SetDestination(point, 3f);
+        _motor.SetDestination(destination, PatrolSnapRadius);
     }
 
     public bool HasReached(float reachExtra)
@@ -104,44 +100,34 @@ public sealed class PatrolPlanner
         return _motor.HasReachedDestination(CurrentDestination, reachExtra);
     }
 
-    bool IsReachablePatrolDestination(Vector3 point)
+    internal bool IsDestinationReachable(Vector3 point) =>
+        IsDestinationReachable(_motor, point, _autoOpenDoors, _doorLayer);
+
+    internal static bool IsDestinationReachable(NavMotor motor, Vector3 point, bool autoOpenDoors, LayerMask doorLayer)
     {
-        if (!_motor.CalculatePath(point, out NavMeshPathStatus status))
+        if (!motor.CalculatePath(point, out NavMeshPathStatus status))
             return false;
 
-        Vector3 pathEnd = _motor.GetCalculatedPathEnd();
+        Vector3 pathEnd = motor.GetCalculatedPathEnd();
 
-        // PathComplete = 같은 NavMesh 섬 / 도달 가능
         if (status == NavMeshPathStatus.PathComplete)
-            return NavMotor.GetHorizontalDistance(pathEnd, point) <= 1.5f;
+            return NavMotor.GetHorizontalDistance(pathEnd, point) <= 1f;
 
-        // PathPartial = 닫힌 문 너머만 허용 (끊긴 NavMesh 섬·벽·틈은 거부)
-        if (!_autoOpenDoors || status != NavMeshPathStatus.PathPartial)
+        if (!autoOpenDoors || status != NavMeshPathStatus.PathPartial)
             return false;
 
-        DoorClick doorAtPathEnd = EnemyDoorUtility.FindClosedDoorNearPosition(pathEnd, _doorLayer, 2f);
-        if (doorAtPathEnd == null)
+        DoorClick door = EnemyDoorUtility.FindClosedDoorNearPosition(pathEnd, doorLayer, 2.5f);
+        if (door == null)
             return false;
 
-        Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(doorAtPathEnd.transform);
-        if (NavMotor.GetHorizontalDistance(pathEnd, doorPos) > 2.5f)
-            return false;
+        Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
+        return NavMotor.GetHorizontalDistance(pathEnd, doorPos) <= 2.5f &&
+               NavMotor.GetHorizontalDistance(point, doorPos) >= 0.75f;
+    }
 
-        if (!EnemyDoorUtility.HasClosedDoorBetween(
-                _transform.position, point, _doorLayer, _doorCheckHeight, _pathDoorCheckRadius))
-            return false;
-
-        float agentToPoint = NavMotor.GetHorizontalDistance(_transform.position, point);
-        float agentToEnd = NavMotor.GetHorizontalDistance(_transform.position, pathEnd);
-        float pointToEnd = NavMotor.GetHorizontalDistance(point, pathEnd);
-
-        if (agentToPoint <= agentToEnd + 2f)
-            return false;
-
-        if (pointToEnd < 2f)
-            return false;
-
-        return true;
+    void CacheNavMesh()
+    {
+        _triangulation = NavMesh.CalculateTriangulation();
     }
 
     bool TryGetRandomPoint(out Vector3 result)

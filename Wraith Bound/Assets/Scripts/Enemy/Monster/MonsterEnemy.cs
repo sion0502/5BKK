@@ -21,6 +21,12 @@ public class MonsterEnemy : EnemyBase
     private bool attacking;
     private float nextPossibleAttackTime;
 
+    protected override void Awake()
+    {
+        autoOpenDoorsOnPatrol = true;
+        base.Awake();
+    }
+
     protected internal override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;

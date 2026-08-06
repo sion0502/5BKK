@@ -138,11 +138,9 @@ public sealed class NavMotor
         float reach = _agent.stoppingDistance + extraDistance;
         float flatDist = GetHorizontalDistance(_agent.transform.position, destination);
 
-        // 최종 목적지에 충분히 가까움
         if (flatDist <= reach)
             return true;
 
-        // PathPartial = 문/막힘 앞 → 최종 도착 아님 (문 열고 계속 가야 함)
         if (_agent.hasPath && _agent.pathStatus == NavMeshPathStatus.PathPartial)
             return false;
 
@@ -153,7 +151,6 @@ public sealed class NavMotor
                 return true;
         }
 
-        // 경로 끝나고 멈춤 — NavMesh 도착점 오차 허용
         if (!_agent.hasPath && flatDist <= reach * 4f)
             return true;
 

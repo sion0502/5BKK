@@ -1,6 +1,10 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// 적 AI 진입점.
+/// EnemyState / EnemySense / EnemyCombat / NavMotor / EnemyDoorUtility + Patrol/
+/// </summary>
 public abstract class EnemyBase : MonoBehaviour
 {
     public enum State
@@ -41,6 +45,7 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected bool autoOpenDoorsOnPatrol = true;
 
     [Header("Patrol")]
+    [SerializeField] protected PatrolPointZone patrolPointZone;
     [SerializeField] protected float patrolReachDistance = 0.5f;
     [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
     [SerializeField] protected float minWallClearance = 0.8f;
@@ -104,6 +109,7 @@ public abstract class EnemyBase : MonoBehaviour
     internal int AnimStateHash => AnimState;
 
     internal float ViewAngle => viewAngle;
+    internal float EyeFrontArcAngle => data != null ? data.eyeFrontArcAngle : 180f;
     internal LayerMask ObstacleLayer => obstacleLayer;
     internal LayerMask DoorLayer => doorLayer;
     internal float PlayerDetectRadius => playerDetectRadius;
@@ -206,6 +212,8 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (eyePoint == null)
             eyePoint = transform;
+
+        AutoAssignDoorLayer();
     }
 
     protected virtual void Start()
@@ -213,6 +221,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (!ValidateComponents())
             return;
 
+        ResolvePatrolPointZone();
         InitState();
         ApplyDataSettings();
         AutoAssignDoorLayer();
@@ -232,6 +241,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Update()
     {
+        if (PlayerDeathDebug.IsDead)
+            return;
+
         if (eyePoint == null || agent == null || !agent.isOnNavMesh)
             return;
 
@@ -314,6 +326,18 @@ public abstract class EnemyBase : MonoBehaviour
     {
         _navMotor = new NavMotor(agent);
 
+        PatrolPointSelector pointSelector = null;
+        if (patrolPointZone != null && patrolPointZone.HasPoints)
+        {
+            pointSelector = new PatrolPointSelector(
+                transform,
+                _navMotor,
+                patrolPointZone,
+                autoOpenDoorsOnPatrol,
+                doorLayer
+            );
+        }
+
         PatrolPlanner planner = new PatrolPlanner(
             transform,
             _navMotor,
@@ -321,7 +345,8 @@ public abstract class EnemyBase : MonoBehaviour
             autoOpenDoorsOnPatrol,
             doorLayer,
             doorCheckHeight,
-            pathDoorCheckRadius
+            pathDoorCheckRadius,
+            pointSelector
         );
 
         PatrolDoorService doorService = new PatrolDoorService(
@@ -329,13 +354,7 @@ public abstract class EnemyBase : MonoBehaviour
             _navMotor,
             planner,
             doorLayer,
-            doorCheckHeight,
-            pathDoorCheckRadius,
-            patrolDoorFrontCheckDistance,
-            patrolDoorOpenDistance,
-            patrolDoorSearchRadius,
-            patrolDoorPassThroughDistance,
-            patrolReachDistance
+            patrolDoorOpenDistance
         );
 
         _patrol = new PatrolBehavior(_navMotor, planner, doorService, patrolReachDistance);
@@ -349,7 +368,7 @@ public abstract class EnemyBase : MonoBehaviour
 
         float patrolSpeed = data.moveSpeed * 0.5f;
 
-        switch (_patrol.Update(patrolSpeed))
+        switch (_patrol.Update(patrolSpeed, autoOpenDoorsOnPatrol))
         {
             case PatrolBehavior.PatrolUpdateResult.ReachedDestination:
                 LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
@@ -363,10 +382,6 @@ public abstract class EnemyBase : MonoBehaviour
 
             case PatrolBehavior.PatrolUpdateResult.HandlingDoor:
                 LogAI("순찰 중 닫힌 문 자동 열기");
-                break;
-
-            case PatrolBehavior.PatrolUpdateResult.ThroughDoor:
-                LogAI("순찰 문 통과 중");
                 break;
 
             case PatrolBehavior.PatrolUpdateResult.StuckNeedRepath:
@@ -419,14 +434,24 @@ public abstract class EnemyBase : MonoBehaviour
             obstacleLayer = data.obstacleLayer;
     }
 
+    void ResolvePatrolPointZone()
+    {
+        if (patrolPointZone != null)
+            return;
+
+        patrolPointZone = FindFirstObjectByType<PatrolPointZone>();
+    }
+
     void AutoAssignDoorLayer()
     {
-        if (doorLayer.value != 0) return;
-
         int layer = LayerMask.NameToLayer("Door");
-        if (layer < 0) return;
+        if (layer < 0)
+            return;
 
-        doorLayer = 1 << layer;
+        if (doorLayer.value == 0)
+            doorLayer = 1 << layer;
+
+        EnemyDoorUtility.EnsureDoorsUseLayer(layer);
     }
 
     protected internal virtual Vector3 DetectPlayerPosition()

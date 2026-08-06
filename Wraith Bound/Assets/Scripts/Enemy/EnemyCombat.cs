@@ -39,6 +39,8 @@ public sealed class EnemyCombat
                 _owner.LogSenseThrottled("시야만 감지 CHASE 중");
             else if (s.LastHeardPlayer)
                 _owner.LogSenseThrottled("소리만 감지 CHASE 중");
+            else if (s.LastSawFlashlight)
+                _owner.LogSenseThrottled("손전등 감지 CHASE 중");
 
             return;
         }
@@ -56,8 +58,7 @@ public sealed class EnemyCombat
 
                 if (dist <= _owner.PlayerCatchDistance)
                 {
-                    _owner.LogAI("대놓고 숨은 위치 도착 → Player Dead");
-                    _owner.Sense.KillPlayerDirect();
+                    _owner.Sense.KillPlayerFromHiddenCatch();
                     return;
                 }
 
@@ -94,42 +95,16 @@ public sealed class EnemyCombat
             if (!s.TargetLostActive)
             {
                 s.TargetLostActive = true;
-                _owner.LogAI("시야/소리 감지 X → targetLostTime 발동");
-            }
-
-            float distToPlayer = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
-
-            if (distToPlayer <= _owner.InvestigateStartDistance ||
-                HasReachedDestination(_owner.InvestigateReachDistance))
-            {
-                _owner.LogAI("targetLostTime 중 플레이어 위치 도달 → 수색 시작");
-
-                if (!s.InvestigateRoutineRunning)
-                    _owner.StartCoroutine(BeginInvestigate());
-
-                return;
+                _owner.LogAI($"{_owner.Data.targetLostTIme:F0}초동안 추격합니다");
             }
 
             SetChaseDestination(s.LastKnownPosition);
             _owner.LogAIThrottled(
-                $"시야/소리 감지 X → targetLostTime 진행 중, 남은 시간 {_owner.Data.targetLostTIme - lostTime:F1}초");
+                $"시야/소리/손전등 감지 X → 남은 시간 {_owner.Data.targetLostTIme - lostTime:F1}초");
             return;
         }
 
-        float finalDist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
-
-        if (finalDist <= _owner.InvestigateStartDistance ||
-            HasReachedDestination(_owner.InvestigateReachDistance))
-        {
-            _owner.LogAI("targetLostTime 종료 시 플레이어 위치 도달 → 수색 시작");
-
-            if (!s.InvestigateRoutineRunning)
-                _owner.StartCoroutine(BeginInvestigate());
-
-            return;
-        }
-
-        _owner.LogAI("targetLostTime 종료 + 플레이어 위치 도달 실패 → 순찰 복귀");
+        _owner.LogAI($"{_owner.Data.targetLostTIme:F0}초 지났는데도 감지 없음 → 새 순찰 포인트로 복귀");
         ReturnToPatrolRoute();
     }
 
@@ -342,18 +317,7 @@ public sealed class EnemyCombat
         s.DoorSpecialAllowed = false;
 
         ChangeState(EnemyBase.State.Patrol);
-
-        if (s.HasPatDestination)
-        {
-            _owner.Agent.isStopped = false;
-            _owner.Agent.speed = GetPatrolSpeed();
-            _owner.Patrol.RestoreDestination(s.CurrentPatrolDestination);
-            _owner.SyncPatrolDestinationFromRuntime();
-        }
-        else
-        {
-            _owner.SetNextGlobalPatDestination();
-        }
+        _owner.SetNextGlobalPatDestination();
     }
 
     public bool SafeSetDestination(Vector3 target)
