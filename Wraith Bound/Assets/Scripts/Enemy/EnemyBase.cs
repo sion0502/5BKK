@@ -47,9 +47,7 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Patrol")]
     [SerializeField] protected PatrolPointZone patrolPointZone;
     [SerializeField] protected float patrolReachDistance = 0.5f;
-    [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
     [SerializeField] protected float minWallClearance = 0.8f;
-    [SerializeField] protected int patrolDestinationPickAttempts = 100;
 
     [Header("Obstacle Avoidance")]
     [SerializeField] protected float obstacleCheckDistance = 1.2f;
@@ -338,16 +336,7 @@ public abstract class EnemyBase : MonoBehaviour
             );
         }
 
-        PatrolPlanner planner = new PatrolPlanner(
-            transform,
-            _navMotor,
-            patrolDestinationPickAttempts,
-            autoOpenDoorsOnPatrol,
-            doorLayer,
-            doorCheckHeight,
-            pathDoorCheckRadius,
-            pointSelector
-        );
+        PatrolPlanner planner = new PatrolPlanner(_navMotor, pointSelector);
 
         PatrolDoorService doorService = new PatrolDoorService(
             transform,

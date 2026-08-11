@@ -10157,6 +10157,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MaskGhost
       objectReference: {fileID: 0}
+    - target: {fileID: 3083741283288172052, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3926309361518206525, guid: 904c5d23f19236a4099503c2265f204c, type: 3}
       propertyPath: m_Height
       value: 1.5
