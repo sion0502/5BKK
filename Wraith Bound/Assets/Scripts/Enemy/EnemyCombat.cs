@@ -15,98 +15,94 @@ public sealed class EnemyCombat
     {
         EnemyState s = _owner.RuntimeState;
 
-        if (s.IsBusy) return;
-
-        _owner.LogAIThrottled("추적 중");
+        if (s.IsBusy)
+            return;
 
         _owner.Agent.speed = GetChaseSpeed();
         _owner.HandleChaseSpecial();
 
-        if (s.IsBusy) return;
+        if (s.IsBusy)
+            return;
 
         _owner.Agent.isStopped = false;
 
         if (s.CanDetectPlayer)
         {
+            s.HiddenKillTargetActive = false;
+
             if (_owner.Player != null && !(s.LastHeardPlayer && !s.LastSawPlayer))
                 s.LastKnownPosition = _owner.Player.position;
 
+            s.LastDetectTime = Time.time;
             SetChaseDestination(s.LastKnownPosition, true);
-
-            if (s.LastSawPlayer && s.LastHeardPlayer)
-                _owner.LogSenseThrottled("시야 + 소리 둘 다 감지 CHASE 중");
-            else if (s.LastSawPlayer)
-                _owner.LogSenseThrottled("시야만 감지 CHASE 중");
-            else if (s.LastHeardPlayer)
-                _owner.LogSenseThrottled("소리만 감지 CHASE 중");
-            else if (s.LastSawFlashlight)
-                _owner.LogSenseThrottled("손전등 감지 CHASE 중");
-
+            _owner.LogAIThrottled("추적 중");
             return;
         }
+
+        float limit = GetTargetLostTime();
+        float elapsed = Time.time - s.LastDetectTime;
 
         if (s.HiddenKillTargetActive)
         {
             if (!IsPlayerHiding())
+                s.HiddenKillTargetActive = false;
+            else if (HasReachedLastKnownPosition())
             {
                 s.HiddenKillTargetActive = false;
-                _owner.LogAI("대놓고 숨은 플레이어가 숨기 해제 → 즉사 예약 취소");
+                _owner.LogAI("들킴 · 숨은 위치 도착 → Death");
+                _owner.Sense.KillPlayerDirect();
+                return;
+            }
+            else if (elapsed >= limit)
+            {
+                s.HiddenKillTargetActive = false;
+                ReturnToPatrolRoute();
+                return;
             }
             else
             {
-                float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
-
-                if (dist <= _owner.PlayerCatchDistance)
-                {
-                    _owner.Sense.KillPlayerFromHiddenCatch();
-                    return;
-                }
-
-                SetChaseDestination(s.LastKnownPosition);
-                _owner.LogAIThrottled("대놓고 숨은 플레이어 위치까지 추격 중");
+                SetChaseDestination(s.LastKnownPosition, true);
+                _owner.Sense.TryKillOnColliderTouch();
                 return;
             }
         }
 
-        if (s.HiddenSearchTargetActive)
+        if (HasReachedLastKnownPosition())
         {
-            float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
-
-            if (dist <= _owner.InvestigateStartDistance ||
-                HasReachedDestination(_owner.InvestigateReachDistance))
-            {
-                _owner.LogAI("플레이어 숨은 위치 도착 → 수색모드 시작");
-
-                if (!s.InvestigateRoutineRunning)
-                    _owner.StartCoroutine(BeginInvestigate());
-
-                return;
-            }
-
-            SetChaseDestination(s.LastKnownPosition);
-            _owner.LogAIThrottled("시야/소리 감지 X → 플레이어가 숨은 마지막 위치까지 추격 중");
+            _owner.LogAI("마지막 위치 도착 · 감지 없음 → 수색");
+            StartInvestigateIfReady();
             return;
         }
 
-        float lostTime = Time.time - s.LastDetectTime;
-
-        if (lostTime < _owner.Data.targetLostTIme)
+        if (elapsed >= limit)
         {
-            if (!s.TargetLostActive)
-            {
-                s.TargetLostActive = true;
-                _owner.LogAI($"{_owner.Data.targetLostTIme:F0}초동안 추격합니다");
-            }
-
-            SetChaseDestination(s.LastKnownPosition);
-            _owner.LogAIThrottled(
-                $"시야/소리/손전등 감지 X → 남은 시간 {_owner.Data.targetLostTIme - lostTime:F1}초");
+            _owner.LogAI($"{limit:F0}초 추격 종료 · 순찰");
+            ReturnToPatrolRoute();
             return;
         }
 
-        _owner.LogAI($"{_owner.Data.targetLostTIme:F0}초 지났는데도 감지 없음 → 새 순찰 포인트로 복귀");
-        ReturnToPatrolRoute();
+        SetChaseDestination(s.LastKnownPosition);
+        _owner.LogAIThrottled($"추격 유지 · {limit - elapsed:F1}초 / 도착 시 수색");
     }
+
+    void StartInvestigateIfReady()
+    {
+        EnemyState s = _owner.RuntimeState;
+        if (s.InvestigateRoutineRunning)
+            return;
+
+        _owner.StartCoroutine(BeginInvestigate());
+    }
+
+    bool HasReachedLastKnownPosition()
+    {
+        EnemyState s = _owner.RuntimeState;
+        float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
+        return dist <= _owner.InvestigateStartDistance ||
+               HasReachedDestination(_owner.InvestigateReachDistance);
+    }
+
+    float GetTargetLostTime() => Mathf.Max(0.01f, _owner.Data.targetLostTIme);
 
     public void TickInvestigate()
     {
@@ -141,10 +137,12 @@ public sealed class EnemyCombat
                 return;
 
             s.ReachedLastKnownPosition = true;
-            s.InvestigateTimer = _owner.Data.targetLostTIme;
+            s.InvestigateTimer = GetTargetLostTime();
 
             _owner.LogAI("마지막 위치 도착 완료 → 주변 랜덤 수색 시작");
+            s.NextInvestigateRepathTime = Time.time + 0.5f;
             SetRandomInvestigatePointAround(s.LastKnownPosition, GetInvestigateRadius());
+            StabilizeInvestigateRotation();
             return;
         }
 
@@ -158,10 +156,32 @@ public sealed class EnemyCombat
         }
 
         if (!HasReachedDestination(_owner.InvestigateReachDistance))
+        {
+            StabilizeInvestigateRotation();
             return;
+        }
 
+        if (Time.time < s.NextInvestigateRepathTime)
+        {
+            StabilizeInvestigateRotation();
+            return;
+        }
+
+        s.NextInvestigateRepathTime = Time.time + 1.4f;
         _owner.LogAI($"수색 중 → 남은 시간 {s.InvestigateTimer:F1}초, 다음 수색 지점 선택");
         SetRandomInvestigatePointAround(s.LastKnownPosition, GetInvestigateRadius());
+        StabilizeInvestigateRotation();
+    }
+
+    void StabilizeInvestigateRotation()
+    {
+        NavMeshAgent agent = _owner.Agent;
+        if (agent == null)
+            return;
+
+        Vector3 vel = agent.velocity;
+        vel.y = 0f;
+        agent.updateRotation = vel.sqrMagnitude > 0.08f;
     }
 
     public void TickObstacleAvoidance()
@@ -280,8 +300,16 @@ public sealed class EnemyCombat
 
             case EnemyBase.State.Investigate:
                 _owner.Agent.speed = GetPatrolSpeed();
+                s.NextInvestigateRepathTime = 0f;
+                break;
+
+            default:
+                _owner.Agent.updateRotation = true;
                 break;
         }
+
+        if (s.CurrentState != EnemyBase.State.Investigate)
+            _owner.Agent.updateRotation = true;
 
         _owner.LogAI($"상태 변경: {prevState} → {s.CurrentState}");
 
@@ -312,9 +340,8 @@ public sealed class EnemyCombat
         EnemyState s = _owner.RuntimeState;
 
         s.TargetLostActive = false;
-        s.HiddenSearchTargetActive = false;
-        s.HiddenKillTargetActive = false;
         s.DoorSpecialAllowed = false;
+        s.HiddenKillTargetActive = false;
 
         ChangeState(EnemyBase.State.Patrol);
         _owner.SetNextGlobalPatDestination();
@@ -354,8 +381,7 @@ public sealed class EnemyCombat
         _owner.LogAI("수색모드 시작: 마지막 위치 주변 5m 수색");
 
         s.ReachedLastKnownPosition = false;
-        s.InvestigateTimer = _owner.Data.targetLostTIme;
-        s.HiddenSearchTargetActive = false;
+        s.InvestigateTimer = GetTargetLostTime();
 
         _owner.Agent.speed = GetPatrolSpeed();
         _owner.Agent.isStopped = false;

@@ -16,6 +16,7 @@ public sealed class EnemyState
     public float LastVisionDetectTime = -999f;
     public float ObstacleStuckTimer;
     public float NextObstacleAvoidTime;
+    public float NextInvestigateRepathTime;
 
     public bool HasPatDestination;
     public bool IsBusy;

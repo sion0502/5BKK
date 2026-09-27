@@ -48,7 +48,7 @@ public sealed class EnemySense
 
         s.CanDetectPlayer = true;
         s.TargetLostActive = false;
-        s.HiddenSearchTargetActive = false;
+        s.HiddenKillTargetActive = false;
         s.DoorSpecialAllowed = sawPlayer || heardPlayer || sawFlashlight;
 
         if (_owner.Player != null)
@@ -67,38 +67,25 @@ public sealed class EnemySense
         EnemyState s = _owner.RuntimeState;
         bool isHiding = IsPlayerHiding();
 
-        if (isHiding && CheckFlashlight())
+        if (isHiding && !s.WasPlayerHiding &&
+            (s.CurrentState == EnemyBase.State.Chase || s.CurrentState == EnemyBase.State.Investigate) &&
+            _owner.Player != null)
         {
-            MarkPlayerDead();
-            s.WasPlayerHiding = isHiding;
-            return;
-        }
+            s.LastKnownPosition = _owner.Player.position;
+            s.LastDetectTime = Time.time;
 
-        if (isHiding && !s.WasPlayerHiding)
-        {
-            bool visibleAtHidingMoment = CheckVision();
-            bool wasSeenWhileEntering = visibleAtHidingMoment || s.LastSawPlayer ||
-                                        Time.time - s.LastVisionDetectTime <= _owner.HidingSeenMemoryTime;
+            if (s.CurrentState == EnemyBase.State.Investigate)
+                _owner.Combat.ChangeState(EnemyBase.State.Chase);
 
-            if (wasSeenWhileEntering)
+            if (s.LastSawPlayer || CheckVision())
             {
-                if (_owner.Player != null)
-                    s.LastKnownPosition = _owner.Player.position;
-
                 s.HiddenKillTargetActive = true;
-                s.HiddenSearchTargetActive = false;
-                s.TargetLostActive = false;
-                LogHiddenCaught("들켰다");
-
-                if (s.CurrentState != EnemyBase.State.Chase)
-                    _owner.Combat.ChangeState(EnemyBase.State.Chase);
+                LogHiddenCaught("들킴(시야) — 숨은 위치 도착 시 Death");
             }
-            else if (s.CurrentState == EnemyBase.State.Chase && _owner.Player != null)
+            else
             {
-                s.LastKnownPosition = _owner.Player.position;
-                s.HiddenSearchTargetActive = true;
                 s.HiddenKillTargetActive = false;
-                _owner.LogAI("플레이어가 시야 밖에서 숨음 → 마지막 숨은 위치 추적 후 수색");
+                _owner.LogAI("못 본 틈 — 10초 추격 후 도착 시 수색");
             }
         }
 
@@ -107,29 +94,28 @@ public sealed class EnemySense
 
     public void CheckPlayerCatchDistance()
     {
+        TryKillOnColliderTouch();
+    }
+
+    public bool TryKillOnColliderTouch()
+    {
         EnemyState s = _owner.RuntimeState;
 
-        if (s.PlayerDeadLogged) return;
-        if (_owner.Player == null) return;
+        if (s.PlayerDeadLogged || _owner.Player == null)
+            return false;
 
-        float distance = GetDistanceToPlayerCollider();
+        if (!s.HiddenKillTargetActive)
+            return false;
 
-        if (distance <= Mathf.Max(0.01f, _owner.PlayerContactKillDistance))
-        {
-            _owner.LogAI($"플레이어와 직접 접촉({distance:F2}m) → Death");
-            MarkPlayerDead();
-            return;
-        }
+        float distance = GetDistanceToPlayerCollider(useTriggers: false);
+        float touchRange = Mathf.Max(0.01f, _owner.PlayerContactKillDistance);
 
-        if (s.CurrentState != EnemyBase.State.Chase) return;
+        if (distance > touchRange)
+            return false;
 
-        float catchDistance = Mathf.Max(0.1f, _owner.PlayerCatchDistance);
-
-        if (distance > catchDistance)
-            return;
-
-        _owner.LogAI($"플레이어와 접촉 거리 도달({distance:F2}m) → Death");
+        _owner.LogAI($"플레이어 콜라이더 접촉({distance:F2}m) → Death");
         MarkPlayerDead();
+        return true;
     }
 
     public void AutoFindPlayerReferences()
@@ -200,7 +186,7 @@ public sealed class EnemySense
 
     public bool IsPlayerContact(Collider other)
     {
-        if (other == null)
+        if (other == null || other.isTrigger)
             return false;
 
         Transform hitTransform = other.transform;
@@ -465,7 +451,7 @@ public sealed class EnemySense
         return _owner.PlayerHidingController != null && _owner.PlayerHidingController.isHiding;
     }
 
-    float GetDistanceToPlayerCollider()
+    float GetDistanceToPlayerCollider(bool useTriggers = true)
     {
         float bestDistance = Vector3.Distance(_owner.transform.position, _owner.Player.position);
 
@@ -479,12 +465,18 @@ public sealed class EnemySense
         for (int i = 0; i < enemyColliders.Length; i++)
         {
             Collider enemyCol = enemyColliders[i];
-            if (enemyCol == null || !enemyCol.enabled) continue;
+            if (enemyCol == null || !enemyCol.enabled)
+                continue;
+            if (!useTriggers && enemyCol.isTrigger)
+                continue;
 
             for (int j = 0; j < playerColliders.Length; j++)
             {
                 Collider playerCol = playerColliders[j];
-                if (playerCol == null || !playerCol.enabled) continue;
+                if (playerCol == null || !playerCol.enabled)
+                    continue;
+                if (!useTriggers && playerCol.isTrigger)
+                    continue;
 
                 Vector3 pointOnEnemy = enemyCol.ClosestPoint(playerCol.bounds.center);
                 Vector3 pointOnPlayer = playerCol.ClosestPoint(pointOnEnemy);

@@ -249,8 +249,8 @@ public abstract class EnemyBase : MonoBehaviour
             Sense.AutoFindPlayerReferences();
 
         Sense.CheckPlayerCatchDistance();
-        Sense.Tick();
         Sense.TickHiding();
+        Sense.Tick();
 
         switch (_state.CurrentState)
         {
@@ -275,14 +275,13 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void OnCollisionEnter(Collision collision)
     {
-        if (Sense != null && Sense.IsPlayerContact(collision.collider))
-            Sense.KillPlayerDirect();
-    }
+        if (Sense == null || !Sense.IsPlayerContact(collision.collider))
+            return;
 
-    protected virtual void OnTriggerEnter(Collider other)
-    {
-        if (Sense != null && Sense.IsPlayerContact(other))
-            Sense.KillPlayerDirect();
+        if (!_state.HiddenKillTargetActive)
+            return;
+
+        Sense.TryKillOnColliderTouch();
     }
 
     bool ValidateComponents()
