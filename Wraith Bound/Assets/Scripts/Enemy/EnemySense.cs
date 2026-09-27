@@ -363,7 +363,9 @@ public sealed class EnemySense
     bool IsVisionBlockedByObstacle(Vector3 eyePos, Vector3 dirToTarget, float distanceToTarget, out RaycastHit blockingHit)
     {
         blockingHit = default;
-        int mask = _owner.ObstacleLayer.value | _owner.DoorLayer.value | _owner.Data.playerLayer.value;
+        // Default(벽·바닥 등)은 SO obstacleLayer에 빠져 있어도 시야는 막아야 함.
+        int mask = _owner.ObstacleLayer.value | _owner.DoorLayer.value | _owner.Data.playerLayer.value |
+                   (1 << LayerMask.NameToLayer("Default"));
 
         RaycastHit[] hits = Physics.SphereCastAll(
             eyePos,
