@@ -278,7 +278,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (Sense == null || !Sense.IsPlayerContact(collision.collider))
             return;
 
-        if (!_state.HiddenKillTargetActive)
+        if (_state.CurrentState != State.Chase && !_state.HiddenKillTargetActive)
             return;
 
         Sense.TryKillOnColliderTouch();

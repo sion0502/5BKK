@@ -49,6 +49,7 @@ public sealed class EnemySense
         s.CanDetectPlayer = true;
         s.TargetLostActive = false;
         s.HiddenKillTargetActive = false;
+        s.ChaseGraceEndTime = 0f;
         s.DoorSpecialAllowed = sawPlayer || heardPlayer || sawFlashlight;
 
         if (_owner.Player != null)
@@ -72,7 +73,7 @@ public sealed class EnemySense
             _owner.Player != null)
         {
             s.LastKnownPosition = _owner.Player.position;
-            s.LastDetectTime = Time.time;
+            _owner.Combat.ArmChaseGraceTimer();
 
             if (s.CurrentState == EnemyBase.State.Investigate)
                 _owner.Combat.ChangeState(EnemyBase.State.Chase);
@@ -104,7 +105,8 @@ public sealed class EnemySense
         if (s.PlayerDeadLogged || _owner.Player == null)
             return false;
 
-        if (!s.HiddenKillTargetActive)
+        bool chaseContact = s.CurrentState == EnemyBase.State.Chase;
+        if (!s.HiddenKillTargetActive && !chaseContact)
             return false;
 
         float distance = GetDistanceToPlayerCollider(useTriggers: false);

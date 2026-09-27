@@ -29,6 +29,7 @@ public sealed class EnemyCombat
         if (s.CanDetectPlayer)
         {
             s.HiddenKillTargetActive = false;
+            s.ChaseGraceEndTime = 0f;
 
             if (_owner.Player != null && !(s.LastHeardPlayer && !s.LastSawPlayer))
                 s.LastKnownPosition = _owner.Player.position;
@@ -40,7 +41,8 @@ public sealed class EnemyCombat
         }
 
         float limit = GetTargetLostTime();
-        float elapsed = Time.time - s.LastDetectTime;
+        float graceEnd = GetChaseGraceEndTime(limit);
+        float remaining = graceEnd - Time.time;
 
         if (s.HiddenKillTargetActive)
         {
@@ -53,7 +55,7 @@ public sealed class EnemyCombat
                 _owner.Sense.KillPlayerDirect();
                 return;
             }
-            else if (elapsed >= limit)
+            else if (remaining <= 0f)
             {
                 s.HiddenKillTargetActive = false;
                 ReturnToPatrolRoute();
@@ -74,7 +76,7 @@ public sealed class EnemyCombat
             return;
         }
 
-        if (elapsed >= limit)
+        if (remaining <= 0f)
         {
             _owner.LogAI($"{limit:F0}초 추격 종료 · 순찰");
             ReturnToPatrolRoute();
@@ -82,7 +84,35 @@ public sealed class EnemyCombat
         }
 
         SetChaseDestination(s.LastKnownPosition);
-        _owner.LogAIThrottled($"추격 유지 · {limit - elapsed:F1}초 / 도착 시 수색");
+        _owner.LogAIThrottled($"추격 유지 · {remaining:F1}초 / 도착 시 수색");
+    }
+
+    public void ArmChaseGraceTimer()
+    {
+        EnemyState s = _owner.RuntimeState;
+        float limit = GetTargetLostTime();
+        s.LastDetectTime = Time.time;
+        s.ChaseGraceEndTime = Time.time + limit;
+    }
+
+    float GetChaseGraceEndTime(float limit)
+    {
+        EnemyState s = _owner.RuntimeState;
+
+        if (s.ChaseGraceEndTime > Time.time)
+            return s.ChaseGraceEndTime;
+
+        if (Time.time - s.LastDetectTime < limit)
+            return s.LastDetectTime + limit;
+
+        if (IsPlayerHiding())
+        {
+            s.ChaseGraceEndTime = Time.time + limit;
+            s.LastDetectTime = Time.time;
+            return s.ChaseGraceEndTime;
+        }
+
+        return s.LastDetectTime + limit;
     }
 
     void StartInvestigateIfReady()
@@ -342,6 +372,7 @@ public sealed class EnemyCombat
         s.TargetLostActive = false;
         s.DoorSpecialAllowed = false;
         s.HiddenKillTargetActive = false;
+        s.ChaseGraceEndTime = 0f;
 
         ChangeState(EnemyBase.State.Patrol);
         _owner.SetNextGlobalPatDestination();

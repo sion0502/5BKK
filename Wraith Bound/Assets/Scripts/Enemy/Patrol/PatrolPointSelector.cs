@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 public sealed class PatrolPointSelector
 {
-    const float PatrolSnapRadius = 0.45f;
+    const float PatrolSnapRadius = 2f;
 
     readonly Transform _transform;
     readonly NavMotor _motor;

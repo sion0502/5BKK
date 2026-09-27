@@ -6,7 +6,7 @@ using UnityEngine.AI;
 /// </summary>
 public sealed class PatrolPlanner
 {
-    const float PatrolSnapRadius = 0.45f;
+    const float PatrolSnapRadius = 2f;
 
     readonly NavMotor _motor;
     readonly PatrolPointSelector _pointSelector;
@@ -58,19 +58,29 @@ public sealed class PatrolPlanner
             return false;
 
         Vector3 pathEnd = motor.GetCalculatedPathEnd();
+        Vector3 from = motor.Agent.transform.position;
 
         if (status == NavMeshPathStatus.PathComplete)
-            return NavMotor.GetHorizontalDistance(pathEnd, point) <= 1f;
+            return NavMotor.GetHorizontalDistance(pathEnd, point) <= 2f;
 
-        if (!autoOpenDoors || status != NavMeshPathStatus.PathPartial)
+        if (!autoOpenDoors)
             return false;
+
+        if (status != NavMeshPathStatus.PathPartial)
+            return false;
+
+        if (EnemyDoorUtility.FindClosedDoorBetween(from, point, doorLayer, 1f, 0.35f) != null)
+            return true;
 
         DoorClick door = EnemyDoorUtility.FindClosedDoorNearPosition(pathEnd, doorLayer, 2.5f);
-        if (door == null)
-            return false;
+        if (door != null)
+        {
+            Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
+            if (NavMotor.GetHorizontalDistance(pathEnd, doorPos) <= 2.5f &&
+                NavMotor.GetHorizontalDistance(point, doorPos) >= 0.5f)
+                return true;
+        }
 
-        Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
-        return NavMotor.GetHorizontalDistance(pathEnd, doorPos) <= 2.5f &&
-               NavMotor.GetHorizontalDistance(point, doorPos) >= 0.75f;
+        return NavMotor.GetHorizontalDistance(pathEnd, point) >= 1f;
     }
 }

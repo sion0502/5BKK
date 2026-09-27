@@ -17,6 +17,7 @@ public sealed class EnemyState
     public float ObstacleStuckTimer;
     public float NextObstacleAvoidTime;
     public float NextInvestigateRepathTime;
+    public float ChaseGraceEndTime;
 
     public bool HasPatDestination;
     public bool IsBusy;
