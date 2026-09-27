@@ -331,7 +331,7 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
   m_PrefabInstance: {fileID: 923510701}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &308411773
+--- !u!114 &308411775
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -340,9 +340,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 308411767}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4319dcc443bf67a4b8448b49d1ca3938, type: 3}
+  m_Script: {fileID: 11500000, guid: 2af883f120d9a404ca2ec9e985a2391a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GhostEnemy
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
   data: {fileID: 11400000, guid: 53fe132abcfe4f748aaf0d7fa75a606a, type: 2}
   eyePoint: {fileID: 1668310273}
   drawVisionDebug: 1
@@ -387,7 +387,19 @@ MonoBehaviour:
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
   logInterval: 0.5
-  canPassThroughDoors: 1
+  doorAttackStartDistance: 1
+  doorStopDistance: 0.7
+  idleBeforeAttackTime: 0.5
+  doorHitDelay: 0.45
+  attackEndDelay: 0.7
+  postAttackIdleTime: 1
+  faceRotateSpeed: 360
+  postAttackCooldown: 0.2
+  attackFaceAngle: 6
+  approachTimeout: 3
+  finalAttackDistance: 0.8
+  finalAttackFaceAngle: 2.5
+  finalAlignTimeout: 1.5
 --- !u!1 &454534505
 GameObject:
   m_ObjectHideFlags: 0
@@ -1341,7 +1353,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       propertyPath: m_Name
-      value: Meshy_AI_Specter_in_Rags_biped_Animation_019ffdbb-f423-753d-a16a-15bff7974cfe_frame_rate_60
+      value: NurseGhost
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       propertyPath: m_Controller
@@ -1356,6 +1368,9 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 308411775}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 308411770}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
@@ -1363,9 +1378,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 308411768}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 308411773}
   m_SourcePrefab: {fileID: 100100000, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
 --- !u!1 &964519615 stripped
 GameObject:
