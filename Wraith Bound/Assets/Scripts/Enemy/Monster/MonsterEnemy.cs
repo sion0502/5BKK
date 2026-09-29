@@ -9,17 +9,28 @@ public class MonsterEnemy : EnemyBase
     [SerializeField] private float idleBeforeAttackTime = 0.5f;
     [SerializeField] private float doorHitDelay = 0.45f;
     [SerializeField] private float attackEndDelay = 0.7f;
+    [SerializeField] private float postAttackIdleTime = 1.0f;
     [SerializeField] private float faceRotateSpeed = 360f;
     [SerializeField] private float postAttackCooldown = 0.2f;
     [SerializeField] private float attackFaceAngle = 6f;
     [SerializeField] private float approachTimeout = 3f;
+    [SerializeField] private float finalAttackDistance = 0.8f;
+    [SerializeField] private float finalAttackFaceAngle = 2.5f;
+    [SerializeField] private float finalAlignTimeout = 1.5f;
 
     private bool attacking;
     private float nextPossibleAttackTime;
 
-    protected override void HandleChaseSpecial()
+    protected override void Awake()
+    {
+        autoOpenDoorsOnPatrol = true;
+        base.Awake();
+    }
+
+    protected internal override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;
+        if (!doorSpecialAllowed) return;
         if (attacking) return;
         if (Time.time < nextPossibleAttackTime) return;
 
@@ -38,6 +49,9 @@ public class MonsterEnemy : EnemyBase
         attacking = true;
         isBusy = true;
         lockAnimator = true;
+
+        agent.isStopped = true;
+        agent.ResetPath();
 
         anim.ResetTrigger(AnimAttack);
         anim.SetInteger(AnimState, 2);
@@ -74,6 +88,13 @@ public class MonsterEnemy : EnemyBase
             yield break;
         }
 
+        if (!IsReadyToAttackDoor(door, doorAttackStartDistance, attackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         agent.isStopped = true;
         agent.ResetPath();
 
@@ -105,6 +126,38 @@ public class MonsterEnemy : EnemyBase
             yield break;
         }
 
+        float finalAlignTimer = 0f;
+
+        while (finalAlignTimer < finalAlignTimeout)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            FaceDoorCollider(door);
+
+            if (IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+                break;
+
+            agent.isStopped = false;
+            SafeSetDestination(GetDoorAttackPosition(door));
+
+            finalAlignTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         anim.SetInteger(AnimState, 0);
 
         float idleTimer = 0f;
@@ -131,21 +184,63 @@ public class MonsterEnemy : EnemyBase
 
         FaceDoorCollider(door);
 
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         anim.SetTrigger(AnimAttack);
 
-        yield return new WaitForSeconds(doorHitDelay);
+        yield return WaitAttackPhase(doorHitDelay, door);
 
-        if (door != null && !door.IsBroken())
+        if (door != null && !door.IsBroken() && IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
         {
-            Debug.Log("Monster Force Hit Without Condition");
+            Debug.Log("Monster Door Hit");
             door.BreakByEnemy(transform.position);
         }
 
-        yield return new WaitForSeconds(attackEndDelay);
+        yield return WaitAttackPhase(attackEndDelay, door, true);
+
+        anim.SetInteger(AnimState, 0);
+        yield return WaitAttackPhase(postAttackIdleTime, door, true);
 
         nextPossibleAttackTime = Time.time + postAttackCooldown;
 
         EndDoorAttack();
+    }
+
+    IEnumerator WaitAttackPhase(float duration, DoorBrokenTest door, bool allowBrokenDoor = false)
+    {
+        float timer = 0f;
+
+        while (timer < duration)
+        {
+            if (door == null)
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            if (!allowBrokenDoor && !IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            KeepAgentStoppedForAttack();
+            FaceDoorCollider(door);
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    void KeepAgentStoppedForAttack()
+    {
+        agent.isStopped = true;
+        agent.ResetPath();
     }
 
     private bool IsDoorStillAttackable(DoorBrokenTest door)
@@ -159,6 +254,16 @@ public class MonsterEnemy : EnemyBase
         if (door.IsBroken()) return false;
 
         return true;
+    }
+
+    private bool IsReadyToAttackDoor(DoorBrokenTest door, float maxDistance, float maxAngle)
+    {
+        if (!IsDoorStillAttackable(door)) return false;
+
+        float dist = GetDistanceToDoorCollider(door);
+        float angle = GetAngleToDoorCollider(door);
+
+        return dist <= maxDistance && angle <= maxAngle;
     }
 
     private Vector3 GetDoorAttackPosition(DoorBrokenTest door)
@@ -229,12 +334,15 @@ public class MonsterEnemy : EnemyBase
 
     private void EndDoorAttack()
     {
-        anim.SetInteger(AnimState, 2);
+        KeepAgentStoppedForAttack();
 
-        agent.isStopped = false;
+        if (currentState == State.Chase)
+            anim.SetInteger(AnimState, 2);
 
         lockAnimator = false;
         isBusy = false;
         attacking = false;
+
+        agent.isStopped = false;
     }
 }
