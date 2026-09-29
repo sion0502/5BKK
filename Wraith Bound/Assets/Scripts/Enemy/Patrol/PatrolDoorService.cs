@@ -11,6 +11,8 @@ public sealed class PatrolDoorService
     readonly PatrolPlanner _planner;
     readonly LayerMask _doorLayer;
     readonly float _openDistance;
+    DoorClick _openingDoor;
+    float _openingDeadline;
 
     public PatrolDoorService(
         Transform transform,
@@ -28,6 +30,17 @@ public sealed class PatrolDoorService
 
     public bool TryOpenNearbyDoor()
     {
+        if (_openingDoor != null)
+        {
+            if (!_openingDoor.IsPassageReady() && Time.time < _openingDeadline)
+            {
+                _motor.Stop();
+                return true;
+            }
+            _openingDoor = null;
+            ResumePatrolMovement();
+            return true;
+        }
         if (!_planner.HasDestination || _doorLayer.value == 0)
             return false;
 
@@ -49,7 +62,9 @@ public sealed class PatrolDoorService
         if (!EnemyDoorUtility.TryOpenDoor(door, _transform.position))
             return false;
 
-        ResumePatrolMovement();
+        _openingDoor = door;
+        _openingDeadline = Time.time + 3f;
+        _motor.Stop();
         return true;
     }
 
@@ -65,8 +80,9 @@ public sealed class PatrolDoorService
         if (NavMotor.GetHorizontalDistance(pathEnd, _planner.CurrentDestination) < 1f)
             return false;
 
-        return EnemyDoorUtility.IsDoorUsefulForTarget(
-            _transform.position, pathEnd, _planner.CurrentDestination);
+        DoorClick door = EnemyDoorUtility.FindClosedDoorNearPosition(pathEnd, _doorLayer, 2f);
+        return door != null && EnemyDoorUtility.IsDoorUsefulForTarget(
+            _transform.position, EnemyDoorUtility.GetDoorWorldPosition(door.transform), _planner.CurrentDestination);
     }
 
     void ResumePatrolMovement()

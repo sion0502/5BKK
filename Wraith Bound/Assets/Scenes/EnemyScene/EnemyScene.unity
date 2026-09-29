@@ -192,63 +192,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 11ac91e55fd278849a2846408b1b5605, type: 3}
---- !u!1001 &224589115
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 14.31
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -12.32
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7709734305081502132, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
-      propertyPath: m_Name
-      value: Player
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
 --- !u!1 &308411767 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
@@ -383,6 +326,7 @@ MonoBehaviour:
   hidingSeenMemoryTime: 0.75
   playerCatchDistance: 1.1
   playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
   senseStartDelay: 0.5
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
@@ -1579,6 +1523,7 @@ MonoBehaviour:
   hidingSeenMemoryTime: 0.75
   playerCatchDistance: 1.1
   playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
   senseStartDelay: 0.5
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
@@ -1800,6 +1745,7 @@ MonoBehaviour:
   hidingSeenMemoryTime: 0.75
   playerCatchDistance: 1.1
   playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
   senseStartDelay: 0.5
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
@@ -1901,6 +1847,99 @@ CapsuleCollider:
   m_Height: 0.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.2, z: 0}
+--- !u!1001 &1620910607
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -4.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13.07
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 318007018526127761, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2429791317560265539, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_Resource
+      value: 
+      objectReference: {fileID: 8300000, guid: 84c3c3f2a672845148f30d89eb59d1f2, type: 3}
+    - target: {fileID: 2698086481169583290, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: breathDrainRate
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: footstepSettings.Array.data[0].volume
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: footstepSettings.Array.data[1].volume
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: footstepSettings.Array.data[0].stepInterval
+      value: 0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: footstepSettings.Array.data[1].stepInterval
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: 'footstepSettings.Array.data[0].clips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 84c3c3f2a672845148f30d89eb59d1f2, type: 3}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: 'footstepSettings.Array.data[1].clips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 84c3c3f2a672845148f30d89eb59d1f2, type: 3}
+    - target: {fileID: 5168041097852179032, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: 'footstepSettings.Array.data[2].clips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 84c3c3f2a672845148f30d89eb59d1f2, type: 3}
+    - target: {fileID: 7709734305081502132, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
+      propertyPath: m_Name
+      value: Player (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0b9b7d60ee5e5410eab392884865dbcd, type: 3}
 --- !u!1 &1639768559
 GameObject:
   m_ObjectHideFlags: 0
@@ -3477,6 +3516,7 @@ MonoBehaviour:
   hidingSeenMemoryTime: 0.75
   playerCatchDistance: 1.1
   playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
   senseStartDelay: 0.5
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
@@ -3596,5 +3636,5 @@ SceneRoots:
   - {fileID: 99801709}
   - {fileID: 2013958363}
   - {fileID: 1946031597}
-  - {fileID: 224589115}
   - {fileID: 923510701}
+  - {fileID: 1620910607}

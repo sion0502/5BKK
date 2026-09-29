@@ -61,6 +61,15 @@ public class DoorClick : MonoBehaviour
         return brokenDoor != null && brokenDoor.IsBroken();
     }
 
+    public bool IsPassageReady()
+    {
+        if (IsBroken()) return true;
+        if (!open) return false;
+        return isSlidingDoor
+            ? Vector3.Distance(transform.localPosition, targetLocalSlidePos) <= 0.1f
+            : Quaternion.Angle(transform.rotation, openRot) <= 10f;
+    }
+
     private void Start()
     {
        
@@ -134,7 +143,7 @@ public class DoorClick : MonoBehaviour
         if (GetComponent<DoorNavMesh>() != null)
             return;
 
-        bool blocked = !open && !IsBroken();
+        bool blocked = !IsPassageReady();
         if (!force && blocked == lastNavBlocked)
             return;
 

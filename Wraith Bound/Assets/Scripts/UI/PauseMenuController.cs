@@ -51,7 +51,7 @@ public class PauseMenuController : MonoBehaviour
 
     void Update()
     {
-        if (isTransitioning)
+        if (isTransitioning || PlayerDeathDebug.IsDying)
         {
             return;
         }

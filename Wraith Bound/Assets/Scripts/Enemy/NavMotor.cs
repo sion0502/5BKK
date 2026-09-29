@@ -20,6 +20,7 @@ public sealed class NavMotor
 
     Vector3 _activeDestination;
     bool _hasActiveDestination;
+    float _nextRepathTime;
 
     Vector3 _progressAnchor;
     float _progressAnchorTime;
@@ -36,14 +37,20 @@ public sealed class NavMotor
 
         if (_hasActiveDestination &&
             GetHorizontalDistance(_activeDestination, hit.position) < 0.3f &&
-            _agent.hasPath &&
-            !_agent.pathPending)
+            GetHorizontalDistance(_agent.destination, hit.position) < 0.3f &&
+            (_agent.pathPending ||
+             (_agent.hasPath && !_agent.isPathStale &&
+              (_agent.pathStatus == NavMeshPathStatus.PathComplete || Time.time < _nextRepathTime))))
             return true;
 
+        bool destinationChanged = !_hasActiveDestination ||
+            GetHorizontalDistance(_activeDestination, hit.position) >= 0.3f;
+        if (!_agent.SetDestination(hit.position))
+            return false;
         _activeDestination = hit.position;
         _hasActiveDestination = true;
-        _agent.SetDestination(hit.position);
-        ResetProgressTracking();
+        _nextRepathTime = Time.time + 0.4f;
+        if (destinationChanged) ResetProgressTracking();
         return true;
     }
 
@@ -148,18 +155,6 @@ public sealed class NavMotor
         {
             if (!float.IsNaN(_agent.remainingDistance) && !float.IsInfinity(_agent.remainingDistance) &&
                 _agent.remainingDistance <= reach)
-                return true;
-        }
-
-        if (!_agent.hasPath && flatDist <= reach * 4f)
-            return true;
-
-        if (_agent.velocity.sqrMagnitude < 0.12f && flatDist <= reach * 4f)
-        {
-            if (!_agent.hasPath)
-                return true;
-
-            if (!float.IsNaN(_agent.remainingDistance) && _agent.remainingDistance <= reach * 2f)
                 return true;
         }
 

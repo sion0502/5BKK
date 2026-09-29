@@ -18,7 +18,7 @@ public class DoorNavMesh : MonoBehaviour
         if (doorClick == null)
             return;
 
-        bool blocked = !doorClick.IsOpen() && !doorClick.IsBroken();
+        bool blocked = !doorClick.IsPassageReady();
 
         if (cols != null)
         {

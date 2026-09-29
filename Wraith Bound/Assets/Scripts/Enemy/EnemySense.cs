@@ -19,13 +19,13 @@ public sealed class EnemySense
     {
         EnemyState s = _owner.RuntimeState;
 
+        if (Time.time < s.SenseEnableTime) return;
+        if (Time.time < s.NextSenseTime) return;
+
         s.CanDetectPlayer = false;
         s.LastSawPlayer = false;
         s.LastHeardPlayer = false;
         s.LastSawFlashlight = false;
-
-        if (Time.time < s.SenseEnableTime) return;
-        if (Time.time < s.NextSenseTime) return;
 
         s.NextSenseTime = Time.time + Mathf.Max(0.02f, _owner.Data.checkInterval);
 
@@ -111,23 +111,20 @@ public sealed class EnemySense
         TryKillOnColliderTouch();
     }
 
-    public bool TryKillOnColliderTouch()
+    public bool TryKillOnColliderTouch(Collider confirmedContact = null)
     {
         EnemyState s = _owner.RuntimeState;
 
         if (s.PlayerDeadLogged || _owner.Player == null)
             return false;
 
-        bool chaseContact = s.CurrentState == EnemyBase.State.Chase;
         if (IsPlayerHiding() && !s.HiddenKillTargetActive)
-            return false;
-        if (!s.HiddenKillTargetActive && !chaseContact)
             return false;
 
         float distance = GetDistanceToPlayerCollider(useTriggers: false);
         float touchRange = Mathf.Max(0.01f, _owner.PlayerContactKillDistance);
 
-        if (distance > touchRange)
+        if ((confirmedContact == null || !IsPlayerContact(confirmedContact)) && distance > touchRange)
             return false;
 
         _owner.LogAI($"플레이어 콜라이더 접촉({distance:F2}m) → Death");
@@ -510,14 +507,14 @@ public sealed class EnemySense
     }
 
     /// <summary>
-    /// 플레이어 사망 — Debug "Death"만 출력. 나중에 UI 담당이 이 로그 지점을 게임오버 UI로 교체.
+    /// 사망 직전 연출을 재생한 뒤 기존 사망 처리를 실행합니다.
     /// </summary>
     void MarkPlayerDead()
     {
         if (_owner.RuntimeState.PlayerDeadLogged) return;
 
         _owner.RuntimeState.PlayerDeadLogged = true;
-        PlayerDeathDebug.TriggerDeath();
+        PlayerDeathDebug.BeginJumpscare(_owner);
     }
 
     public void KillPlayerFromHiddenCatch() => MarkPlayerDead();

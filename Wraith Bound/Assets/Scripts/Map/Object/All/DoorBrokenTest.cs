@@ -73,23 +73,21 @@ public class DoorBrokenTest : MonoBehaviour
         if (doorScript != null)
             doorScript.enabled = false;
 
-        BoxCollider col = GetComponent<BoxCollider>();
-
-        if (col != null)
-            col.size = new Vector3(1f, 1f, 0.3f);
+        // Release navigation immediately, even on doors without DoorNavMesh.
+        DoorNavMeshUtility.SetNavMeshBlocked(transform, false);
+        DoorNavMesh navigation = GetComponent<DoorNavMesh>();
+        if (navigation != null) navigation.enabled = false;
+        foreach (Collider col in GetComponentsInChildren<Collider>(true))
+            col.enabled = false;
 
         transform.SetParent(null);
 
         if (rb == null)
             rb = gameObject.AddComponent<Rigidbody>();
 
-        rb.isKinematic = false;
-        rb.useGravity = true;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.detectCollisions = false;
 
         Vector3 dir = transform.position - attackerPosition;
         dir.y = 0f;
@@ -99,10 +97,31 @@ public class DoorBrokenTest : MonoBehaviour
 
         dir.Normalize();
 
-        rb.AddForce((dir + Vector3.up * 0.05f) * breakImpulse, ForceMode.Impulse);
-        rb.AddTorque(Random.insideUnitSphere * torqueImpulse, ForceMode.Impulse);
-
+        StartCoroutine(AnimateDebris(dir));
         StartCoroutine(FadeAndDestroy());
+    }
+
+    IEnumerator AnimateDebris(Vector3 direction)
+    {
+        Vector3 start = transform.position;
+        Vector3 end = start + direction * Mathf.Clamp(breakImpulse * 0.015f, 0.5f, 2f);
+        if (Physics.Raycast(end + Vector3.up * 1.5f, Vector3.down, out RaycastHit ground,
+            5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            end.y = ground.point.y + 0.05f;
+        Quaternion initial = transform.rotation;
+        Quaternion landed = Quaternion.Euler(90f, transform.eulerAngles.y + torqueImpulse, 0f);
+        float elapsed = 0f;
+        const float duration = 0.5f;
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            transform.SetPositionAndRotation(
+                Vector3.Lerp(start, end, t) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 0.6f),
+                Quaternion.Slerp(initial, landed, t));
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        transform.SetPositionAndRotation(end, landed);
     }
 
     private IEnumerator FadeAndDestroy()

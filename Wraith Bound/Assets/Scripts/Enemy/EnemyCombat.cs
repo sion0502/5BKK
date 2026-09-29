@@ -195,9 +195,7 @@ public sealed class EnemyCombat
         if (agent == null)
             return;
 
-        Vector3 vel = agent.velocity;
-        vel.y = 0f;
-        agent.updateRotation = vel.sqrMagnitude > 0.08f;
+        agent.updateRotation = true;
     }
 
     public void TickObstacleAvoidance()
@@ -393,6 +391,17 @@ public sealed class EnemyCombat
         _owner.Agent.ResetPath();
 
         yield return new WaitForSeconds(0.15f);
+
+        // Detection can resume during the short pause; do not overwrite a renewed chase.
+        if (s.CanDetectPlayer || s.HiddenKillTargetActive ||
+            PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
+        {
+            s.IsBusy = false;
+            s.InvestigateRoutineRunning = false;
+            if (!PlayerDeathDebug.IsDying && !PlayerDeathDebug.IsDead)
+                _owner.Agent.isStopped = false;
+            yield break;
+        }
 
         ChangeState(EnemyBase.State.Investigate);
         _owner.LogAI("수색모드 시작: 마지막 위치 주변 5m 수색");
@@ -808,9 +817,8 @@ public sealed class EnemyCombat
         {
             Quaternion.Euler(0f, 70f, 0f) * forward,
             Quaternion.Euler(0f, -70f, 0f) * forward,
-            Quaternion.Euler(0f, 120f, 0f) * forward,
-            Quaternion.Euler(0f, -120f, 0f) * forward,
-            -forward
+            Quaternion.Euler(0f, 35f, 0f) * forward,
+            Quaternion.Euler(0f, -35f, 0f) * forward
         };
 
         for (int i = 0; i < directions.Length; i++)

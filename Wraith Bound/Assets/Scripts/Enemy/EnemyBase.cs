@@ -21,6 +21,11 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected Monsters data;
     [SerializeField] protected Transform eyePoint;
 
+    [Header("Death Jumpscare")]
+    [SerializeField] internal Transform jumpscareFacePoint;
+    [SerializeField, Range(0.3f, 2f)] internal float jumpscareDuration = 0.9f;
+    [SerializeField] internal AudioClip jumpscareSound;
+
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
     [SerializeField] protected bool debugStateLog = true;
@@ -244,7 +249,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Update()
     {
-        if (PlayerDeathDebug.IsDead)
+        if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
             return;
 
         if (eyePoint == null || agent == null || !agent.isOnNavMesh)
@@ -253,8 +258,10 @@ public abstract class EnemyBase : MonoBehaviour
         if (player == null)
             Sense.AutoFindPlayerReferences();
 
-        Sense.CheckPlayerCatchDistance();
         Sense.TickHiding();
+        Sense.CheckPlayerCatchDistance();
+        if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
+            return;
         Sense.Tick();
 
         switch (_state.CurrentState)
@@ -272,6 +279,9 @@ public abstract class EnemyBase : MonoBehaviour
                 break;
         }
 
+        if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
+            return;
+
         Combat.TickObstacleAvoidance();
 
         if (!_state.LockAnimator)
@@ -283,11 +293,10 @@ public abstract class EnemyBase : MonoBehaviour
         if (Sense == null || !Sense.IsPlayerContact(collision.collider))
             return;
 
-        if (_state.CurrentState != State.Chase && !_state.HiddenKillTargetActive)
-            return;
-
-        Sense.TryKillOnColliderTouch();
+        Sense.TryKillOnColliderTouch(collision.collider);
     }
+
+    protected virtual void OnCollisionStay(Collision collision) => OnCollisionEnter(collision);
 
     bool ValidateComponents()
     {
