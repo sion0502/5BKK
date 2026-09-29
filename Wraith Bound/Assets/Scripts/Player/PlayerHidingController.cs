@@ -10,6 +10,7 @@ public class PlayerHidingController : MonoBehaviour
 
     PlayerController playerController;
     MonoBehaviour mouseLook;
+    PlayerAudioMixerController playerAudioMixerController;
 
     public float interactionDistance = 2.5f;
     public LayerMask interactableLayer;
@@ -60,6 +61,8 @@ public class PlayerHidingController : MonoBehaviour
 
         playerController =
             GetComponent<PlayerController>();
+
+        playerAudioMixerController = GetComponent<PlayerAudioMixerController>();
 
         mouseLook =
             playerCamera.GetComponent<MouseLook>();
@@ -194,6 +197,8 @@ public class PlayerHidingController : MonoBehaviour
         isHiding = true;
         isHoldingBreath = false;
 
+        playerAudioMixerController.enabled = false;
+
         characterController.enabled =
             false;
 
@@ -323,13 +328,9 @@ public class PlayerHidingController : MonoBehaviour
         transform.rotation =
             targetRot;
 
-<<<<<<< Updated upstream
-=======
         playerAudioMixerController.enabled = true;    
 
-        isHoldingBreath = false;
         
->>>>>>> Stashed changes
         characterController.enabled =
             true;
 

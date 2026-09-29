@@ -4,51 +4,47 @@ using UnityEngine;
 public class MonsterEnemy : EnemyBase
 {
     [Header("Door Attack")]
-    [SerializeField] private float doorDetectDistance = 2.2f;
+    [SerializeField] private float doorAttackStartDistance = 1.0f;
+    [SerializeField] private float doorStopDistance = 0.7f;
     [SerializeField] private float idleBeforeAttackTime = 0.5f;
-    [SerializeField] private float doorHitDelay = 0.35f;
+    [SerializeField] private float doorHitDelay = 0.45f;
     [SerializeField] private float attackEndDelay = 0.7f;
-    [SerializeField] private float faceRotateSpeed = 12f;
+    [SerializeField] private float postAttackIdleTime = 1.0f;
+    [SerializeField] private float faceRotateSpeed = 360f;
     [SerializeField] private float postAttackCooldown = 0.2f;
+    [SerializeField] private float attackFaceAngle = 6f;
+    [SerializeField] private float approachTimeout = 3f;
+    [SerializeField] private float finalAttackDistance = 0.8f;
+    [SerializeField] private float finalAttackFaceAngle = 2.5f;
+    [SerializeField] private float finalAlignTimeout = 1.5f;
 
     private bool attacking;
     private float nextPossibleAttackTime;
 
-    protected override void HandleChaseSpecial()
+    protected override void Awake()
     {
-        if (currentState != State.Chase)
-            return;
-
-        if (attacking)
-            return;
-
-        DoorBrokenTest door = GetClosedDoorOnChasePath(doorDetectDistance);
-        if (door == null)
-            return;
-
-        // 이미 공격 중이나, 다음 공격 가능 시간 지나야 함
-        if (Time.time < nextPossibleAttackTime)
-            return;
-
-        StartCoroutine(AttackDoorRoutine(door));
+        autoOpenDoorsOnPatrol = true;
+        base.Awake();
     }
 
-    private IEnumerator AttackDoorRoutine(DoorBrokenTest door)
+    protected internal override void HandleChaseSpecial()
     {
-        if (door == null)
-            yield break;
+        if (currentState != State.Chase) return;
+        if (!doorSpecialAllowed) return;
+        if (attacking) return;
+        if (Time.time < nextPossibleAttackTime) return;
 
-        DoorClick click = door.GetComponent<DoorClick>();
-        if (click == null)
-            yield break;
+        DoorBrokenTest door = GetClosedDoorOnChasePath(chaseDoorDetectDistance);
+        if (door == null) return;
+        if (!IsDoorStillAttackable(door)) return;
 
-        // 공격 가능한지 다시 한번 확인
-        if (click.IsOpen() || click.IsBroken() || door.IsBroken())
-            yield break;
+        StartCoroutine(DoorAttackRoutine(door));
+    }
 
-        // 헛공격 방지: 이미 공격 중이 아니고, cooldown 경과 시 시작
-        if (attacking)
-            yield break;
+    private IEnumerator DoorAttackRoutine(DoorBrokenTest door)
+    {
+        if (door == null) yield break;
+        if (!IsDoorStillAttackable(door)) yield break;
 
         attacking = true;
         isBusy = true;
@@ -57,14 +53,169 @@ public class MonsterEnemy : EnemyBase
         agent.isStopped = true;
         agent.ResetPath();
 
-        // Idle 상태로 바라보기
         anim.ResetTrigger(AnimAttack);
+        anim.SetInteger(AnimState, 2);
+
+        float approachTimer = 0f;
+
+        while (approachTimer < approachTimeout)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            float dist = GetDistanceToDoorCollider(door);
+            float angle = GetAngleToDoorCollider(door);
+
+            if (dist <= doorAttackStartDistance && angle <= attackFaceAngle)
+                break;
+
+            Vector3 attackPos = GetDoorAttackPosition(door);
+
+            agent.isStopped = false;
+            SafeSetDestination(attackPos);
+            FaceDoorCollider(door);
+
+            approachTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!IsDoorStillAttackable(door))
+        {
+            EndDoorAttack();
+            yield break;
+        }
+
+        if (!IsReadyToAttackDoor(door, doorAttackStartDistance, attackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        float faceTimer = 0f;
+
+        while (faceTimer < 1.0f)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            FaceDoorCollider(door);
+
+            float dist = GetDistanceToDoorCollider(door);
+            float angle = GetAngleToDoorCollider(door);
+
+            if (dist <= doorAttackStartDistance + 0.2f && angle <= attackFaceAngle + 4f)
+                break;
+
+            faceTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!IsDoorStillAttackable(door))
+        {
+            EndDoorAttack();
+            yield break;
+        }
+
+        float finalAlignTimer = 0f;
+
+        while (finalAlignTimer < finalAlignTimeout)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            FaceDoorCollider(door);
+
+            if (IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+                break;
+
+            agent.isStopped = false;
+            SafeSetDestination(GetDoorAttackPosition(door));
+
+            finalAlignTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
         anim.SetInteger(AnimState, 0);
 
+        float idleTimer = 0f;
+
+        while (idleTimer < idleBeforeAttackTime)
+        {
+            if (!IsDoorStillAttackable(door))
+            {
+                EndDoorAttack();
+                yield break;
+            }
+
+            FaceDoorCollider(door);
+
+            idleTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!IsDoorStillAttackable(door))
+        {
+            EndDoorAttack();
+            yield break;
+        }
+
+        FaceDoorCollider(door);
+
+        if (!IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            nextPossibleAttackTime = Time.time + postAttackCooldown;
+            EndDoorAttack();
+            yield break;
+        }
+
+        anim.SetTrigger(AnimAttack);
+
+        yield return WaitAttackPhase(doorHitDelay, door);
+
+        if (door != null && !door.IsBroken() && IsReadyToAttackDoor(door, finalAttackDistance, finalAttackFaceAngle))
+        {
+            Debug.Log("Monster Door Hit");
+            door.BreakByEnemy(transform.position);
+        }
+
+        yield return WaitAttackPhase(attackEndDelay, door, true);
+
+        anim.SetInteger(AnimState, 0);
+        yield return WaitAttackPhase(postAttackIdleTime, door, true);
+
+        nextPossibleAttackTime = Time.time + postAttackCooldown;
+
+        EndDoorAttack();
+    }
+
+    IEnumerator WaitAttackPhase(float duration, DoorBrokenTest door, bool allowBrokenDoor = false)
+    {
         float timer = 0f;
 
-        // 0.5초 동안 문 방향으로 바라보기
-        while (timer < idleBeforeAttackTime)
+        while (timer < duration)
         {
             if (door == null)
             {
@@ -72,70 +223,126 @@ public class MonsterEnemy : EnemyBase
                 yield break;
             }
 
-            DoorClick currentClick = door.GetComponent<DoorClick>();
-            if (currentClick == null || currentClick.IsOpen() || currentClick.IsBroken() || door.IsBroken())
+            if (!allowBrokenDoor && !IsDoorStillAttackable(door))
             {
                 EndDoorAttack();
                 yield break;
             }
 
-            Vector3 dir = door.transform.position - transform.position;
-            dir.y = 0f;
-
-            if (dir.sqrMagnitude > 0.001f)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation,
-                    targetRot,
-                    Time.deltaTime * faceRotateSpeed
-                );
-            }
+            KeepAgentStoppedForAttack();
+            FaceDoorCollider(door);
 
             timer += Time.deltaTime;
             yield return null;
         }
+    }
 
-        // 최종 확인: 공격 직전 문이 닫혀 있고, 열려 있지 않은지 재확인
-        DoorClick finalClick = door.GetComponent<DoorClick>();
-        if (finalClick == null || finalClick.IsOpen() || finalClick.IsBroken() || door.IsBroken())
+    void KeepAgentStoppedForAttack()
+    {
+        agent.isStopped = true;
+        agent.ResetPath();
+    }
+
+    private bool IsDoorStillAttackable(DoorBrokenTest door)
+    {
+        if (door == null) return false;
+
+        DoorClick click = door.GetComponent<DoorClick>();
+        if (click == null) return false;
+        if (click.IsOpen()) return false;
+        if (click.IsBroken()) return false;
+        if (door.IsBroken()) return false;
+
+        return true;
+    }
+
+    private bool IsReadyToAttackDoor(DoorBrokenTest door, float maxDistance, float maxAngle)
+    {
+        if (!IsDoorStillAttackable(door)) return false;
+
+        float dist = GetDistanceToDoorCollider(door);
+        float angle = GetAngleToDoorCollider(door);
+
+        return dist <= maxDistance && angle <= maxAngle;
+    }
+
+    private Vector3 GetDoorAttackPosition(DoorBrokenTest door)
+    {
+        Vector3 doorPoint = GetDoorClosestPoint(door);
+        Vector3 dir = transform.position - doorPoint;
+        dir.y = 0f;
+
+        if (dir.sqrMagnitude <= 0.001f)
+            dir = -transform.forward;
+
+        Vector3 attackPos = doorPoint + dir.normalized * doorStopDistance;
+        attackPos.y = transform.position.y;
+
+        return attackPos;
+    }
+
+    private Vector3 GetDoorClosestPoint(DoorBrokenTest door)
+    {
+        Collider col = door.GetComponentInChildren<Collider>();
+
+        if (col != null)
         {
-            EndDoorAttack();
-            yield break;
+            Vector3 point = col.ClosestPoint(transform.position);
+            point.y = transform.position.y;
+            return point;
         }
 
-        // Attack 애니메이션 트리거
-        anim.SetTrigger(AnimAttack);
+        Vector3 fallback = door.transform.position;
+        fallback.y = transform.position.y;
+        return fallback;
+    }
 
-        // 공격 딜레이 기다린 뒤, 문 파괴 처리
-        yield return new WaitForSeconds(doorHitDelay);
+    private float GetDistanceToDoorCollider(DoorBrokenTest door)
+    {
+        Vector3 doorPoint = GetDoorClosestPoint(door);
+        Vector3 enemyPos = transform.position;
 
-        // 실제 파괴
-        if (door != null && !door.IsBroken())
-        {
-            door.HitDoor(transform.position);
-        }
+        doorPoint.y = enemyPos.y;
 
-        // Attack End Delay 대기
-        yield return new WaitForSeconds(attackEndDelay);
+        return Vector3.Distance(enemyPos, doorPoint);
+    }
 
-        // 공격 종료 후 다음 가능 시간 설정
-        nextPossibleAttackTime = Time.time + postAttackCooldown;
+    private void FaceDoorCollider(DoorBrokenTest door)
+    {
+        Vector3 doorPoint = GetDoorClosestPoint(door);
+        Vector3 dir = doorPoint - transform.position;
+        dir.y = 0f;
 
-        EndDoorAttack();
+        if (dir.sqrMagnitude <= 0.001f)
+            return;
+
+        Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, faceRotateSpeed * Time.deltaTime);
+    }
+
+    private float GetAngleToDoorCollider(DoorBrokenTest door)
+    {
+        Vector3 doorPoint = GetDoorClosestPoint(door);
+        Vector3 dir = doorPoint - transform.position;
+        dir.y = 0f;
+
+        if (dir.sqrMagnitude <= 0.001f)
+            return 0f;
+
+        return Vector3.Angle(transform.forward, dir.normalized);
     }
 
     private void EndDoorAttack()
     {
-        anim.SetInteger(AnimState, 2);
+        KeepAgentStoppedForAttack();
 
-        agent.isStopped = false;
-
-        if (player != null)
-            agent.SetDestination(player.position);
+        if (currentState == State.Chase)
+            anim.SetInteger(AnimState, 2);
 
         lockAnimator = false;
         isBusy = false;
         attacking = false;
+
+        agent.isStopped = false;
     }
 }
