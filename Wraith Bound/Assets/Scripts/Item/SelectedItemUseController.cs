@@ -13,6 +13,7 @@ public class SelectedItemUseController : MonoBehaviour
     private FlashlightEnergyController flashlightEnergy;
     private CamcorderEnergyController camcorderEnergy;
     private PassiveLanternController passiveLantern;
+    private InteractionCrosshairUI crosshairUI;
     private ActiveItem holdingActiveItem;
     private float holdTimer;
 
@@ -23,6 +24,12 @@ public class SelectedItemUseController : MonoBehaviour
         smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
         equipmentView = GetComponent<EquipmentViewController>();
         flashlightEnergy = GetComponent<FlashlightEnergyController>();
+
+        crosshairUI = GetComponent<InteractionCrosshairUI>();
+        if (crosshairUI == null)
+        {
+            crosshairUI = gameObject.AddComponent<InteractionCrosshairUI>();
+        }
 
         if (flashlightEnergy == null)
         {
@@ -207,6 +214,13 @@ public class SelectedItemUseController : MonoBehaviour
         }
 
         holdTimer += Time.deltaTime;
+
+        float progress = activeItemHoldTime > 0f ? holdTimer / activeItemHoldTime : 1f;
+        if (crosshairUI != null)
+        {
+            crosshairUI.SetActiveItemHoldProgress(Mathf.Clamp01(progress));
+        }
+
         if (holdTimer < activeItemHoldTime)
         {
             return;
@@ -227,6 +241,11 @@ public class SelectedItemUseController : MonoBehaviour
     {
         holdingActiveItem = null;
         holdTimer = 0f;
+
+        if (crosshairUI != null)
+        {
+            crosshairUI.SetActiveItemHoldProgress(0f);
+        }
     }
 
     private bool IsPointerOverUI()

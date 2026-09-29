@@ -38,6 +38,8 @@ public class PauseMenuController : MonoBehaviour
     private GameObject player;
     private CharacterController playerController;
     private readonly List<Behaviour> disabledBehaviours = new List<Behaviour>();
+    private readonly Dictionary<UniversalAdditionalCameraData, bool> cachedPostProcessingStates =
+        new Dictionary<UniversalAdditionalCameraData, bool>();
 
     void Awake()
     {
@@ -65,6 +67,12 @@ public class PauseMenuController : MonoBehaviour
                 PauseGame();
             }
         }
+    }
+
+    void OnDisable()
+    {
+        // 일시정지 중에 이 오브젝트가 비활성화·파괴돼도 카메라 설정이 남지 않도록 원복한다.
+        RestorePlayerCameraPostProcessing();
     }
 
     public void PauseGame()
@@ -100,6 +108,7 @@ public class PauseMenuController : MonoBehaviour
 
         isPaused = false;
         Time.timeScale = 1f;
+        RestorePlayerCameraPostProcessing();
         SetGameplayEnabled(true);
         SetPauseVisible(false);
         FadeBlur(0f);
@@ -136,6 +145,7 @@ public class PauseMenuController : MonoBehaviour
 
         Time.timeScale = 1f;
         SetBlurWeight(0f);
+        RestorePlayerCameraPostProcessing();
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else
@@ -148,6 +158,7 @@ public class PauseMenuController : MonoBehaviour
         isTransitioning = true;
         Time.timeScale = 1f;
         SetBlurWeight(0f);
+        RestorePlayerCameraPostProcessing();
         SetGameplayEnabled(true);
         SetPauseVisible(false);
 
@@ -162,6 +173,7 @@ public class PauseMenuController : MonoBehaviour
         isTransitioning = true;
         Time.timeScale = 1f;
         SetBlurWeight(0f);
+        RestorePlayerCameraPostProcessing();
         SetGameplayEnabled(true);
         SetPauseVisible(false);
 
@@ -199,6 +211,9 @@ public class PauseMenuController : MonoBehaviour
             return;
         }
 
+        // 이전 일시정지에서 남은 상태가 있으면 먼저 원복하고 다시 캐시한다.
+        RestorePlayerCameraPostProcessing();
+
         Camera[] cameras = player.GetComponentsInChildren<Camera>(true);
         foreach (Camera camera in cameras)
         {
@@ -208,11 +223,39 @@ public class PauseMenuController : MonoBehaviour
             }
 
             UniversalAdditionalCameraData cameraData = camera.GetUniversalAdditionalCameraData();
-            if (cameraData != null)
+            if (cameraData == null)
             {
-                cameraData.renderPostProcessing = true;
+                continue;
+            }
+
+            // Overlay 카메라(ItemViewCamera 등)에 포스트프로세싱을 켜면
+            // Base 카메라가 처리한 결과 위에 스택이 한 번 더 적용돼 화면이 어두워진다.
+            if (cameraData.renderType != CameraRenderType.Base)
+            {
+                continue;
+            }
+
+            cachedPostProcessingStates[cameraData] = cameraData.renderPostProcessing;
+            cameraData.renderPostProcessing = true;
+        }
+    }
+
+    private void RestorePlayerCameraPostProcessing()
+    {
+        if (cachedPostProcessingStates.Count == 0)
+        {
+            return;
+        }
+
+        foreach (KeyValuePair<UniversalAdditionalCameraData, bool> entry in cachedPostProcessingStates)
+        {
+            if (entry.Key != null)
+            {
+                entry.Key.renderPostProcessing = entry.Value;
             }
         }
+
+        cachedPostProcessingStates.Clear();
     }
 
     private void EnsureBlurVolume()
