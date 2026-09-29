@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorClick : MonoBehaviour
 {
@@ -47,6 +48,7 @@ public class DoorClick : MonoBehaviour
     public float pitchMax = 1.12f;
 
     private AudioSource audioSource;
+    private bool lastNavBlocked = true;
 
     public bool IsOpen()
     {
@@ -76,9 +78,10 @@ public class DoorClick : MonoBehaviour
         audioSource = gameObject.AddComponent<AudioSource>();
 
         if (viewCamera == null)
-        {
             viewCamera = Camera.main;
-        }
+
+        DoorNavMeshUtility.EnsureCarveObstacle(transform);
+        SyncNavMeshObstacle(true);
     }
 
     private void Update()
@@ -118,12 +121,25 @@ public class DoorClick : MonoBehaviour
 
             open = !open;
 
-           
-
             PlayDoorSound();
+            SyncNavMeshObstacle(true);
         }
 
         UpdateDoorMessage();
+        SyncNavMeshObstacle(false);
+    }
+
+    private void SyncNavMeshObstacle(bool force)
+    {
+        if (GetComponent<DoorNavMesh>() != null)
+            return;
+
+        bool blocked = !open && !IsBroken();
+        if (!force && blocked == lastNavBlocked)
+            return;
+
+        lastNavBlocked = blocked;
+        DoorNavMeshUtility.SetNavMeshBlocked(transform, blocked);
     }
 
     private bool WasInteractPressed()

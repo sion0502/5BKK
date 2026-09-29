@@ -3,7 +3,7 @@ using UnityEngine;
 public class MouseLook : MonoBehaviour
 {
     [Header("Look Settings")]
-    [SerializeField] private float mouseSensitivity;
+    [SerializeField] private float mouseSensitivity; // 마우스 민감도
     [SerializeField] private Transform playerBody; // 플레이어 최상위 객체 할당
 
     private float xRotation = 0f;

@@ -1,7 +1,10 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// 적 AI 진입점.
+/// EnemyState / EnemySense / EnemyCombat / NavMotor / EnemyDoorUtility + Patrol/
+/// </summary>
 public abstract class EnemyBase : MonoBehaviour
 {
     public enum State
@@ -15,161 +18,197 @@ public abstract class EnemyBase : MonoBehaviour
     protected static readonly int AnimAttack = Animator.StringToHash("Attack");
 
     [Header("References")]
-    [SerializeField] private MonsterFootstep footstep;
     [SerializeField] protected Monsters data;
-    [SerializeField] protected Transform player;
     [SerializeField] protected Transform eyePoint;
-    [SerializeField] protected AudioSource playerFootstepSource;
-    [SerializeField] protected CharacterController playerCharacterController;
-    [SerializeField] protected Rigidbody playerRigidbody;
+
+    [Header("Runtime Player Auto Find")]
+    protected string playerTag = "Player";
+
+    protected Transform player;
+    protected AudioSource playerFootstepSource;
+    protected CharacterController playerCharacterController;
+    protected Rigidbody playerRigidbody;
+    protected PlayerHidingController playerHidingController;
 
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
+    [SerializeField] protected bool debugStateLog = true;
+    [SerializeField] protected bool debugSenseLog = true;
+
+    [Header("Vision")]
+    [SerializeField] protected float viewAngle = 90f;
+    [SerializeField] protected LayerMask obstacleLayer;
+    [SerializeField] protected float playerDetectRadius = 0.35f;
 
     [Header("Door")]
     [SerializeField] protected LayerMask doorLayer;
     [SerializeField] protected float doorCheckHeight = 1.0f;
     [SerializeField] protected float patrolDoorFrontCheckDistance = 1.2f;
     [SerializeField] protected float pathDoorCheckRadius = 0.25f;
+    [SerializeField] protected float chaseDoorDetectDistance = 2.2f;
+    [SerializeField] protected float chaseDoorSearchRadius = 18f;
+    [SerializeField] protected float patrolDoorSearchRadius = 10f;
+    [SerializeField] protected float patrolDoorOpenDistance = 0.75f;
+    [SerializeField] protected float patrolDoorOpenFaceAngle = 20f;
+    [SerializeField] protected float patrolDoorPassThroughDistance = 1.5f;
+    [SerializeField] protected bool autoOpenDoorsOnPatrol = true;
 
     [Header("Patrol")]
+    [SerializeField] protected PatrolPointZone patrolPointZone;
     [SerializeField] protected float patrolReachDistance = 0.5f;
-    [SerializeField] protected float globalPatrolSampleRadius = 2.0f;
+    [SerializeField] protected float minWallClearance = 0.8f;
+
+    [Header("Obstacle Avoidance")]
+    [SerializeField] protected float obstacleCheckDistance = 1.2f;
+    [SerializeField] protected float obstacleCheckRadius = 0.35f;
+    [SerializeField] protected float obstacleStuckTime = 1.0f;
+    [SerializeField] protected float obstacleStuckSpeed = 0.08f;
+    [SerializeField] protected float obstacleSideStepDistance = 2.0f;
+    [SerializeField] protected float obstacleAvoidCooldown = 0.75f;
 
     [Header("Investigate")]
-    [SerializeField] protected float investigateRadius = 3f;
-    [SerializeField] protected float investigateDuration = 10f;
+    [SerializeField] protected float investigateRadius = 5f;
     [SerializeField] protected float investigateReachDistance = 0.6f;
     [SerializeField] protected float investigateStartDistance = 2.2f;
 
     [Header("Hearing")]
     [SerializeField] protected float minFootstepMoveSpeed = 0.15f;
+    [SerializeField] protected float footstepHearingMemory = 0.85f;
+
+    [Header("Hiding")]
+    [SerializeField] protected float hidingSeenMemoryTime = 0.75f;
+    [SerializeField] protected float playerCatchDistance = 1.1f;
+    [SerializeField] protected float playerContactKillDistance = 0.15f;
+
+    [Header("Hiding")]
+    // 숨어 있지만 숨을 참고 있지 않을 때, 이 거리 안의 괴물은 숨소리로 플레이어를 알아챕니다.
+    [SerializeField] protected float hidingBreathDetectRange = 4.5f;
 
     [Header("Sense Timing")]
     [SerializeField] protected float senseStartDelay = 0.5f;
 
+    [Header("Chase Optimization")]
+    [SerializeField] protected float chaseDestinationUpdateInterval = 0.15f;
+    [SerializeField] protected float chaseRepathDistance = 0.35f;
+
+    [Header("Log Timing")]
+    [SerializeField] protected float logInterval = 0.5f;
+
     protected NavMeshAgent agent;
     protected Animator anim;
+    protected Transform player;
 
-    protected State currentState;
-    protected Vector3 lastKnownPosition;
-    protected float lastDetectTime;
-    protected float investigateTimer;
+    protected string playerTag = "Player";
+    protected AudioSource playerFootstepSource;
+    protected CharacterController playerCharacterController;
+    protected Rigidbody playerRigidbody;
+    protected PlayerHidingController playerHidingController;
 
-    protected bool isBusy;
-    protected bool canDetectPlayer;
-    protected bool lockAnimator;
-    protected bool reachedLastKnownPosition;
+    readonly EnemyState _state = new EnemyState();
+    NavMotor _navMotor;
+    PatrolBehavior _patrol;
 
-    protected Vector3 currentPatrolDestination;
-    protected bool hasPatrolDestination;
+    internal EnemyState RuntimeState => _state;
+    internal EnemySense Sense { get; private set; }
+    internal EnemyCombat Combat { get; private set; }
+    internal NavMotor NavMotor => _navMotor;
+    internal PatrolBehavior Patrol => _patrol;
+    internal NavMeshAgent Agent => agent;
+    internal Animator Anim => anim;
+    internal Monsters Data => data;
+    internal Transform EyePoint => eyePoint;
+    internal int AnimStateHash => AnimState;
 
-    private bool investigateRoutineRunning;
-    private float nextSenseTime;
-    private float senseEnableTime;
-    private NavMeshTriangulation cachedTriangulation;
+    internal float ViewAngle => viewAngle;
+    internal float EyeFrontArcAngle => data != null ? data.eyeFrontArcAngle : 180f;
+    internal LayerMask ObstacleLayer => obstacleLayer;
+    internal LayerMask DoorLayer => doorLayer;
+    internal float PlayerDetectRadius => playerDetectRadius;
+    internal float DoorCheckHeight => doorCheckHeight;
+    internal float PathDoorCheckRadius => pathDoorCheckRadius;
+    internal float PatrolDoorFrontCheckDistance => patrolDoorFrontCheckDistance;
+    internal float ChaseDoorSearchRadius => chaseDoorSearchRadius;
+    internal float MinFootstepMoveSpeed => minFootstepMoveSpeed;
+    internal float FootstepHearingMemory => footstepHearingMemory;
+    internal float HidingSeenMemoryTime => hidingSeenMemoryTime;
+    internal float PlayerCatchDistance => playerCatchDistance;
+    internal float PlayerContactKillDistance => playerContactKillDistance;
+    internal float InvestigateRadius => investigateRadius;
+    internal float InvestigateReachDistance => investigateReachDistance;
+    internal float InvestigateStartDistance => investigateStartDistance;
+    internal float PatrolReachDistance => patrolReachDistance;
+    internal float MinWallClearance => minWallClearance;
 
-    protected virtual void Awake()
+    internal Transform Player
     {
-        agent = GetComponent<NavMeshAgent>();
-        anim = GetComponentInChildren<Animator>();
+        get => player;
+        set => player = value;
     }
 
-    protected virtual void Start()
+    internal string PlayerTag => playerTag;
+
+    internal CharacterController PlayerCharacterController
     {
-        if (agent == null)
-        {
-            Debug.LogError($"{name} : NavMeshAgent가 없습니다.");
-            enabled = false;
-            return;
-        }
-        if (footstep == null)
-            footstep = GetComponent<MonsterFootstep>();
+        get => playerCharacterController;
+        set => playerCharacterController = value;
+    }
 
-        if (anim == null)
-        {
-            Debug.LogError($"{name} : Animator가 없습니다.");
-            enabled = false;
-            return;
-        }
+    internal Rigidbody PlayerRigidbody
+    {
+        get => playerRigidbody;
+        set => playerRigidbody = value;
+    }
 
-        if (data == null)
-        {
-            Debug.LogError($"{name} : Monsters 데이터가 없습니다.");
-            enabled = false;
-            return;
-        }
+    internal AudioSource PlayerFootstepSource
+    {
+        get => playerFootstepSource;
+        set => playerFootstepSource = value;
+    }
 
-        if (player == null)
-        {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj != null)
-                player = playerObj.transform;
-        }
-
-        if (player == null)
-        {
-            Debug.LogError($"{name} : Player 태그 오브젝트를 찾지 못했습니다.");
-            enabled = false;
-            return;
-        }
-
-        if (eyePoint == null)
-            eyePoint = transform;
-
-        currentState = State.Patrol;
-        lastKnownPosition = transform.position;
-        lastDetectTime = -999f;
-        investigateTimer = 0f;
-        reachedLastKnownPosition = false;
-        hasPatrolDestination = false;
-
-        senseEnableTime = Time.time + senseStartDelay;
-
+    protected void SetupAgent()
+    {
         agent.isStopped = false;
         agent.speed = GetPatrolSpeed();
 
-        CacheTriangulation();
-        SetAnimatorByState();
-        SetNextGlobalPatrolDestination();
+        agent.autoBraking = true;
+        agent.autoRepath = true;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        agent.avoidancePriority = Random.Range(30, 60);
+
+        if (agent.radius < 0.35f)
+            agent.radius = 0.35f;
     }
 
-    protected virtual void Update()
+    protected void AutoFindPlayerReferences()
     {
-
-        if (footstep != null)
+        if (player == null)
         {
-            footstep.SetMoveState(
-                agent.velocity.magnitude,
-                currentState == State.Chase
-            );
+            GameObject taggedPlayer = GameObject.FindGameObjectWithTag(playerTag);
+            if (taggedPlayer != null)
+                player = taggedPlayer.transform;
+        }
+
+        if (player == null)
+        {
+            Collider[] hits = Physics.OverlapSphere(transform.position, 200f, data.playerLayer, QueryTriggerInteraction.Ignore);
+            if (hits.Length > 0)
+                player = hits[0].transform;
         }
 
         if (player == null)
             return;
 
-        if (!agent.isOnNavMesh)
-            return;
+        if (playerCharacterController == null)
+            playerCharacterController = player.GetComponent<CharacterController>();
 
-        UpdateSenses();
+        if (playerRigidbody == null)
+            playerRigidbody = player.GetComponent<Rigidbody>();
 
-        switch (currentState)
-        {
-            case State.Patrol:
-                UpdatePatrol();
-                break;
+        if (playerFootstepSource == null)
+            playerFootstepSource = player.GetComponentInChildren<AudioSource>();
 
-            case State.Chase:
-                UpdateChase();
-                break;
-
-            case State.Investigate:
-                UpdateInvestigate();
-                break;
-        }
-
-        if (!lockAnimator)
-            SetAnimatorByState();
+        if (playerHidingController == null)
+            playerHidingController = player.GetComponent<PlayerHidingController>();
     }
 
     protected void UpdateSenses()
@@ -184,8 +223,14 @@ public abstract class EnemyBase : MonoBehaviour
 
         nextSenseTime = Time.time + Mathf.Max(0.02f, data.checkInterval);
 
+        // 숨은 상태에서 숨 참기까지 성공 중이면 시야/소리 감지를 모두 차단합니다.
+        if (IsPlayerHiddenByHeldBreath())
+            return;
+
         bool sawPlayer = CheckVision();
-        bool heardPlayer = false;
+        // 숨 참기에 실패한 상태라면 일반 발소리와 별개로 숨소리 감지를 시도합니다.
+        bool heardBreathing = CheckHidingBreathExposure();
+        bool heardPlayer = CheckHearing() || heardBreathing;
 
         if (!sawPlayer)
             heardPlayer = CheckHearing();
@@ -196,16 +241,38 @@ public abstract class EnemyBase : MonoBehaviour
         canDetectPlayer = true;
         lastKnownPosition = player.position;
         lastDetectTime = Time.time;
-        reachedLastKnownPosition = false;
+
+        if (sawPlayer && heardPlayer)
+            LogSense("시야 + 소리 둘 다 감지");
+        else if (sawPlayer)
+            LogSense("시야만 감지");
+        else if (heardBreathing)
+            LogSense("숨 참기 실패 감지");
+        else if (heardPlayer)
+            LogSense("소리만 감지");
 
         if (currentState != State.Chase)
             ChangeState(State.Chase);
-    }
-
-    protected virtual bool CheckVision()
+    internal PlayerHidingController PlayerHidingController
     {
-        if (eyePoint == null || player == null)
-            return false;
+        get => playerHidingController;
+        set => playerHidingController = value;
+    }
+    internal float ChaseDestinationUpdateInterval => chaseDestinationUpdateInterval;
+    internal float ChaseRepathDistance => chaseRepathDistance;
+    internal float ObstacleCheckDistance => obstacleCheckDistance;
+    internal float ObstacleCheckRadius => obstacleCheckRadius;
+    internal float ObstacleStuckTime => obstacleStuckTime;
+    internal float ObstacleStuckSpeed => obstacleStuckSpeed;
+    internal float ObstacleSideStepDistance => obstacleSideStepDistance;
+    internal float ObstacleAvoidCooldown => obstacleAvoidCooldown;
+    internal bool DrawVisionDebug => drawVisionDebug;
+
+    protected State currentState
+    {
+        if (IsPlayerHiddenByHeldBreath()) return false;
+        if (player == null) return false;
+        if (eyePoint == null) return false;
 
         Vector3 eyePos = eyePoint.position;
         Vector3 targetPos = GetPlayerTargetPosition();
@@ -240,487 +307,351 @@ public abstract class EnemyBase : MonoBehaviour
             Debug.DrawRay(eyePos, dir * dist, Color.yellow, data.checkInterval);
 
         return false;
+        get => _state.CurrentState;
+        set => _state.CurrentState = value;
     }
 
-    protected virtual bool CheckHearing()
+    protected bool isBusy
     {
-        if (playerFootstepSource == null)
-            return false;
-
-        if (!playerFootstepSource.isPlaying)
-            return false;
-
-        if (!IsPlayerActuallyMoving())
-            return false;
+        if (IsPlayerHiddenByHeldBreath()) return false;
+        if (player == null) return false;
+        if (playerFootstepSource == null) return false;
+        if (!playerFootstepSource.isPlaying) return false;
+        if (!IsPlayerActuallyMoving()) return false;
 
         float dist = Vector3.Distance(transform.position, player.position);
         return dist <= data.hearingRange;
     }
 
+    protected bool IsPlayerHiddenByHeldBreath()
+    {
+        // 기존 isHiding만 보지 않고, PlayerHidingController가 계산한 최종 은신 상태를 사용합니다.
+        return playerHidingController != null &&
+            playerHidingController.IsHiddenFromEnemies;
+    }
+
+    protected bool CheckHidingBreathExposure()
+    {
+        // 숨는 장소에 들어가 있더라도 숨 참기 중이 아니면 가까운 괴물에게 들킬 수 있습니다.
+        if (player == null) return false;
+        if (playerHidingController == null) return false;
+        if (!playerHidingController.isHiding) return false;
+        if (playerHidingController.IsHiddenFromEnemies) return false;
+
+        float dist =
+            Vector3.Distance(
+                transform.position,
+                player.position);
+
+        return dist <= hidingBreathDetectRange;
+    }
+
     protected bool IsPlayerActuallyMoving()
-    {
-        if (playerCharacterController != null)
-        {
-            Vector3 v = playerCharacterController.velocity;
-            v.y = 0f;
-            return v.magnitude > minFootstepMoveSpeed;
-        }
-
-        if (playerRigidbody != null)
-        {
-            Vector3 v = playerRigidbody.linearVelocity;
-            v.y = 0f;
-            return v.magnitude > minFootstepMoveSpeed;
-        }
-
-        return false;
+        get => _state.IsBusy;
+        set => _state.IsBusy = value;
     }
 
-    protected virtual Vector3 GetPlayerTargetPosition()
+    protected bool canDetectPlayer
     {
-        Collider c = player.GetComponentInChildren<Collider>();
-        if (c != null)
-            return c.bounds.center;
-
-        return player.position + Vector3.up * 0.9f;
+        get => _state.CanDetectPlayer;
+        set => _state.CanDetectPlayer = value;
     }
 
-    protected bool IsPlayerTransform(Transform target)
+    protected bool lockAnimator
     {
-        if (target == null || player == null)
-            return false;
-
-        return target == player || target.IsChildOf(player) || player.IsChildOf(target);
+        get => _state.LockAnimator;
+        set => _state.LockAnimator = value;
     }
 
-    protected void UpdatePatrol()
+    protected bool doorSpecialAllowed
     {
-        if (isBusy)
-            return;
-
-        agent.speed = GetPatrolSpeed();
-        agent.isStopped = false;
-
-        if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
-        {
-            SetNextGlobalPatrolDestination();
-            return;
-        }
-
-        if (!hasPatrolDestination)
-        {
-            SetNextGlobalPatrolDestination();
-            return;
-        }
-
-        agent.SetDestination(currentPatrolDestination);
-
-        if (!HasReachedDestination(patrolReachDistance))
-            return;
-
-        SetNextGlobalPatrolDestination();
+        get => _state.DoorSpecialAllowed;
+        set => _state.DoorSpecialAllowed = value;
     }
 
-    protected void UpdateChase()
+    protected Vector3 lastKnownPosition
     {
-        if (isBusy)
-            return;
-
-        agent.speed = GetChaseSpeed();
-
-        HandleChaseSpecial();
-
-        if (isBusy)
-            return;
-
-        agent.isStopped = false;
-
-        if (canDetectPlayer)
-        {
-            agent.SetDestination(player.position);
-            return;
-        }
-
-        float lostTime = Time.time - lastDetectTime;
-
-        if (lostTime < 10f)
-        {
-            agent.SetDestination(lastKnownPosition);
-            return;
-        }
-
-        float distToLastKnown = Vector3.Distance(transform.position, lastKnownPosition);
-
-        if (distToLastKnown <= investigateStartDistance)
-        {
-            if (!investigateRoutineRunning)
-                StartCoroutine(StartInvestigate());
-        }
-        else
-        {
-            ReturnToPatrolRoute();
-        }
+        get => _state.LastKnownPosition;
+        set => _state.LastKnownPosition = value;
     }
 
-    protected IEnumerator StartInvestigate()
+    protected virtual void Awake()
     {
-        investigateRoutineRunning = true;
-        isBusy = true;
+        agent = GetComponent<NavMeshAgent>();
+        anim = GetComponentInChildren<Animator>();
 
-        agent.isStopped = true;
-        yield return new WaitForSeconds(0.15f);
+        if (eyePoint == null)
+            eyePoint = transform;
 
-        ChangeState(State.Investigate);
-        reachedLastKnownPosition = false;
-        investigateTimer = investigateDuration;
-
-        agent.speed = GetPatrolSpeed();
-        agent.isStopped = false;
-        agent.SetDestination(lastKnownPosition);
-
-        isBusy = false;
-        investigateRoutineRunning = false;
+        AutoAssignDoorLayer();
     }
 
-    protected void UpdateInvestigate()
+    protected virtual void Start()
     {
-        if (isBusy)
+        if (!ValidateComponents())
             return;
 
-        agent.speed = GetPatrolSpeed();
-        agent.isStopped = false;
+        ResolvePatrolPointZone();
+        InitState();
+        ApplyDataSettings();
+        AutoAssignDoorLayer();
+        SetupAgent();
+        InitPatrolRuntime();
 
-        if (IsClosedDoorDirectlyAhead(patrolDoorFrontCheckDistance))
-        {
-            ReturnToPatrolRoute();
-            return;
-        }
+        Sense = new EnemySense(this);
+        Combat = new EnemyCombat(this);
 
-        if (!reachedLastKnownPosition)
-        {
-            if (HasClosedDoorBetween(transform.position, lastKnownPosition))
-            {
-                ReturnToPatrolRoute();
-                return;
-            }
+        Sense.AutoFindPlayerReferences();
+        _state.WasPlayerHiding = playerHidingController != null && playerHidingController.isHiding;
+        Combat.TickAnimation();
+        SetNextGlobalPatDestination();
 
-            agent.SetDestination(lastKnownPosition);
+        LogAI("초기 상태: Patrol");
+    }
 
-            if (!HasReachedDestination(investigateReachDistance))
-                return;
-
-            reachedLastKnownPosition = true;
-            investigateTimer = investigateDuration;
-            SetRandomInvestigatePoint();
-            return;
-        }
-
-        investigateTimer -= Time.deltaTime;
-
-        if (investigateTimer <= 0f)
-        {
-            ReturnToPatrolRoute();
-            return;
-        }
-
-        if (!HasReachedDestination(investigateReachDistance))
+    protected virtual void Update()
+    {
+        if (PlayerDeathDebug.IsDead)
             return;
 
-        SetRandomInvestigatePoint();
-    }
-
-    protected void ReturnToPatrolRoute()
-    {
-        ChangeState(State.Patrol);
-
-        if (hasPatrolDestination)
-        {
-            agent.isStopped = false;
-            agent.speed = GetPatrolSpeed();
-            agent.SetDestination(currentPatrolDestination);
-        }
-        else
-        {
-            SetNextGlobalPatrolDestination();
-        }
-    }
-
-    protected void SetNextGlobalPatrolDestination()
-    {
-        if (!agent.isOnNavMesh)
+        if (eyePoint == null || agent == null || !agent.isOnNavMesh)
             return;
 
-        CacheTriangulation();
+        if (player == null)
+            Sense.AutoFindPlayerReferences();
 
-        for (int i = 0; i < 40; i++)
-        {
-            if (!TryGetRandomGlobalNavMeshPoint(out Vector3 point))
-                continue;
+        Sense.CheckPlayerCatchDistance();
+        Sense.TickHiding();
+        Sense.Tick();
 
-            if (HasClosedDoorBetween(transform.position, point))
-                continue;
-
-            currentPatrolDestination = point;
-            hasPatrolDestination = true;
-
-            agent.isStopped = false;
-            agent.SetDestination(currentPatrolDestination);
-            return;
-        }
-
-        hasPatrolDestination = false;
-        agent.isStopped = true;
-    }
-
-    protected void SetRandomInvestigatePoint()
-    {
-        if (!agent.isOnNavMesh)
-            return;
-
-        for (int i = 0; i < 20; i++)
-        {
-            Vector3 randomDir = Random.insideUnitSphere * investigateRadius;
-            randomDir.y = 0f;
-
-            Vector3 randomPos = lastKnownPosition + randomDir;
-
-            if (!NavMesh.SamplePosition(randomPos, out NavMeshHit hit, investigateRadius, NavMesh.AllAreas))
-                continue;
-
-            if (HasClosedDoorBetween(transform.position, hit.position))
-                continue;
-
-            agent.isStopped = false;
-            agent.SetDestination(hit.position);
-            return;
-        }
-
-        agent.isStopped = false;
-        agent.SetDestination(lastKnownPosition);
-    }
-
-    protected void CacheTriangulation()
-    {
-        cachedTriangulation = NavMesh.CalculateTriangulation();
-    }
-
-    protected bool TryGetRandomGlobalNavMeshPoint(out Vector3 result)
-    {
-        result = transform.position;
-
-        if (cachedTriangulation.vertices == null || cachedTriangulation.vertices.Length < 3)
-            return false;
-
-        for (int attempt = 0; attempt < 20; attempt++)
-        {
-            int idx = Random.Range(0, cachedTriangulation.vertices.Length);
-            Vector3 basePoint = cachedTriangulation.vertices[idx];
-
-            Vector3 randomOffset = new Vector3(
-                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius),
-                0f,
-                Random.Range(-globalPatrolSampleRadius, globalPatrolSampleRadius)
-            );
-
-            Vector3 samplePoint = basePoint + randomOffset;
-
-            if (NavMesh.SamplePosition(samplePoint, out NavMeshHit hit, globalPatrolSampleRadius + 1f, NavMesh.AllAreas))
-            {
-                result = hit.position;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    protected bool HasReachedDestination(float extraDistance)
-    {
-        if (agent.pathPending)
-            return false;
-
-        if (!agent.hasPath)
-            return true;
-
-        float reachDistance = agent.stoppingDistance + extraDistance;
-        return agent.remainingDistance <= reachDistance;
-    }
-
-    protected bool HasClosedDoorBetween(Vector3 from, Vector3 to)
-    {
-        Vector3 start = from + Vector3.up * doorCheckHeight;
-        Vector3 end = to + Vector3.up * 0.2f;
-        Vector3 dir = end - start;
-        float dist = dir.magnitude;
-
-        if (dist <= 0.1f)
-            return false;
-
-        dir.Normalize();
-
-        RaycastHit[] hits = Physics.SphereCastAll(
-            start,
-            pathDoorCheckRadius,
-            dir,
-            dist,
-            doorLayer,
-            QueryTriggerInteraction.Collide
-        );
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            DoorClick door = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (door == null)
-                continue;
-
-            if (!door.IsOpen() && !door.IsBroken())
-                return true;
-        }
-
-        return false;
-    }
-
-    protected bool IsClosedDoorDirectlyAhead(float distance)
-    {
-        Vector3 origin = transform.position + Vector3.up * doorCheckHeight;
-        Vector3 dir = transform.forward;
-
-        if (!Physics.Raycast(origin, dir, out RaycastHit hit, distance, doorLayer, QueryTriggerInteraction.Collide))
-            return false;
-
-        DoorClick door = hit.collider.GetComponentInParent<DoorClick>();
-        if (door == null)
-            return false;
-
-        return !door.IsOpen() && !door.IsBroken();
-    }
-
-    protected DoorBrokenTest GetClosedDoorOnChasePath(float distance)
-    {
-        Vector3 origin = transform.position + Vector3.up * doorCheckHeight;
-        Vector3 dir = GetChaseMoveDirection();
-
-        if (dir.sqrMagnitude <= 0.0001f)
-            return null;
-
-        RaycastHit[] hits = Physics.SphereCastAll(
-            origin,
-            0.25f,
-            dir,
-            distance,
-            doorLayer,
-            QueryTriggerInteraction.Collide
-        );
-
-        float nearest = float.MaxValue;
-        DoorBrokenTest result = null;
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            DoorClick click = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (click == null)
-                continue;
-
-            if (click.IsOpen() || click.IsBroken())
-                continue;
-
-            DoorBrokenTest broken = hits[i].collider.GetComponentInParent<DoorBrokenTest>();
-            if (broken == null || broken.IsBroken())
-                continue;
-
-            if (hits[i].distance < nearest)
-            {
-                nearest = hits[i].distance;
-                result = broken;
-            }
-        }
-
-        return result;
-    }
-
-    protected Vector3 GetChaseMoveDirection()
-    {
-        if (agent != null && agent.hasPath)
-        {
-            Vector3 dir = agent.steeringTarget - transform.position;
-            dir.y = 0f;
-
-            if (dir.sqrMagnitude > 0.01f)
-                return dir.normalized;
-        }
-
-        if (player != null)
-        {
-            Vector3 dir = player.position - transform.position;
-            dir.y = 0f;
-
-            if (dir.sqrMagnitude > 0.01f)
-                return dir.normalized;
-        }
-
-        Vector3 forward = transform.forward;
-        forward.y = 0f;
-        return forward.normalized;
-    }
-
-    protected void ChangeState(State nextState)
-    {
-        if (currentState == nextState)
-            return;
-
-        currentState = nextState;
-
-        switch (currentState)
+        switch (_state.CurrentState)
         {
             case State.Patrol:
-                agent.speed = GetPatrolSpeed();
+                UpdatePatrol();
                 break;
 
             case State.Chase:
-                agent.speed = GetChaseSpeed();
+                Combat.TickChase();
                 break;
 
             case State.Investigate:
-                agent.speed = GetPatrolSpeed();
+                Combat.TickInvestigate();
                 break;
         }
 
-        if (!lockAnimator)
-            SetAnimatorByState();
+        Combat.TickObstacleAvoidance();
+
+        if (!_state.LockAnimator)
+            Combat.TickAnimation();
     }
 
-    protected void SetAnimatorByState()
+    protected virtual void OnCollisionEnter(Collision collision)
     {
+        if (Sense == null || !Sense.IsPlayerContact(collision.collider))
+            return;
+
+        if (_state.CurrentState != State.Chase && !_state.HiddenKillTargetActive)
+            return;
+
+        Sense.TryKillOnColliderTouch();
+    }
+
+    bool ValidateComponents()
+    {
+        if (agent == null)
+        {
+            Debug.LogError($"{name} : NavMeshAgent가 없습니다.");
+            enabled = false;
+            return false;
+        }
+
         if (anim == null)
-            return;
-
-        switch (currentState)
         {
-            case State.Patrol:
-                anim.SetInteger(AnimState, 1);
+            Debug.LogError($"{name} : Animator가 없습니다.");
+            enabled = false;
+            return false;
+        }
+
+        if (data == null)
+        {
+            Debug.LogError($"{name} : Monsters 데이터가 없습니다.");
+            enabled = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    void InitState()
+    {
+        _state.CurrentState = State.Patrol;
+        _state.LastKnownPosition = transform.position;
+        _state.LastChaseDestination = transform.position;
+        _state.LastObstacleCheckPosition = transform.position;
+        _state.SenseEnableTime = Time.time + senseStartDelay;
+    }
+
+    void InitPatrolRuntime()
+    {
+        _navMotor = new NavMotor(agent);
+
+        PatrolPointSelector pointSelector = null;
+        if (patrolPointZone != null && patrolPointZone.HasPoints)
+        {
+            pointSelector = new PatrolPointSelector(
+                transform,
+                _navMotor,
+                patrolPointZone,
+                autoOpenDoorsOnPatrol,
+                doorLayer
+            );
+        }
+
+        PatrolPlanner planner = new PatrolPlanner(_navMotor, pointSelector);
+
+        PatrolDoorService doorService = new PatrolDoorService(
+            transform,
+            _navMotor,
+            planner,
+            doorLayer,
+            patrolDoorOpenDistance
+        );
+
+        _patrol = new PatrolBehavior(_navMotor, planner, doorService, patrolReachDistance);
+    }
+
+    void UpdatePatrol()
+    {
+        if (_state.IsBusy) return;
+
+        LogAIThrottled("순찰 중");
+
+        float patrolSpeed = data.moveSpeed * 0.5f;
+
+        switch (_patrol.Update(patrolSpeed, autoOpenDoorsOnPatrol))
+        {
+            case PatrolBehavior.PatrolUpdateResult.ReachedDestination:
+                LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
+                SetNextGlobalPatDestination();
                 break;
 
-            case State.Chase:
-                anim.SetInteger(AnimState, 2);
+            case PatrolBehavior.PatrolUpdateResult.NeedDestination:
+                LogAI("순찰 목적지 선택");
+                SetNextGlobalPatDestination();
                 break;
 
-            case State.Investigate:
-                anim.SetInteger(AnimState, 1);
+            case PatrolBehavior.PatrolUpdateResult.HandlingDoor:
+                LogAI("순찰 중 닫힌 문 자동 열기");
+                break;
+
+            case PatrolBehavior.PatrolUpdateResult.StuckNeedRepath:
+                LogAI("벽/코너 막힘 → 새 순찰 목적지 선택");
+                SetNextGlobalPatDestination();
                 break;
         }
+
+        SyncPatrolDestinationFromRuntime();
     }
 
-    protected float GetPatrolSpeed()
+    internal void SetNextGlobalPatDestination()
     {
-        return data.moveSpeed * 0.5f;
+        if (!agent.isOnNavMesh) return;
+
+        _state.HasPatDestination = _patrol.PickRandomDestination();
+        if (_state.HasPatDestination)
+        {
+            _state.CurrentPatrolDestination = _patrol.CurrentDestination;
+            agent.isStopped = false;
+            _navMotor?.ResetProgressTracking();
+            return;
+        }
+
+        agent.ResetPath();
+        agent.isStopped = true;
     }
 
-    protected float GetChaseSpeed()
+    internal void SyncPatrolDestinationFromRuntime()
     {
-        return data.moveSpeed;
+        _state.HasPatDestination = _patrol.HasDestination;
+        _state.CurrentPatrolDestination = _patrol.CurrentDestination;
     }
 
-    protected virtual void HandleChaseSpecial()
+    void SetupAgent()
     {
+        agent.isStopped = false;
+        agent.speed = data.moveSpeed * 0.5f;
+        agent.autoBraking = true;
+        agent.autoRepath = true;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        agent.avoidancePriority = Random.Range(30, 60);
+    }
+
+    void ApplyDataSettings()
+    {
+        viewAngle = data.viewAngle;
+
+        if (data.obstacleLayer.value != 0)
+            obstacleLayer = data.obstacleLayer;
+    }
+
+    void ResolvePatrolPointZone()
+    {
+        if (patrolPointZone != null)
+            return;
+
+        patrolPointZone = FindFirstObjectByType<PatrolPointZone>();
+    }
+
+    void AutoAssignDoorLayer()
+    {
+        int layer = LayerMask.NameToLayer("Door");
+        if (layer < 0)
+            return;
+
+        if (doorLayer.value == 0)
+            doorLayer = 1 << layer;
+
+        EnemyDoorUtility.EnsureDoorsUseLayer(layer);
+    }
+
+    protected internal virtual Vector3 DetectPlayerPosition()
+    {
+        if (player != null)
+            return player.position;
+
+        return _state.LastKnownPosition;
+    }
+
+    protected bool SafeSetDestination(Vector3 target) => Combat.SafeSetDestination(target);
+
+    protected DoorBrokenTest GetClosedDoorOnChasePath(float distance) =>
+        Combat.GetClosedDoorOnChasePath(distance);
+
+    protected internal virtual void HandleChaseSpecial()
+    {
+    }
+
+    internal void LogAI(string message)
+    {
+        if (!debugStateLog) return;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    internal void LogSenseThrottled(string message)
+    {
+        if (!debugSenseLog) return;
+        if (Time.time < _state.NextSenseLogTime) return;
+
+        _state.NextSenseLogTime = Time.time + logInterval;
+        Debug.Log($"[{name}] {message}");
+    }
+
+    internal void LogAIThrottled(string message)
+    {
+        if (!debugStateLog) return;
+        if (Time.time < _state.NextLogTime) return;
+
+        _state.NextLogTime = Time.time + logInterval;
+        Debug.Log($"[{name}] {message}");
     }
 }
