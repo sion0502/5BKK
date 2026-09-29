@@ -18,6 +18,7 @@ public class PlayerStatusHudUI : MonoBehaviour
     [Header("References")]
     [SerializeField] private PlayerConditions conditions;
     [SerializeField] private PlayerController playerController;
+    [SerializeField] private PlayerHidingController hidingController;
 
     [Header("Health (bottom-left)")]
     [SerializeField] private Vector2 healthAnchoredPosition = new Vector2(24f, 24f);
@@ -28,6 +29,11 @@ public class PlayerStatusHudUI : MonoBehaviour
     [SerializeField] private Vector2 staminaBarSize = new Vector2(360f, 14f);
     [SerializeField] private float staminaFadeOutDuration = 0.5f;
 
+    [Header("Breath (shown while hiding)")]
+    // 숨는 중에만 표시되는 숨 참기 게이지 위치와 크기입니다.
+    [SerializeField] private Vector2 breathAnchoredPosition = new Vector2(0f, 58f);
+    [SerializeField] private Vector2 breathBarSize = new Vector2(320f, 12f);
+
     private TextMeshProUGUI healthValueText;
     private GameObject staminaRoot;
     private CanvasGroup staminaCanvasGroup;
@@ -36,6 +42,11 @@ public class PlayerStatusHudUI : MonoBehaviour
     private GameObject staminaFillGo;
     private Image staminaFillImage;
     private Coroutine staminaFadeCoroutine;
+    private GameObject breathRoot;
+    private GameObject breathTrackGo;
+    private RectTransform breathFillRect;
+    private GameObject breathFillGo;
+    private Image breathFillImage;
 
     void Awake()
     {
@@ -49,9 +60,15 @@ public class PlayerStatusHudUI : MonoBehaviour
             playerController = FindFirstObjectByType<PlayerController>();
         }
 
+        if (hidingController == null)
+        {
+            hidingController = FindFirstObjectByType<PlayerHidingController>();
+        }
+
         EnsureHudRoot();
         BuildHealthUI();
         BuildStaminaUI();
+        BuildBreathUI();
     }
 
     void Update()
@@ -63,6 +80,7 @@ public class PlayerStatusHudUI : MonoBehaviour
 
         UpdateHealthUI();
         UpdateStaminaUI();
+        UpdateBreathUI();
     }
 
     private void EnsureHudRoot()
@@ -152,6 +170,47 @@ public class PlayerStatusHudUI : MonoBehaviour
         staminaFillImage.raycastTarget = false;
 
         staminaRoot.SetActive(false);
+    }
+
+    private void BuildBreathUI()
+    {
+        // 기존 HUD 프리팹을 크게 수정하지 않기 위해 런타임에 숨 게이지 UI를 구성합니다.
+        breathRoot = CreatePanel(
+            "BreathPanel",
+            new Vector2(0.5f, 0f),
+            new Vector2(0.5f, 0f),
+            new Vector2(0.5f, 0f),
+            breathAnchoredPosition);
+
+        breathTrackGo = new GameObject("BreathTrack");
+        breathTrackGo.transform.SetParent(breathRoot.transform, false);
+
+        RectTransform trackRect = breathTrackGo.AddComponent<RectTransform>();
+        trackRect.anchorMin = new Vector2(0.5f, 0.5f);
+        trackRect.anchorMax = new Vector2(0.5f, 0.5f);
+        trackRect.pivot = new Vector2(0.5f, 0.5f);
+        trackRect.anchoredPosition = Vector2.zero;
+        trackRect.sizeDelta = breathBarSize;
+
+        Image trackImage = breathTrackGo.AddComponent<Image>();
+        trackImage.color = new Color(0f, 0f, 0f, 0.25f);
+        trackImage.raycastTarget = false;
+
+        breathFillGo = new GameObject("BreathFill");
+        breathFillGo.transform.SetParent(breathTrackGo.transform, false);
+
+        breathFillRect = breathFillGo.AddComponent<RectTransform>();
+        breathFillRect.anchorMin = new Vector2(0.5f, 0.5f);
+        breathFillRect.anchorMax = new Vector2(0.5f, 0.5f);
+        breathFillRect.pivot = new Vector2(0.5f, 0.5f);
+        breathFillRect.anchoredPosition = Vector2.zero;
+        breathFillRect.sizeDelta = breathBarSize;
+
+        breathFillImage = breathFillGo.AddComponent<Image>();
+        breathFillImage.color = GetBreathColor(1f);
+        breathFillImage.raycastTarget = false;
+
+        breathRoot.SetActive(false);
     }
 
     private void UpdateHealthUI()
@@ -244,6 +303,73 @@ public class PlayerStatusHudUI : MonoBehaviour
                 ? conditions.GetStaminaBarColor()
                 : PlayerConditions.EvaluateStaminaBarColor(ratio);
         }
+    }
+
+    private void UpdateBreathUI()
+    {
+        if (breathRoot == null || breathFillRect == null)
+        {
+            return;
+        }
+
+        if (hidingController == null)
+        {
+            hidingController = FindFirstObjectByType<PlayerHidingController>();
+        }
+
+        bool wantsVisible =
+            hidingController != null &&
+            hidingController.isHiding;
+
+        // 숨는 장소 안에 있을 때만 숨 게이지를 보여줍니다.
+        breathRoot.SetActive(wantsVisible);
+
+        if (!wantsVisible)
+        {
+            return;
+        }
+
+        ApplyBreathFillWidth(hidingController.BreathRatio);
+    }
+
+    private void ApplyBreathFillWidth(float ratio)
+    {
+        ratio = Mathf.Clamp01(ratio);
+        breathTrackGo.SetActive(true);
+
+        if (ratio <= 0.001f)
+        {
+            breathFillGo.SetActive(false);
+            breathFillRect.sizeDelta = Vector2.zero;
+            return;
+        }
+
+        breathFillGo.SetActive(true);
+        breathFillRect.sizeDelta = new Vector2(breathBarSize.x * ratio, breathBarSize.y);
+
+        if (breathFillImage != null)
+        {
+            breathFillImage.color = GetBreathColor(ratio);
+        }
+    }
+
+    private Color GetBreathColor(float ratio)
+    {
+        // 게이지가 낮을수록 빨간색에 가까워져 위험 상태를 직관적으로 보여줍니다.
+        Color calm = new Color(0.45f, 0.9f, 1f, 0.85f);
+        Color warning = new Color(1f, 0.92f, 0.2f, 0.85f);
+        Color danger = new Color(1f, 0.25f, 0.2f, 0.85f);
+
+        ratio = Mathf.Clamp01(ratio);
+
+        if (ratio >= 0.35f)
+        {
+            float t = (ratio - 0.35f) / 0.65f;
+            return Color.Lerp(warning, calm, t);
+        }
+
+        float lowT = ratio / 0.35f;
+        return Color.Lerp(danger, warning, lowT);
     }
 
     private IEnumerator FadeOutStaminaBar()

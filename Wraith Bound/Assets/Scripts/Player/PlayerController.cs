@@ -45,14 +45,14 @@ public class PlayerController : MonoBehaviour
     private float targetCameraHeight; // 목표 카메라 높이
 
     [Header("Ground Check Settings")]
-    [SerializeField] private float groundCheckOffset = 0.05f; // 캐릭터 컨트롤러 하단에서 시작할 오프셋
-    [SerializeField] private float groundCheckDistance = 0.15f; // 감지 레이 길이
-    [SerializeField] private float groundSphereRadius = 0.28f; // SphereCast 사용 시 반지름 (컨트롤러 반경보다 약간 작게 설정)
+    [SerializeField] private float groundCheckOffset = 0.05f; // 발 위치보다 살짝 위에서 Raycast를 시작하기 위한 오프셋
+    [SerializeField] private float groundCheckDistance = 0.15f; // 발 아래로 검사할 Raycast 길이
+    [SerializeField] private float groundSphereRadius = 0.28f; // 중앙/앞/뒤/좌/우 Raycast 간격
 
     [Header("Ceiling Check Settings")]
-    [SerializeField] private float ceilingCheckOffset = 0.05f; // 캐릭터 컨트롤러 상단에서 시작할 오프셋
-    [SerializeField] private float ceilingCheckDistance = 0.15f; // 감지 레이 길이
-    [SerializeField] private float ceilingSphereRadius = 0.28f;
+    [SerializeField] private float ceilingCheckOffset = 0.05f; // 머리 위치보다 살짝 아래에서 Raycast를 시작하기 위한 오프셋
+    [SerializeField] private float ceilingCheckDistance = 0.15f; // 일어설 공간 위쪽 여유 검사 길이
+    [SerializeField] private float ceilingSphereRadius = 0.28f; // 중앙/앞/뒤/좌/우 Raycast 간격
 
     [Header("References")]
     private PlayerConditions conditions; // PlayerConditions 스크립트 가져오기
@@ -60,11 +60,15 @@ public class PlayerController : MonoBehaviour
     public Transform cameraTransform; // 1인칭 카메라 할당
     private Vector3 velocity; // 평면 플레이어 속도
     private Vector3 horizontalVelocity; // 수직 플레이어 속도(낙하 속도)
-    public LayerMask ceilingCheckLayer; // 천장 충돌을 체크할 레이어
-    public LayerMask groundMask; // 지면 검사를 체크할 레이어
+    private readonly RaycastHit[] checkHits = new RaycastHit[8];
 
     void Reset()
     {
+        controller = GetComponent<CharacterController>();
+
+        if (controller == null)
+            return;
+
         // 기본값 세팅 (기본 CharacterController radius인 0.5보다 작게 세팅하여 벽면 마찰 간섭 최소화)
         groundSphereRadius = controller.radius * 0.9f;
         ceilingSphereRadius = controller.radius * 0.9f;
@@ -100,40 +104,28 @@ public class PlayerController : MonoBehaviour
 
     private void CheckGround()
     {
-        /*
-        // CharacterController의 실제 바닥 중심 좌표 계산 (스케일 및 피벗 오프셋 반영)
-        Vector3 controllerBottom = transform.position
-                                   + transform.up * (controller.center.y - (controller.height * 0.5f));
+        // CharacterController의 실제 발 위치를 기준으로 Raycast를 아래 방향으로 쏩니다.
+        Vector3 controllerBottom =
+            transform.position +
+            transform.up * (controller.center.y - (controller.height * 0.5f));
 
-        // Character Controller 자체 스킨 너비(Skin Width)보다 약간 위에서 발사하도록 시작점 오프셋 적용
-        Vector3 rayStartPoint = controllerBottom + transform.up * groundCheckOffset;
+        Vector3 rayOrigin =
+            controllerBottom +
+            transform.up * groundCheckOffset;
 
-        // SphereCast를 사용하여 경사면 및 모서리 바닥까지 정확하게 커버
-        bool hit = Physics.SphereCast(
-            rayStartPoint,
-            groundSphereRadius,
-            -transform.up,
-            out _groundHit,
-            groundCheckDistance,
-            groundLayer,
-            QueryTriggerInteraction.Ignore
-        );
+        float rayDistance =
+            groundCheckOffset +
+            groundCheckDistance;
 
-        return hit;
+        float raySpread =
+            GetCheckRaySpread(groundSphereRadius);
 
-        */
-
-        Vector3 origin = transform.position + Vector3.up * groundCheckDistance;
-        float groundCheckRadius = controller.radius * 0.85f;
-
-        // SphereCast는 구체를 방향으로 쏘면서 충돌을 찾는데, '이미 접속 중인 지면'에 대한 검사에서 오류가 발생할 수 있음
-        // 따라서 CheckSphere를 사용함
-        isGrounded = Physics.CheckSphere(
-            origin,
-            groundCheckRadius,
-            groundMask,
-            QueryTriggerInteraction.Ignore
-        );
+        isGrounded =
+            CheckAnyObjectRayPattern(
+                rayOrigin,
+                -transform.up,
+                rayDistance,
+                raySpread);
 
         controller.stepOffset = isGrounded ? 0.3f : 0f; // 지상에서는 기본 stepOffset 값으로, 공중에서는 stepOffset 값을 0으로 설정하여 벽에 걸리는 것을 방지
     }
@@ -199,6 +191,15 @@ public class PlayerController : MonoBehaviour
             {
                 isCrouching = true; // 강제 유지
             }
+        }
+
+        // 일어서는 전환 중 뒤늦게 천장이 감지되면 기존 웅크리기 유지 로직처럼 다시 웅크리게 합니다.
+        if (!isCrouching &&
+            !Input.GetKey(KeyCode.LeftControl) &&
+            controller.height < normalHeight - 0.02f &&
+            !CheckCeiling())
+        {
+            isCrouching = true;
         }
 
         if (isCrouching)
@@ -296,38 +297,113 @@ public class PlayerController : MonoBehaviour
     // 머리 위에 장애물이 있는지 확인하여 일어설 수 있는지 체크
     private bool CheckCeiling()
     {
-        // 벽면 긁힘 등 미세한 오차로 인해 못 일어나는 버그를 방지하기 위해 반경을 90%로 줄임
-        float checkRadius = controller.radius * 0.9f;
-        // 일어섰을 때 캡슐의 중심
-        Vector3 standCenter = transform.position + Vector3.up * (normalHeight * 0.5f);
-        // 일어섰을 때 캡슐의 하단 구체 중심 (발바닥에서 반경만큼 위)
-        Vector3 bottom = standCenter + Vector3.down * ((normalHeight * 0.5f) - controller.radius);
-        // 일어섰을 때 캡슐의 상단 구체 중심 (원래 키에서 반경만큼 아래)
-        Vector3 top = standCenter + Vector3.up * ((normalHeight * 0.5f) - controller.radius);
-        // Physics.CheckCapsule은 해당 영역에 지정된 레이어의 콜라이더가 겹치면 true를 반환
-        bool hitCeiling = Physics.CheckCapsule(bottom, top, checkRadius, ceilingCheckLayer, QueryTriggerInteraction.Ignore);
-        return !hitCeiling; 
+        // 웅크리기 중 controller.height와 controller.center가 계속 변하므로,
+        // 천장 검사는 현재 콜라이더 상태를 보지 않고 transform.position을 발 위치로 간주해 고정 높이로 검사합니다.
+        float controllerRadius = controller != null ? controller.radius : 0.5f;
+        Vector3 footPosition = transform.position;
+        Vector3 rayOrigin = footPosition + transform.up * (controllerRadius + ceilingCheckOffset);
+        float rayDistance = Mathf.Max(0f, normalHeight - controllerRadius + ceilingCheckDistance);
 
-        /*
-        // CharacterController의 실제 천장 중심 좌표 계산
-        Vector3 controllerTop = transform.position
-                                 + transform.up * (controller.center.y + (controller.height * 0.5f));
+        float raySpread =
+            GetCeilingRaySpread();
 
-        // 머리 상단 오프셋 아래에서 시작하여 위쪽으로 발사
-        Vector3 rayStartPoint = controllerTop - transform.up * ceilingCheckOffset;
+        hitCeiling =
+            CheckAnyObjectRayPattern(
+                rayOrigin,
+                transform.up,
+                rayDistance,
+                raySpread);
 
-        bool hit = Physics.SphereCast(
-            rayStartPoint,
-            ceilingSphereRadius,
-            transform.up,
-            out _ceilingHit,
-            ceilingCheckDistance,
-            ceilingLayer,
-            QueryTriggerInteraction.Ignore
-        );
+        return !hitCeiling;
+    }
 
-        return hit;
-        */
+    private float GetCheckRaySpread(float configuredSpread)
+    {
+        // Raycast가 벽을 긁어서 오탐하는 일을 줄이기 위해 컨트롤러 반경보다 살짝 안쪽만 검사합니다.
+        float maxSpread =
+            controller != null
+                ? controller.radius * 0.85f
+                : configuredSpread;
+
+        return Mathf.Clamp(configuredSpread, 0f, maxSpread);
+    }
+
+    private float GetCeilingRaySpread()
+    {
+        // 일어서기 검사는 기존 CheckCapsule처럼 몸통 반경 대부분을 검사해야 머리 위 장애물을 놓치지 않습니다.
+        float maxSpread =
+            controller != null
+                ? controller.radius * 0.9f
+                : ceilingSphereRadius;
+
+        float requestedSpread =
+            Mathf.Max(ceilingSphereRadius, maxSpread);
+
+        return Mathf.Clamp(requestedSpread, 0f, maxSpread);
+    }
+
+    private bool CheckAnyObjectRayPattern(
+        Vector3 centerOrigin,
+        Vector3 direction,
+        float distance,
+        float spread)
+    {
+        if (RaycastHitsBlockingObject(centerOrigin, direction, distance))
+            return true;
+
+        if (spread <= 0.001f)
+            return false;
+
+        Vector3 rightOffset = transform.right * spread;
+        Vector3 forwardOffset = transform.forward * spread;
+        Vector3 rightForwardOffset = (transform.right + transform.forward).normalized * spread;
+        Vector3 rightBackOffset = (transform.right - transform.forward).normalized * spread;
+
+        return
+            RaycastHitsBlockingObject(centerOrigin + rightOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin - rightOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin + forwardOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin - forwardOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin + rightForwardOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin - rightForwardOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin + rightBackOffset, direction, distance) ||
+            RaycastHitsBlockingObject(centerOrigin - rightBackOffset, direction, distance);
+    }
+
+    private bool RaycastHitsBlockingObject(
+        Vector3 origin,
+        Vector3 direction,
+        float distance)
+    {
+        int hitCount =
+            Physics.RaycastNonAlloc(
+                origin,
+                direction,
+                checkHits,
+                distance,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hitCollider = checkHits[i].collider;
+
+            if (hitCollider != null &&
+                !IsOwnCollider(hitCollider))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsOwnCollider(Collider hitCollider)
+    {
+        if (hitCollider == controller)
+            return true;
+
+        Transform hitTransform = hitCollider.transform;
+        return hitTransform == transform ||
+            hitTransform.IsChildOf(transform);
     }
 
     private float highestY;
@@ -340,7 +416,12 @@ public class PlayerController : MonoBehaviour
         {
             Vector3 origin = transform.position + Vector3.up * (controller.height * 0.5f);
 
-            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, rayLength, groundMask, QueryTriggerInteraction.Ignore);
+            RaycastHit[] hits = Physics.RaycastAll(
+                origin,
+                Vector3.down,
+                rayLength,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
 
             if (hits.Length == 0)
             {
@@ -352,7 +433,7 @@ public class PlayerController : MonoBehaviour
 
             foreach (var hit in hits)
             {
-                if (hit.collider == controller) continue;
+                if (IsOwnCollider(hit.collider)) continue;
 
                 if (hit.point.y > transform.position.y) continue;
 
