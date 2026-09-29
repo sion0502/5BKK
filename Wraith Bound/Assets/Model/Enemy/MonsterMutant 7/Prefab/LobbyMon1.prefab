@@ -3383,12 +3383,12 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3992468658594580169}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 7fcb9bbbfbc2e9c49a02107ece56fd22, type: 3}
-  m_PlayOnAwake: 1
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -3529,19 +3529,28 @@ MonoBehaviour:
   m_GameObject: {fileID: 3992468658594580169}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 738fd922b5a5b2d44a525bb233597a82, type: 3}
+  m_Script: {fileID: 11500000, guid: f7e6d5c4b3a29180706050403020100, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MonsterFootstep
-  audioSource: {fileID: 3163607524444763568}
-  walkClips: []
-  runClips: []
-  walkVolume: 0.7
-  runVolume: 0.95
-  pitchRange: {x: 0.95, y: 1.05}
-  useAutoStep: 0
+  m_EditorClassIdentifier: Assembly-CSharp::LobbyMonSound
+  footstepSource: {fileID: 3163607524444763568}
+  vocalSource: {fileID: 0}
+  walkFootsteps: []
+  runFootsteps: []
+  walkFootstepVolume: 0.7
+  runFootstepVolume: 0.95
+  footstepPitchRange: {x: 0.95, y: 1.05}
   walkStepInterval: 0.55
   runStepInterval: 0.33
   minMoveSpeed: 0.15
+  footstepSync: 0
+  chaseVocals: []
+  chaseVocalVolume: 0.9
+  chaseVocalPitchRange: {x: 0.98, y: 1.02}
+  chaseVocalInterval: 3
+  playVocalOnChaseEnter: 1
+  patrolMoans: []
+  patrolMoanVolume: 0.45
+  patrolMoanInterval: 14
 --- !u!114 &4089292039070660183
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -12,6 +12,7 @@ public enum HeldItemSource
 public class InventoryManager : MonoBehaviour
 {
     private const string CamcorderResourcePath = "ItemDatas/Equipment/Camcorder";
+    private const string KeyItemResourcePath = "ItemDatas/Active/Key";
     private const string PickupClipPath = "Sound/PickUp_Generic-003";
 
     [Header("Capacity")]
@@ -33,6 +34,7 @@ public class InventoryManager : MonoBehaviour
 
     private bool ownsCamcorder;
     private HeldItemSource heldSource = HeldItemSource.QuickSlot;
+    private ActiveItem keyItemData;
 
     public HeldItemSource HeldSource => heldSource;
     public bool HasCamcorder => ownsCamcorder && camcorderEquipment != null;
@@ -531,6 +533,40 @@ public class InventoryManager : MonoBehaviour
         smartPhoneToggle = GetComponent<SmartPhoneHolderToggle>();
         camcorderEnergy = GetComponent<CamcorderEnergyController>();
         ResolveCamcorderReference();
+        ResolveKeyItemReference();
+    }
+
+    private void ResolveKeyItemReference()
+    {
+        if (keyItemData != null)
+        {
+            return;
+        }
+
+        keyItemData = Resources.Load<ActiveItem>(KeyItemResourcePath);
+        if (keyItemData == null)
+        {
+            Debug.LogWarning($"[Inventory] 열쇠 아이템 데이터를 찾을 수 없습니다: Resources/{KeyItemResourcePath}");
+        }
+    }
+
+    /// <summary>잠긴 문 등에서 열쇠 소지 여부를 확인할 때 사용합니다.</summary>
+    public bool HasKey()
+    {
+        ResolveKeyItemReference();
+        return keyItemData != null && CountItem(keyItemData) > 0;
+    }
+
+    /// <summary>잠긴 문 등에서 열쇠 1개를 소모합니다. 소지 중이 아니면 아무 것도 하지 않고 false를 반환합니다.</summary>
+    public bool UseKey()
+    {
+        ResolveKeyItemReference();
+        if (keyItemData == null)
+        {
+            return false;
+        }
+
+        return TryConsumeItem(keyItemData, 1);
     }
 
     void Start()

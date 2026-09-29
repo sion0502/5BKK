@@ -52,7 +52,7 @@ public class CamcorderController : MonoBehaviour
     [Header("들어올리기 — ItemViewCamera (캠코더만 확대)")]
     [Tooltip("캠코더 사용 중 ItemViewCamera Orthographic Size 보간")]
     [SerializeField] private bool animateItemViewOrtho = true;
-    [Tooltip("뷰파인더가 화면에 가득 찰 때 Orthographic Size (작을수록 큼)")]
+    [Tooltip("Fallback Orthographic Size(작을수록 큼). 실제 적용값은 GetEyeOrthographicSize()에서 화면비에 맞춰 LCD(4:3)가 빈틈없이 꽉 차도록(cover-fit) 매 순간 재계산되며, 이 값은 카메라 참조를 못 찾았을 때만 사용됩니다.")]
     [SerializeField] private float itemViewEyeOrthographicSize = 0.062f;
 
     [Header("들어올리기 — ItemView 카메라 관통(클리핑) 방지")]
@@ -157,6 +157,7 @@ public class CamcorderController : MonoBehaviour
     private Canvas viewfinderCanvas;
     private Image recDot;
     private Image batteryImage;
+    private Material hudMaterial;
     private CamcorderEnergyController camcorderEnergy;
 
     private Quaternion displayClosedRotation;
@@ -252,6 +253,7 @@ public class CamcorderController : MonoBehaviour
         if (nightVisionVolume != null) Destroy(nightVisionVolume.gameObject);
         if (nightVisionProfile != null) Destroy(nightVisionProfile);
         if (screenMaterial != null) Destroy(screenMaterial);
+        if (hudMaterial != null) Destroy(hudMaterial);
         RestoreItemViewOrthographicSize();
         RestoreItemViewCameraLocalPosition();
     }
@@ -425,7 +427,7 @@ public class CamcorderController : MonoBehaviour
         Quaternion anchorToRot = toEye ? Quaternion.Euler(anchorEyeLocalEuler) : anchorRestLocalRotation;
 
         float orthoFrom = itemViewRestOrthographicSize;
-        float orthoTo = toEye ? itemViewEyeOrthographicSize : itemViewRestOrthographicSize;
+        float orthoTo = toEye ? GetEyeOrthographicSize() : itemViewRestOrthographicSize;
 
         float t = 0f;
         float d = Mathf.Max(0.01f, raiseDuration);
@@ -546,7 +548,7 @@ public class CamcorderController : MonoBehaviour
             heldItemSway.enabled = !value;
 
         if (animateItemViewOrtho && itemViewCamera != null)
-            itemViewCamera.orthographicSize = value ? itemViewEyeOrthographicSize : itemViewRestOrthographicSize;
+            itemViewCamera.orthographicSize = value ? GetEyeOrthographicSize() : itemViewRestOrthographicSize;
 
         RestoreItemViewCameraLocalPosition();
         if (value)
@@ -1014,6 +1016,20 @@ public class CamcorderController : MonoBehaviour
         }
     }
 
+    /// <summary>LCD 스크린(screenLocalScale 비율, 4:3)이 현재 화면비에서 빈틈없이 꽉 차도록(cover-fit, 넘치는 쪽은 크롭)
+    /// 보정된 Orthographic Size. HUD는 크롭되는 영역을 피해 배치해야 합니다(GetEyeOrthographicSize 참고).</summary>
+    private float GetEyeOrthographicSize()
+    {
+        if (itemViewCamera == null || screenLocalScale.y <= 0.0001f)
+            return itemViewEyeOrthographicSize;
+
+        float halfHeight = screenLocalScale.y * 0.5f;
+        float halfWidth = screenLocalScale.x * 0.5f;
+        float aspect = Mathf.Max(0.0001f, itemViewCamera.aspect);
+
+        return Mathf.Min(halfHeight, halfWidth / aspect);
+    }
+
     /// <summary>4:3 RT에 메인 카메라와 같은 가로 시야를 유지하도록 세로 FOV를 보정합니다.</summary>
     private float GetLensVerticalFov(float eyeVerticalFov)
     {
@@ -1294,27 +1310,49 @@ public class CamcorderController : MonoBehaviour
             frame.type = Image.Type.Simple;
             frame.preserveAspect = false;
             frame.raycastTarget = false;
+            frame.material = GetOrCreateHudMaterial();
         }
 
         if (recordingDotSprite != null)
         {
             recDot = CreateAnchoredChild<Image>(canvasGo.transform, "RecDot",
-                new Vector2(0f, 1f), new Vector2(60f, -45f), new Vector2(24f, 24f));
+                new Vector2(0f, 1f), new Vector2(60f, -110f), new Vector2(24f, 24f));
             recDot.sprite = recordingDotSprite;
             recDot.color = new Color(1f, 0.15f, 0.15f, 1f);
             recDot.raycastTarget = false;
+            recDot.material = GetOrCreateHudMaterial();
         }
 
         if (batteryEmptySprite != null || HasAnyBatteryLevelSprite())
         {
             batteryImage = CreateAnchoredChild<Image>(canvasGo.transform, "Battery",
-                new Vector2(1f, 1f), new Vector2(-70f, -45f), new Vector2(80f, 36f));
+                new Vector2(1f, 1f), new Vector2(-70f, -110f), new Vector2(80f, 36f));
             batteryImage.preserveAspect = true;
             batteryImage.raycastTarget = false;
+            batteryImage.material = GetOrCreateHudMaterial();
             RefreshBatteryHud();
         }
 
         canvasGo.SetActive(false);
+    }
+
+    private const string HudShaderName = "Hidden/UI_AlwaysOnTop";
+
+    /// <summary>뷰파인더 HUD가 LCD 스크린 쿼드보다 항상 앞에 그려지도록 ZTest Always 머티리얼을 사용합니다.</summary>
+    private Material GetOrCreateHudMaterial()
+    {
+        if (hudMaterial != null)
+            return hudMaterial;
+
+        Shader hudShader = Shader.Find(HudShaderName);
+        if (hudShader == null)
+        {
+            Debug.LogWarning($"[Camcorder] '{HudShaderName}' 셰이더를 찾지 못했습니다. HUD가 LCD 화면에 가려질 수 있습니다.");
+            return null;
+        }
+
+        hudMaterial = new Material(hudShader) { name = "Camcorder_HudMat" };
+        return hudMaterial;
     }
 
     private static T CreateStretchedChild<T>(Transform parent, string name) where T : Graphic
