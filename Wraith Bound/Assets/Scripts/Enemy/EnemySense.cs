@@ -30,8 +30,15 @@ public sealed class EnemySense
         s.NextSenseTime = Time.time + Mathf.Max(0.02f, _owner.Data.checkInterval);
 
         bool playerIsHiding = IsPlayerHiding();
-        bool sawPlayer = playerIsHiding ? false : CheckVision();
-        bool heardPlayer = playerIsHiding ? false : CheckHearing();
+        bool sawPlayer = !playerIsHiding && CheckVision();
+        // 숨 참기 시스템 비활성화: 은신 중에는 숨소리로 재감지하지 않습니다.
+        // bool hiddenByHeldBreath = _owner.PlayerHidingController != null &&
+        //     _owner.PlayerHidingController.IsHiddenFromEnemies;
+        // bool heardBreathing = playerIsHiding && !hiddenByHeldBreath && _owner.Player != null &&
+        //     !_owner.PlayerHidingController.IsTransitioning &&
+        //     Vector3.Distance(_owner.transform.position, _owner.Player.position) <= _owner.HidingBreathDetectRange;
+        // bool heardPlayer = (!playerIsHiding && CheckHearing()) || heardBreathing;
+        bool heardPlayer = !playerIsHiding && CheckHearing();
         bool sawFlashlight = playerIsHiding ? false : CheckFlashlight();
 
         s.LastSawPlayer = sawPlayer;
@@ -48,8 +55,11 @@ public sealed class EnemySense
 
         s.CanDetectPlayer = true;
         s.TargetLostActive = false;
-        s.HiddenKillTargetActive = false;
-        s.ChaseGraceEndTime = 0f;
+        if (!playerIsHiding)
+        {
+            s.HiddenKillTargetActive = false;
+            s.ChaseGraceEndTime = 0f;
+        }
         s.DoorSpecialAllowed = sawPlayer || heardPlayer || sawFlashlight;
 
         if (_owner.Player != null)
@@ -72,14 +82,17 @@ public sealed class EnemySense
             (s.CurrentState == EnemyBase.State.Chase || s.CurrentState == EnemyBase.State.Investigate) &&
             _owner.Player != null)
         {
-            s.LastKnownPosition = _owner.Player.position;
+            // Only a witnessed entry reveals the hiding position.
+            bool witnessedEntry = CheckVision();
+            s.CanDetectPlayer = false;
             _owner.Combat.ArmChaseGraceTimer();
 
             if (s.CurrentState == EnemyBase.State.Investigate)
                 _owner.Combat.ChangeState(EnemyBase.State.Chase);
 
-            if (s.LastSawPlayer || CheckVision())
+            if (witnessedEntry)
             {
+                s.LastKnownPosition = _owner.Player.position;
                 s.HiddenKillTargetActive = true;
                 LogHiddenCaught("들킴(시야) — 숨은 위치 도착 시 Death");
             }
@@ -106,6 +119,8 @@ public sealed class EnemySense
             return false;
 
         bool chaseContact = s.CurrentState == EnemyBase.State.Chase;
+        if (IsPlayerHiding() && !s.HiddenKillTargetActive)
+            return false;
         if (!s.HiddenKillTargetActive && !chaseContact)
             return false;
 

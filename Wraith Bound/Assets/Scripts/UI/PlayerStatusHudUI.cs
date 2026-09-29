@@ -68,7 +68,7 @@ public class PlayerStatusHudUI : MonoBehaviour
         EnsureHudRoot();
         BuildHealthUI();
         BuildStaminaUI();
-        BuildBreathUI();
+        // BuildBreathUI(); // 숨 참기 시스템 비활성화
     }
 
     void Update()
@@ -80,7 +80,7 @@ public class PlayerStatusHudUI : MonoBehaviour
 
         UpdateHealthUI();
         UpdateStaminaUI();
-        UpdateBreathUI();
+        // UpdateBreathUI(); // 숨 참기 시스템 비활성화
     }
 
     private void EnsureHudRoot()

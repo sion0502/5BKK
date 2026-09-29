@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
@@ -20,15 +20,6 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("References")]
     [SerializeField] protected Monsters data;
     [SerializeField] protected Transform eyePoint;
-
-    [Header("Runtime Player Auto Find")]
-    protected string playerTag = "Player";
-
-    protected Transform player;
-    protected AudioSource playerFootstepSource;
-    protected CharacterController playerCharacterController;
-    protected Rigidbody playerRigidbody;
-    protected PlayerHidingController playerHidingController;
 
     [Header("Debug")]
     [SerializeField] protected bool drawVisionDebug = true;
@@ -131,6 +122,7 @@ public abstract class EnemyBase : MonoBehaviour
     internal float MinFootstepMoveSpeed => minFootstepMoveSpeed;
     internal float FootstepHearingMemory => footstepHearingMemory;
     internal float HidingSeenMemoryTime => hidingSeenMemoryTime;
+    internal float HidingBreathDetectRange => hidingBreathDetectRange;
     internal float PlayerCatchDistance => playerCatchDistance;
     internal float PlayerContactKillDistance => playerContactKillDistance;
     internal float InvestigateRadius => investigateRadius;
@@ -165,94 +157,6 @@ public abstract class EnemyBase : MonoBehaviour
         set => playerFootstepSource = value;
     }
 
-    protected void SetupAgent()
-    {
-        agent.isStopped = false;
-        agent.speed = GetPatrolSpeed();
-
-        agent.autoBraking = true;
-        agent.autoRepath = true;
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-        agent.avoidancePriority = Random.Range(30, 60);
-
-        if (agent.radius < 0.35f)
-            agent.radius = 0.35f;
-    }
-
-    protected void AutoFindPlayerReferences()
-    {
-        if (player == null)
-        {
-            GameObject taggedPlayer = GameObject.FindGameObjectWithTag(playerTag);
-            if (taggedPlayer != null)
-                player = taggedPlayer.transform;
-        }
-
-        if (player == null)
-        {
-            Collider[] hits = Physics.OverlapSphere(transform.position, 200f, data.playerLayer, QueryTriggerInteraction.Ignore);
-            if (hits.Length > 0)
-                player = hits[0].transform;
-        }
-
-        if (player == null)
-            return;
-
-        if (playerCharacterController == null)
-            playerCharacterController = player.GetComponent<CharacterController>();
-
-        if (playerRigidbody == null)
-            playerRigidbody = player.GetComponent<Rigidbody>();
-
-        if (playerFootstepSource == null)
-            playerFootstepSource = player.GetComponentInChildren<AudioSource>();
-
-        if (playerHidingController == null)
-            playerHidingController = player.GetComponent<PlayerHidingController>();
-    }
-
-    protected void UpdateSenses()
-    {
-        canDetectPlayer = false;
-
-        if (Time.time < senseEnableTime)
-            return;
-
-        if (Time.time < nextSenseTime)
-            return;
-
-        nextSenseTime = Time.time + Mathf.Max(0.02f, data.checkInterval);
-
-        // 숨은 상태에서 숨 참기까지 성공 중이면 시야/소리 감지를 모두 차단합니다.
-        if (IsPlayerHiddenByHeldBreath())
-            return;
-
-        bool sawPlayer = CheckVision();
-        // 숨 참기에 실패한 상태라면 일반 발소리와 별개로 숨소리 감지를 시도합니다.
-        bool heardBreathing = CheckHidingBreathExposure();
-        bool heardPlayer = CheckHearing() || heardBreathing;
-
-        if (!sawPlayer)
-            heardPlayer = CheckHearing();
-
-        if (!sawPlayer && !heardPlayer)
-            return;
-
-        canDetectPlayer = true;
-        lastKnownPosition = player.position;
-        lastDetectTime = Time.time;
-
-        if (sawPlayer && heardPlayer)
-            LogSense("시야 + 소리 둘 다 감지");
-        else if (sawPlayer)
-            LogSense("시야만 감지");
-        else if (heardBreathing)
-            LogSense("숨 참기 실패 감지");
-        else if (heardPlayer)
-            LogSense("소리만 감지");
-
-        if (currentState != State.Chase)
-            ChangeState(State.Chase);
     internal PlayerHidingController PlayerHidingController
     {
         get => playerHidingController;
@@ -270,83 +174,12 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected State currentState
     {
-        if (IsPlayerHiddenByHeldBreath()) return false;
-        if (player == null) return false;
-        if (eyePoint == null) return false;
-
-        Vector3 eyePos = eyePoint.position;
-        Vector3 targetPos = GetPlayerTargetPosition();
-        Vector3 toTarget = targetPos - eyePos;
-        float dist = toTarget.magnitude;
-
-        if (dist > data.detectRange)
-            return false;
-
-        Vector3 dir = toTarget.normalized;
-        float angle = Vector3.Angle(eyePoint.forward, dir);
-
-        if (angle > data.viewAngle * 0.5f)
-            return false;
-
-        int mask = data.obstacleLayer.value | data.playerLayer.value;
-
-        if (Physics.Raycast(eyePos, dir, out RaycastHit hit, dist, mask, QueryTriggerInteraction.Ignore))
-        {
-            bool seen = IsPlayerTransform(hit.transform);
-
-            if (drawVisionDebug)
-            {
-                Color c = seen ? Color.green : Color.red;
-                Debug.DrawLine(eyePos, hit.point, c, data.checkInterval);
-            }
-
-            return seen;
-        }
-
-        if (drawVisionDebug)
-            Debug.DrawRay(eyePos, dir * dist, Color.yellow, data.checkInterval);
-
-        return false;
         get => _state.CurrentState;
         set => _state.CurrentState = value;
     }
 
     protected bool isBusy
     {
-        if (IsPlayerHiddenByHeldBreath()) return false;
-        if (player == null) return false;
-        if (playerFootstepSource == null) return false;
-        if (!playerFootstepSource.isPlaying) return false;
-        if (!IsPlayerActuallyMoving()) return false;
-
-        float dist = Vector3.Distance(transform.position, player.position);
-        return dist <= data.hearingRange;
-    }
-
-    protected bool IsPlayerHiddenByHeldBreath()
-    {
-        // 기존 isHiding만 보지 않고, PlayerHidingController가 계산한 최종 은신 상태를 사용합니다.
-        return playerHidingController != null &&
-            playerHidingController.IsHiddenFromEnemies;
-    }
-
-    protected bool CheckHidingBreathExposure()
-    {
-        // 숨는 장소에 들어가 있더라도 숨 참기 중이 아니면 가까운 괴물에게 들킬 수 있습니다.
-        if (player == null) return false;
-        if (playerHidingController == null) return false;
-        if (!playerHidingController.isHiding) return false;
-        if (playerHidingController.IsHiddenFromEnemies) return false;
-
-        float dist =
-            Vector3.Distance(
-                transform.position,
-                player.position);
-
-        return dist <= hidingBreathDetectRange;
-    }
-
-    protected bool IsPlayerActuallyMoving()
         get => _state.IsBusy;
         set => _state.IsBusy = value;
     }

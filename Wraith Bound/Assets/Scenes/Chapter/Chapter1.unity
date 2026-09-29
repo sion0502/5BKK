@@ -3715,11 +3715,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStatusHudUI
   conditions: {fileID: 0}
   playerController: {fileID: 0}
+  hidingController: {fileID: 0}
   healthAnchoredPosition: {x: 24, y: 24}
   healthFontSize: 50
   staminaAnchoredPosition: {x: 0, y: 32}
   staminaBarSize: {x: 1000, y: 10}
   staminaFadeOutDuration: 0.5
+  breathAnchoredPosition: {x: 0, y: 58}
+  breathBarSize: {x: 320, y: 12}
 --- !u!114 &416544401
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15019,11 +15022,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8465821883077178126, guid: 039647f44d2a40d4f9f3c76bf913036a, type: 3}
   m_PrefabInstance: {fileID: 1237936335}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1240261951 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 698186903442303884, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-  m_PrefabInstance: {fileID: 1329229740}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1243961650
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16106,7 +16104,7 @@ MonoBehaviour:
   surface: {fileID: 0}
   monsterPrefabs:
   - {fileID: 1848058395}
-  - {fileID: 1240261951}
+  - {fileID: 0}
   ghostPrefabs: []
   lobbyNameKeyword: (Lobby)
   waitBeforeBuild: 0.5
@@ -16128,79 +16126,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DoorLayerSetter
   doorLayerName: Door
   delay: 0.5
---- !u!1001 &1329229740
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 100.37714
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.85606
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 364.05676
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 214947816709189942, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 698186903442303884, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_Name
-      value: TalChum
-      objectReference: {fileID: 0}
-    - target: {fileID: 698186903442303884, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4893345358100014437, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: player
-      value: 
-      objectReference: {fileID: 2104811936}
-    - target: {fileID: 4893345358100014437, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: playerFootstepSource
-      value: 
-      objectReference: {fileID: 2104811952}
-    - target: {fileID: 4893345358100014437, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
-      propertyPath: playerCharacterController
-      value: 
-      objectReference: {fileID: 2104811954}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: b3242723b51e5554b97ef9e0d3cceb35, type: 3}
 --- !u!1 &1333728271
 GameObject:
   m_ObjectHideFlags: 0
@@ -18861,8 +18786,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorBrokenTest
   hitsToBreak: 3
-  breakForce: 500
-  upwardForce: 3
+  breakImpulse: 100
+  torqueImpulse: 50
+  fadeStartDelay: 5
+  fadeDuration: 2
 --- !u!54 &1587094095
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -22480,8 +22407,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorBrokenTest
   hitsToBreak: 3
-  breakForce: 500
-  upwardForce: 3
+  breakImpulse: 100
+  torqueImpulse: 50
+  fadeStartDelay: 5
+  fadeDuration: 2
 --- !u!114 &1873704802
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26044,7 +25973,6 @@ SceneRoots:
   - {fileID: 384027854}
   - {fileID: 2102613738}
   - {fileID: 2011710987}
-  - {fileID: 1329229740}
   - {fileID: 2116286531}
   - {fileID: 2091352325}
   - {fileID: 897682393}

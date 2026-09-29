@@ -46,9 +46,11 @@ public class PlayerHidingController : MonoBehaviour
 
     // EnemyBase가 숨 참기 상태를 확인할 때 사용하는 읽기 전용 상태값입니다.
     public bool IsHoldingBreath => isHiding && isHoldingBreath && currentBreath > 0f;
-    // 실제 적 감지 로직에서는 단순히 숨었는지가 아니라, 숨은 상태 + 숨 참기 중인지를 봅니다.
-    public bool IsHiddenFromEnemies => isHiding && IsHoldingBreath;
+    // 숨 참기 시스템 비활성화: 은신 여부만 사용합니다. 목격 판정은 EnemySense가 유지합니다.
+    // public bool IsHiddenFromEnemies => isHiding && IsHoldingBreath;
+    public bool IsHiddenFromEnemies => isHiding;
     public bool IsBreathDepleted => currentBreath <= 0f;
+    public bool IsTransitioning => isTransitioning;
     public float CurrentBreath => currentBreath;
     public float MaxBreath => maxBreath;
     // HUD에서 숨 게이지를 0~1 비율로 표시하기 위한 값입니다.
@@ -79,7 +81,7 @@ public class PlayerHidingController : MonoBehaviour
         if (!isHiding)
         {
             DetectHidingSpot();
-            RecoverBreathOutsideHiding();
+            // RecoverBreathOutsideHiding(); // 숨 참기 시스템 비활성화
         }
 
         if (Input.GetButtonDown("Interact"))
@@ -105,7 +107,7 @@ public class PlayerHidingController : MonoBehaviour
         if (isHiding &&
             !isTransitioning)
         {
-            HandleHoldBreath();
+            // HandleHoldBreath(); // 숨 참기 시스템 비활성화
             HandleRestrictedLook();
         }
     }

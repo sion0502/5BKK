@@ -26,7 +26,7 @@ public sealed class EnemyCombat
 
         _owner.Agent.isStopped = false;
 
-        if (s.CanDetectPlayer)
+        if (s.CanDetectPlayer && !s.HiddenKillTargetActive)
         {
             s.HiddenKillTargetActive = false;
             s.ChaseGraceEndTime = 0f;
@@ -53,12 +53,6 @@ public sealed class EnemyCombat
                 s.HiddenKillTargetActive = false;
                 _owner.LogAI("들킴 · 숨은 위치 도착 → Death");
                 _owner.Sense.KillPlayerDirect();
-                return;
-            }
-            else if (remaining <= 0f)
-            {
-                s.HiddenKillTargetActive = false;
-                ReturnToPatrolRoute();
                 return;
             }
             else
@@ -99,18 +93,8 @@ public sealed class EnemyCombat
     {
         EnemyState s = _owner.RuntimeState;
 
-        if (s.ChaseGraceEndTime > Time.time)
+        if (s.ChaseGraceEndTime > 0f)
             return s.ChaseGraceEndTime;
-
-        if (Time.time - s.LastDetectTime < limit)
-            return s.LastDetectTime + limit;
-
-        if (IsPlayerHiding())
-        {
-            s.ChaseGraceEndTime = Time.time + limit;
-            s.LastDetectTime = Time.time;
-            return s.ChaseGraceEndTime;
-        }
 
         return s.LastDetectTime + limit;
     }
@@ -129,7 +113,9 @@ public sealed class EnemyCombat
         EnemyState s = _owner.RuntimeState;
         float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
         return dist <= _owner.InvestigateStartDistance ||
-               HasReachedDestination(_owner.InvestigateReachDistance);
+               (_owner.Agent.hasPath && !_owner.Agent.pathPending &&
+                _owner.Agent.pathStatus == NavMeshPathStatus.PathComplete &&
+                HasReachedDestination(_owner.InvestigateReachDistance));
     }
 
     float GetTargetLostTime() => Mathf.Max(0.01f, _owner.Data.targetLostTIme);
@@ -411,7 +397,9 @@ public sealed class EnemyCombat
         ChangeState(EnemyBase.State.Investigate);
         _owner.LogAI("수색모드 시작: 마지막 위치 주변 5m 수색");
 
-        s.ReachedLastKnownPosition = false;
+        // BeginInvestigate starts after reaching the last known position.
+        // Start the search countdown now, alongside the first random destination.
+        s.ReachedLastKnownPosition = true;
         s.InvestigateTimer = GetTargetLostTime();
 
         _owner.Agent.speed = GetPatrolSpeed();
