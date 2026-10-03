@@ -22,6 +22,10 @@ public class SceneStarter : MonoBehaviour
     public float holeRemoveLocalY = 4.5f;
     public float holeRiseSpeed = 0.35f;
 
+    /// <summary>낙하·착지 연출이 끝나 조작이 복구된 뒤 true (튜토리얼 시작 시점 판정용).</summary>
+    public bool IsSequenceFinished { get; private set; }
+    public event System.Action OnSequenceFinished;
+
     void Start()
     {
         // 카메라를 할당 안 했을 경우 자동 찾기
@@ -104,6 +108,9 @@ public class SceneStarter : MonoBehaviour
         
         fadeImage.color = Color.clear;
         ScreenFader.ClearPersisted();
+
+        IsSequenceFinished = true;
+        OnSequenceFinished?.Invoke();
     }
 
     IEnumerator LandingImpactStrong()
