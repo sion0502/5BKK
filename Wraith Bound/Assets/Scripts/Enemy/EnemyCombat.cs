@@ -292,7 +292,7 @@ public sealed class EnemyCombat
     {
         EnemyState s = _owner.RuntimeState;
 
-        if (_owner.Anim == null) return;
+        if (!_owner.HasPlayableAnimator) return;
         if (s.LockAnimator) return;
 
         switch (s.CurrentState)

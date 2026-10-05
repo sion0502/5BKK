@@ -307,7 +307,7 @@ public abstract class EnemyBase : MonoBehaviour
             return false;
         }
 
-        if (anim == null)
+        if (anim == null && RequiresAnimator())
         {
             Debug.LogError($"{name} : Animator가 없습니다.");
             enabled = false;
@@ -323,6 +323,11 @@ public abstract class EnemyBase : MonoBehaviour
 
         return true;
     }
+
+    protected virtual bool RequiresAnimator() => true;
+
+    internal bool HasPlayableAnimator =>
+        anim != null && anim.enabled && anim.runtimeAnimatorController != null;
 
     void InitState()
     {
