@@ -288,6 +288,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
   data: {fileID: 11400000, guid: 53fe132abcfe4f748aaf0d7fa75a606a, type: 2}
   eyePoint: {fileID: 1668310273}
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
   drawVisionDebug: 1
   debugStateLog: 1
   debugSenseLog: 1
@@ -333,16 +336,12 @@ MonoBehaviour:
   logInterval: 0.5
   doorAttackStartDistance: 1
   doorStopDistance: 0.7
-  idleBeforeAttackTime: 0.5
+  doorAttackState: Base Layer.Attack
   doorHitDelay: 0.45
-  attackEndDelay: 0.7
-  postAttackIdleTime: 1
   faceRotateSpeed: 360
   postAttackCooldown: 0.2
   attackFaceAngle: 6
   approachTimeout: 3
-  finalAttackDistance: 0.8
-  finalAttackFaceAngle: 2.5
   finalAlignTimeout: 1.5
 --- !u!1 &454534505
 GameObject:
@@ -1485,6 +1484,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   eyePoint: {fileID: 1722278304}
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
   drawVisionDebug: 1
   debugStateLog: 1
   debugSenseLog: 1
@@ -1530,16 +1532,12 @@ MonoBehaviour:
   logInterval: 0.5
   doorAttackStartDistance: 1
   doorStopDistance: 0.7
-  idleBeforeAttackTime: 0.5
+  doorAttackState: Base Layer.Attack
   doorHitDelay: 0.3
-  attackEndDelay: 1
-  postAttackIdleTime: 1
   faceRotateSpeed: 360
   postAttackCooldown: 0.2
   attackFaceAngle: 6
   approachTimeout: 3
-  finalAttackDistance: 0.8
-  finalAttackFaceAngle: 2.5
   finalAlignTimeout: 1.5
 --- !u!136 &1026369864
 CapsuleCollider:
@@ -1707,6 +1705,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
   data: {fileID: 11400000, guid: fdf5cb468f447094784749d74edc2b30, type: 2}
   eyePoint: {fileID: 1722278304}
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
   drawVisionDebug: 1
   debugStateLog: 1
   debugSenseLog: 1
@@ -1752,16 +1753,12 @@ MonoBehaviour:
   logInterval: 0.5
   doorAttackStartDistance: 1
   doorStopDistance: 0.7
-  idleBeforeAttackTime: 0.5
+  doorAttackState: Base Layer.Attack
   doorHitDelay: 0.3
-  attackEndDelay: 1
-  postAttackIdleTime: 1
   faceRotateSpeed: 360
   postAttackCooldown: 0.2
   attackFaceAngle: 6
   approachTimeout: 3
-  finalAttackDistance: 0.8
-  finalAttackFaceAngle: 2.5
   finalAlignTimeout: 1.5
 --- !u!114 &1305420019
 MonoBehaviour:
@@ -3478,6 +3475,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GhostEnemy
   data: {fileID: 0}
   eyePoint: {fileID: 0}
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
   drawVisionDebug: 1
   debugStateLog: 1
   debugSenseLog: 1
@@ -3521,7 +3521,15 @@ MonoBehaviour:
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
   logInterval: 0.5
-  canPassThroughDoors: 1
+  doorAttackStartDistance: 1
+  doorStopDistance: 0.7
+  doorAttackState: Base Layer.Attack
+  doorHitDelay: 0.45
+  faceRotateSpeed: 360
+  postAttackCooldown: 0.2
+  attackFaceAngle: 6
+  approachTimeout: 3
+  finalAlignTimeout: 1.5
 --- !u!1001 &5993625935487508965
 PrefabInstance:
   m_ObjectHideFlags: 0

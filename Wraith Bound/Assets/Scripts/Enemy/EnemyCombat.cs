@@ -1,10 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 public sealed class EnemyCombat
 {
     readonly EnemyBase _owner;
+    readonly List<DoorClick> _chaseUnblockedDoors = new List<DoorClick>();
 
     public EnemyCombat(EnemyBase owner)
     {
@@ -19,6 +21,8 @@ public sealed class EnemyCombat
             return;
 
         _owner.Agent.speed = GetChaseSpeed();
+        _owner.Agent.autoBraking = false;
+        PrepareChasePathThroughDoors(s.LastKnownPosition);
         _owner.HandleChaseSpecial();
 
         if (s.IsBusy)
@@ -57,7 +61,7 @@ public sealed class EnemyCombat
             }
             else
             {
-                SetChaseDestination(s.LastKnownPosition, true);
+                SetChaseDestination(s.LastKnownPosition);
                 _owner.Sense.TryKillOnColliderTouch();
                 return;
             }
@@ -87,6 +91,8 @@ public sealed class EnemyCombat
         float limit = GetTargetLostTime();
         s.LastDetectTime = Time.time;
         s.ChaseGraceEndTime = Time.time + limit;
+        s.NextChaseRepathTime = 0f;
+        s.LastChaseDestination = _owner.transform.position - Vector3.one * 999f;
     }
 
     float GetChaseGraceEndTime(float limit)
@@ -111,6 +117,21 @@ public sealed class EnemyCombat
     bool HasReachedLastKnownPosition()
     {
         EnemyState s = _owner.RuntimeState;
+        if (_owner.Agent != null && _owner.Agent.pathPending)
+            return false;
+
+        if (_owner.Agent != null && _owner.Agent.hasPath &&
+            _owner.Agent.pathStatus == NavMeshPathStatus.PathPartial)
+            return false;
+
+        if (NavMesh.Raycast(
+                _owner.transform.position,
+                s.LastKnownPosition,
+                out NavMeshHit navHit,
+                NavMesh.AllAreas) &&
+            NavMotor.GetHorizontalDistance(navHit.position, s.LastKnownPosition) > 0.6f)
+            return false;
+
         float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
         return dist <= _owner.InvestigateStartDistance ||
                (_owner.Agent.hasPath && !_owner.Agent.pathPending &&
@@ -300,20 +321,26 @@ public sealed class EnemyCombat
         EnemyBase.State prevState = s.CurrentState;
         s.CurrentState = nextState;
 
+        if (prevState == EnemyBase.State.Chase && nextState != EnemyBase.State.Chase)
+            RestoreChaseDoorCarves();
+
         switch (s.CurrentState)
         {
             case EnemyBase.State.Patrol:
                 _owner.Agent.speed = GetPatrolSpeed();
+                _owner.Agent.autoBraking = true;
                 break;
 
             case EnemyBase.State.Chase:
                 _owner.Agent.speed = GetChaseSpeed();
+                _owner.Agent.autoBraking = false;
                 s.NextChaseRepathTime = 0f;
                 s.LastChaseDestination = _owner.transform.position - Vector3.one * 999f;
                 break;
 
             case EnemyBase.State.Investigate:
                 _owner.Agent.speed = GetPatrolSpeed();
+                _owner.Agent.autoBraking = true;
                 s.NextInvestigateRepathTime = 0f;
                 break;
 
@@ -439,20 +466,191 @@ public sealed class EnemyCombat
 
     void SetChaseDestinationInternal(Vector3 target)
     {
+        PrepareChasePathThroughDoors(target);
+
+        if (!TryResolveChaseNavPoint(target, out Vector3 dest))
+            dest = target;
+
         if (_owner.NavMotor != null)
         {
-            if (_owner.NavMotor.EnsureDestination(target, 3f))
+            if (_owner.NavMotor.EnsureDestination(dest, 0.75f))
                 return;
         }
 
         if (!_owner.Agent.isOnNavMesh)
             return;
 
-        if (!NavMesh.SamplePosition(target, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+        if (!NavMesh.SamplePosition(dest, out NavMeshHit hit, 0.75f, NavMesh.AllAreas) &&
+            !NavMesh.SamplePosition(target, out hit, 3f, NavMesh.AllAreas))
             return;
 
         _owner.Agent.isStopped = false;
         _owner.Agent.SetDestination(hit.position);
+    }
+
+    bool TryResolveChaseNavPoint(Vector3 target, out Vector3 dest)
+    {
+        dest = target;
+        Vector3 best = default;
+        float bestScore = float.MaxValue;
+        bool found = false;
+
+        TryScoreChaseSample(target, 0.5f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 1.2f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 2f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 3f, ref found, ref best, ref bestScore);
+
+        Vector3[] offsets =
+        {
+            Vector3.forward, Vector3.back, Vector3.left, Vector3.right,
+            (Vector3.forward + Vector3.right).normalized,
+            (Vector3.forward + Vector3.left).normalized,
+            (Vector3.back + Vector3.right).normalized,
+            (Vector3.back + Vector3.left).normalized
+        };
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            TryScoreChaseSample(target + offsets[i] * 0.9f, 0.8f, ref found, ref best, ref bestScore);
+            TryScoreChaseSample(target + offsets[i] * 1.6f, 0.8f, ref found, ref best, ref bestScore);
+        }
+
+        if (!found)
+            return false;
+
+        dest = PushChasePointOffWall(best);
+        return true;
+    }
+
+    void TryScoreChaseSample(
+        Vector3 point,
+        float radius,
+        ref bool found,
+        ref Vector3 best,
+        ref float bestScore)
+    {
+        if (!NavMesh.SamplePosition(point, out NavMeshHit hit, radius, NavMesh.AllAreas))
+            return;
+
+        Vector3 sampled = hit.position;
+        if (IsChaseSampleOnWrongSideOfWall(sampled, point))
+            return;
+
+        if (_owner.NavMotor == null || !_owner.NavMotor.CalculatePath(sampled, out NavMeshPathStatus status))
+            return;
+
+        if (status == NavMeshPathStatus.PathInvalid)
+            return;
+
+        if (status == NavMeshPathStatus.PathPartial)
+        {
+            float sampleToAgent = NavMotor.GetHorizontalDistance(_owner.transform.position, sampled);
+            float sampleToTarget = NavMotor.GetHorizontalDistance(sampled, point);
+            if (sampleToAgent + 0.5f < sampleToTarget && !IsClosedDoorOnChaseRoute(sampled))
+                return;
+        }
+
+        float score = NavMotor.GetHorizontalDistance(sampled, point);
+        if (status == NavMeshPathStatus.PathComplete)
+            score -= 0.5f;
+
+        if (found && score >= bestScore)
+            return;
+
+        found = true;
+        best = sampled;
+        bestScore = score;
+    }
+
+    bool IsChaseSampleOnWrongSideOfWall(Vector3 navPoint, Vector3 target)
+    {
+        Vector3 from = navPoint + Vector3.up;
+        Vector3 to = target + Vector3.up;
+        Vector3 delta = to - from;
+        float dist = delta.magnitude;
+        if (dist < 0.35f)
+            return false;
+
+        int mask = (1 << 0) | _owner.ObstacleLayer.value;
+        int defaultLayer = LayerMask.NameToLayer("Default");
+        if (defaultLayer >= 0)
+            mask |= 1 << defaultLayer;
+
+        if (!Physics.Raycast(from, delta / dist, out RaycastHit hit, dist - 0.12f, mask, QueryTriggerInteraction.Ignore))
+            return false;
+
+        if (hit.collider.GetComponentInParent<HidingSpot>() != null)
+            return false;
+        if (hit.collider.GetComponentInParent<DoorClick>() != null)
+            return false;
+        if (_owner.Player != null &&
+            (hit.transform == _owner.Player || hit.transform.IsChildOf(_owner.Player)))
+            return false;
+
+        return true;
+    }
+
+    bool IsClosedDoorOnChaseRoute(Vector3 target)
+    {
+        return EnemyDoorUtility.FindClosedDoorBetween(
+                   _owner.transform.position,
+                   target,
+                   _owner.DoorLayer,
+                   _owner.DoorCheckHeight,
+                   _owner.PathDoorCheckRadius) != null ||
+               EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target) != null;
+    }
+
+    Vector3 PushChasePointOffWall(Vector3 pos)
+    {
+        if (EnemyDoorUtility.FindClosedDoorNearPosition(pos, _owner.DoorLayer, 1.4f) != null)
+            return pos;
+
+        float want = Mathf.Max(0.28f, _owner.Agent.radius + 0.12f);
+        if (!NavMesh.FindClosestEdge(pos, out NavMeshHit edge, NavMesh.AllAreas))
+            return pos;
+        if (edge.distance >= want)
+            return pos;
+
+        Vector3 pushed = pos + edge.normal * (want - edge.distance);
+        if (NavMesh.SamplePosition(pushed, out NavMeshHit hit, 0.8f, NavMesh.AllAreas))
+            return hit.position;
+
+        return pos;
+    }
+
+    void PrepareChasePathThroughDoors(Vector3 target)
+    {
+        DoorClick door = EnemyDoorUtility.FindClosedDoorBetween(
+            _owner.transform.position,
+            target,
+            _owner.DoorLayer,
+            _owner.DoorCheckHeight,
+            _owner.PathDoorCheckRadius);
+
+        if (door == null)
+            door = EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 3f);
+
+        if (door == null)
+            return;
+
+        DoorNavMeshUtility.SetNavMeshBlocked(door.transform, false);
+        if (!_chaseUnblockedDoors.Contains(door))
+            _chaseUnblockedDoors.Add(door);
+    }
+
+    void RestoreChaseDoorCarves()
+    {
+        for (int i = 0; i < _chaseUnblockedDoors.Count; i++)
+        {
+            DoorClick door = _chaseUnblockedDoors[i];
+            if (door == null || door.IsOpen() || door.IsBroken())
+                continue;
+
+            DoorNavMeshUtility.SetNavMeshBlocked(door.transform, true);
+        }
+
+        _chaseUnblockedDoors.Clear();
     }
 
     void SetRandomInvestigatePointAround(Vector3 center, float radius)

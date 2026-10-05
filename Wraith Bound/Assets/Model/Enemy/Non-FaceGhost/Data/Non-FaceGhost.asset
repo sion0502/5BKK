@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6bf3ebb2997c99047ad61262a3027084, type: 3}
-  m_Name: NurseGhost
+  m_Name: Non-FaceGhost
   m_EditorClassIdentifier: Assembly-CSharp::Monsters
-  id: 2
-  monsterType: 0
+  id: 1
+  monsterType: 1
   description: 
-  hp: 2000
+  hp: 3000
   moveSpeed: 5
   detectRange: 60
-  viewAngle: 180
+  viewAngle: 200
   checkInterval: 0
   obstacleLayer:
     serializedVersion: 2
@@ -27,5 +27,5 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   targetLostTIme: 10
-  hearingRange: 50
+  hearingRange: 0
   eyeFrontArcAngle: 180
