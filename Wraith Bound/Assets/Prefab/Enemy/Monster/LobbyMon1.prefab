@@ -216,7 +216,7 @@ Transform:
   m_GameObject: {fileID: 269753059294696070}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.011, y: 1.762, z: 0.301}
+  m_LocalPosition: {x: 0.011, y: 1.599, z: 0.41}
   m_LocalScale: {x: 0.19999994, y: 0.2, z: 0.19999994}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2169,15 +2169,13 @@ GameObject:
   - component: {fileID: 1703434590433672886}
   - component: {fileID: 9082991397099811640}
   - component: {fileID: 3982539768576559466}
-  - component: {fileID: 2693815517954712727}
-  - component: {fileID: 9215404806825059159}
   m_Layer: 9
   m_Name: LobbyMon1
   m_TagString: Monster
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8340283813203863147
 Transform:
   m_ObjectHideFlags: 0
@@ -2188,7 +2186,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.9997011, z: -0, w: -0.024450678}
   m_LocalPosition: {x: 0.029303048, y: 0, z: 4.61}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3427580171356135819}
@@ -2426,56 +2424,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2af883f120d9a404ca2ec9e985a2391a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
-  currentState: 0
   data: {fileID: 11400000, guid: dac19af480d096d49acc21fdb3dadddd, type: 2}
-  agent: {fileID: 7835456551424247418}
-  player: {fileID: 0}
   eyePoint: {fileID: 1070382978576248754}
-  animator: {fileID: 913236853532569016}
---- !u!114 &2693815517954712727
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2673527118393339069}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f7e6d5c4b3a291807060504030201000, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LobbyMonSound
-  footstepSource: {fileID: 9082991397099811640}
-  vocalSource: {fileID: 0}
-  walkFootsteps: []
-  runFootsteps: []
-  walkFootstepVolume: 0.7
-  runFootstepVolume: 0.95
-  footstepPitchRange: {x: 0.95, y: 1.05}
-  walkStepInterval: 0.55
-  runStepInterval: 0.33
-  minMoveSpeed: 0.15
-  footstepSync: 0
-  chaseVocals: []
-  chaseVocalVolume: 0.9
-  chaseVocalPitchRange: {x: 0.98, y: 1.02}
-  chaseVocalInterval: 3
-  playVocalOnChaseEnter: 1
-  patrolMoans: []
-  patrolMoanVolume: 0.45
-  patrolMoanInterval: 14
---- !u!114 &9215404806825059159
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2673527118393339069}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37e807eb3a13069408cf17367e3988eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyZone
-  zoneType: 0
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
+  drawVisionDebug: 1
+  debugStateLog: 1
+  debugSenseLog: 1
+  viewAngle: 90
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  playerDetectRadius: 0.35
+  doorLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  doorCheckHeight: 1
+  patrolDoorFrontCheckDistance: 1.2
+  pathDoorCheckRadius: 0.25
+  chaseDoorDetectDistance: 2.2
+  chaseDoorSearchRadius: 18
+  patrolDoorSearchRadius: 10
+  patrolDoorOpenDistance: 0.75
+  patrolDoorOpenFaceAngle: 20
+  patrolDoorPassThroughDistance: 1.5
+  autoOpenDoorsOnPatrol: 1
+  patrolPointZone: {fileID: 0}
+  patrolReachDistance: 0.5
+  minWallClearance: 0.8
+  obstacleCheckDistance: 1.2
+  obstacleCheckRadius: 0.35
+  obstacleStuckTime: 1
+  obstacleStuckSpeed: 0.08
+  obstacleSideStepDistance: 2
+  obstacleAvoidCooldown: 0.75
+  investigateRadius: 5
+  investigateReachDistance: 0.6
+  investigateStartDistance: 2.2
+  minFootstepMoveSpeed: 0.15
+  footstepHearingMemory: 0.85
+  hidingSeenMemoryTime: 0.75
+  playerCatchDistance: 1.1
+  playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
+  senseStartDelay: 0.5
+  chaseDestinationUpdateInterval: 0.15
+  chaseRepathDistance: 0.35
+  logInterval: 0.5
+  doorAttackStartDistance: 1
+  doorStopDistance: 0.7
+  doorAttackState: Base Layer.Attack
+  doorHitDelay: 0.45
+  faceRotateSpeed: 360
+  postAttackCooldown: 0.2
+  attackFaceAngle: 6
+  approachTimeout: 3
+  finalAlignTimeout: 1.5
 --- !u!1 &2754835599893224158
 GameObject:
   m_ObjectHideFlags: 0
