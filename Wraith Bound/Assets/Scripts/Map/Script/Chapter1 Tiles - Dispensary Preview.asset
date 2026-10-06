@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d93490d8cefdf74b80d50ad9df5d939, type: 3}
+  m_Name: Chapter1 Tiles - Dispensary Preview
+  m_EditorClassIdentifier: Assembly-CSharp::TileSet
+  tiles:
+  - {fileID: 8966562417064288515, guid: 78f5a747a40a5624ead73057fc3d11f1, type: 3}
+  - {fileID: 8966562417064288515, guid: 5f6454c7ff1ab7442a1fc41b94d7c54b, type: 3}
+  - {fileID: 8966562417064288515, guid: 7f1a11990bac3364c9986743a259e6f2, type: 3}
+  - {fileID: 8966562417064288515, guid: ecd6be8592e2abe49af611a395e4fd00, type: 3}
+  - {fileID: 8966562417064288515, guid: 03bdf69176f16ac48a6eff687cd7cedc, type: 3}
+  - {fileID: 8966562417064288515, guid: 8ef5d74e3206b2e4584fe1e757bb0752, type: 3}
+  - {fileID: 8966562417064288515, guid: 2f172c04ceaf95b42813a3c40f8051ee, type: 3}
+  - {fileID: 2861150846652874977, guid: 6d6411aad1489e642a2ae7aa049c8f76, type: 3}
+  - {fileID: 8966562417064288515, guid: 70a071028e3509e439abd6bc34b3172f, type: 3}
+  - {fileID: 8966562417064288515, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
+  - {fileID: 8966562417064288515, guid: 48f55e68f0d750d43b83f1f169026282, type: 3}
+  - {fileID: 8966562417064288515, guid: 9effa7079eb24199ac05ec40e6f34aaf, type: 3}
