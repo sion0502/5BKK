@@ -252,16 +252,20 @@ public abstract class EnemyBase : MonoBehaviour
         if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
             return;
 
+        if (player == null && Sense != null)
+            Sense.AutoFindPlayerReferences();
+
+        if (Sense != null)
+        {
+            Sense.TickHiding();
+            Sense.CheckPlayerCatchDistance();
+            if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
+                return;
+        }
+
         if (eyePoint == null || agent == null || !agent.isOnNavMesh)
             return;
 
-        if (player == null)
-            Sense.AutoFindPlayerReferences();
-
-        Sense.TickHiding();
-        Sense.CheckPlayerCatchDistance();
-        if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
-            return;
         Sense.Tick();
 
         switch (_state.CurrentState)
@@ -297,6 +301,16 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     protected virtual void OnCollisionStay(Collision collision) => OnCollisionEnter(collision);
+
+    protected virtual void OnTriggerEnter(Collider other)
+    {
+        if (Sense == null || !Sense.IsPlayerContact(other))
+            return;
+
+        Sense.TryKillOnColliderTouch(other);
+    }
+
+    protected virtual void OnTriggerStay(Collider other) => OnTriggerEnter(other);
 
     bool ValidateComponents()
     {

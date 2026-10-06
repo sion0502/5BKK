@@ -121,13 +121,18 @@ public sealed class EnemySense
         if (IsPlayerHiding() && !s.HiddenKillTargetActive)
             return false;
 
-        float distance = GetDistanceToPlayerCollider(useTriggers: false);
-        float touchRange = Mathf.Max(0.01f, _owner.PlayerContactKillDistance);
+        if (confirmedContact != null && IsPlayerContact(confirmedContact))
+        {
+            _owner.LogAI("플레이어 콜라이더 접촉 → Death");
+            MarkPlayerDead();
+            return true;
+        }
 
-        if ((confirmedContact == null || !IsPlayerContact(confirmedContact)) && distance > touchRange)
+        float distance = GetDistanceToPlayerCollider(useTriggers: true);
+        if (!IsTouchingPlayerBody(distance))
             return false;
 
-        _owner.LogAI($"플레이어 콜라이더 접촉({distance:F2}m) → Death");
+        _owner.LogAI($"플레이어 접촉({distance:F2}m) → Death");
         MarkPlayerDead();
         return true;
     }
@@ -200,7 +205,7 @@ public sealed class EnemySense
 
     public bool IsPlayerContact(Collider other)
     {
-        if (other == null || other.isTrigger)
+        if (other == null)
             return false;
 
         Transform hitTransform = other.transform;
@@ -465,6 +470,60 @@ public sealed class EnemySense
     bool IsPlayerHiding()
     {
         return _owner.PlayerHidingController != null && _owner.PlayerHidingController.isHiding;
+    }
+
+    bool IsTouchingPlayerBody(float colliderGap)
+    {
+        float pad = Mathf.Max(0.05f, _owner.PlayerContactKillDistance);
+        if (colliderGap <= pad)
+            return true;
+
+        Vector3 enemy = _owner.transform.position;
+        Vector3 player = _owner.Player.position;
+        enemy.y = 0f;
+        player.y = 0f;
+        float reach = GetEnemyTouchRadius() + GetPlayerTouchRadius() + pad;
+        return Vector3.Distance(enemy, player) <= reach;
+    }
+
+    float GetEnemyTouchRadius()
+    {
+        float radius = 0.4f;
+        if (_owner.Agent != null)
+            radius = Mathf.Max(radius, _owner.Agent.radius);
+
+        Collider[] enemyColliders = _owner.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < enemyColliders.Length; i++)
+        {
+            Collider col = enemyColliders[i];
+            if (col == null || !col.enabled)
+                continue;
+
+            Vector3 extents = col.bounds.extents;
+            radius = Mathf.Max(radius, Mathf.Max(extents.x, extents.z));
+        }
+
+        Renderer[] renderers = _owner.GetComponentsInChildren<Renderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            Vector3 extents = renderer.bounds.extents;
+            float visual = Mathf.Min(1.1f, Mathf.Max(extents.x, extents.z) * 0.55f);
+            radius = Mathf.Max(radius, visual);
+        }
+
+        return radius;
+    }
+
+    float GetPlayerTouchRadius()
+    {
+        if (_owner.PlayerCharacterController != null)
+            return Mathf.Max(0.25f, _owner.PlayerCharacterController.radius);
+
+        return 0.5f;
     }
 
     float GetDistanceToPlayerCollider(bool useTriggers = true)
