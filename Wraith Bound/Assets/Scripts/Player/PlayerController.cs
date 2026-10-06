@@ -91,6 +91,10 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // Hiding and scripted transitions temporarily disable the controller.
+        if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+            return;
+
         CheckGround();
         HandleMovement();
         HandleGravity();

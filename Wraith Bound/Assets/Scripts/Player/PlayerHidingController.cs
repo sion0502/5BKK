@@ -34,6 +34,7 @@ public class PlayerHidingController : MonoBehaviour
 
     CharacterController characterController;
     HidingSpot currentSpot;
+    RearviewCamera rearviewCamera;
     [SerializeField]AudioSource hideAudio;
 
     public bool isHiding = false;
@@ -68,6 +69,8 @@ public class PlayerHidingController : MonoBehaviour
 
         mouseLook =
             playerCamera.GetComponent<MouseLook>();
+
+        rearviewCamera = playerCamera.GetComponent<RearviewCamera>();
 
         currentBreath =
             Mathf.Max(0f, maxBreath);
@@ -199,13 +202,16 @@ public class PlayerHidingController : MonoBehaviour
         isHiding = true;
         isHoldingBreath = false;
 
-        playerAudioMixerController.enabled = false;
-
-        characterController.enabled =
-            false;
-
         if (playerController != null)
             playerController.enabled = false;
+
+        characterController.enabled = false;
+
+        if (playerAudioMixerController != null)
+            playerAudioMixerController.enabled = false;
+
+        if (rearviewCamera != null)
+            rearviewCamera.enabled = false;
 
         if (mouseLook != null)
             mouseLook.enabled = false;
@@ -330,11 +336,14 @@ public class PlayerHidingController : MonoBehaviour
         transform.rotation =
             targetRot;
 
-        playerAudioMixerController.enabled = true;    
+        if (playerAudioMixerController != null)
+            playerAudioMixerController.enabled = true;
 
         
-        characterController.enabled =
-            true;
+        characterController.enabled = true;
+
+        if (rearviewCamera != null)
+            rearviewCamera.enabled = true;
 
         if (playerController != null)
             playerController.enabled = true;
