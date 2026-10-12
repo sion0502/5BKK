@@ -7,6 +7,9 @@ public sealed class EnemyCombat
 {
     readonly EnemyBase _owner;
     readonly List<DoorClick> _chaseUnblockedDoors = new List<DoorClick>();
+    DoorClick _cachedChaseDoor;
+    Vector3 _cachedChaseDoorTarget;
+    int _cachedChaseDoorFrame = -1;
 
     public EnemyCombat(EnemyBase owner)
     {
@@ -546,7 +549,8 @@ public sealed class EnemyCombat
         {
             float sampleToAgent = NavMotor.GetHorizontalDistance(_owner.transform.position, sampled);
             float sampleToTarget = NavMotor.GetHorizontalDistance(sampled, point);
-            if (sampleToAgent + 0.5f < sampleToTarget && !IsClosedDoorOnChaseRoute(sampled))
+            if (sampleToAgent + 0.5f < sampleToTarget && !IsClosedDoorOnChaseRoute(sampled) &&
+                FindUsefulChaseDoor(point) == null)
                 return;
         }
 
@@ -587,6 +591,10 @@ public sealed class EnemyCombat
             (hit.transform == _owner.Player || hit.transform.IsChildOf(_owner.Player)))
             return false;
 
+        // 벽 너머 숨은 위치여도, 그 방으로 가는 문이 있으면 벽 앞 내비 지점에 붙지 않는다.
+        if (FindUsefulChaseDoor(target) != null)
+            return false;
+
         return true;
     }
 
@@ -598,7 +606,8 @@ public sealed class EnemyCombat
                    _owner.DoorLayer,
                    _owner.DoorCheckHeight,
                    _owner.PathDoorCheckRadius) != null ||
-               EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target) != null;
+               EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 5f) != null ||
+               FindUsefulChaseDoor(target) != null;
     }
 
     Vector3 PushChasePointOffWall(Vector3 pos)
@@ -629,7 +638,10 @@ public sealed class EnemyCombat
             _owner.PathDoorCheckRadius);
 
         if (door == null)
-            door = EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 3f);
+            door = EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 5f);
+
+        if (door == null)
+            door = FindUsefulChaseDoor(target);
 
         if (door == null)
             return;
@@ -637,6 +649,62 @@ public sealed class EnemyCombat
         DoorNavMeshUtility.SetNavMeshBlocked(door.transform, false);
         if (!_chaseUnblockedDoors.Contains(door))
             _chaseUnblockedDoors.Add(door);
+    }
+
+    DoorClick FindUsefulChaseDoor(Vector3 target)
+    {
+        if (Time.frameCount == _cachedChaseDoorFrame &&
+            (_cachedChaseDoorTarget - target).sqrMagnitude < 0.0001f)
+            return _cachedChaseDoor;
+
+        _cachedChaseDoorFrame = Time.frameCount;
+        _cachedChaseDoorTarget = target;
+
+        Vector3 agentPos = _owner.transform.position;
+        DoorClick[] doors = Object.FindObjectsByType<DoorClick>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        DoorClick best = null;
+        float bestScore = float.MaxValue;
+
+        for (int i = 0; i < doors.Length; i++)
+        {
+            DoorClick door = doors[i];
+            if (door == null || door.IsOpen() || door.IsBroken())
+                continue;
+
+            Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
+            if (Vector3.Distance(agentPos, doorPos) > _owner.ChaseDoorSearchRadius)
+                continue;
+            if (!IsChaseDoorUseful(agentPos, doorPos, target))
+                continue;
+
+            float score = Vector3.Distance(agentPos, doorPos) + Vector3.Distance(doorPos, target);
+            if (score >= bestScore)
+                continue;
+
+            bestScore = score;
+            best = door;
+        }
+
+        _cachedChaseDoor = best;
+        return best;
+    }
+
+    static bool IsChaseDoorUseful(Vector3 agentPos, Vector3 doorPos, Vector3 target)
+    {
+        float agentToTarget = Vector3.Distance(agentPos, target);
+        float doorToTarget = Vector3.Distance(doorPos, target);
+        if (doorToTarget >= agentToTarget - 0.2f)
+            return false;
+
+        Vector3 toTarget = target - agentPos;
+        Vector3 toDoor = doorPos - agentPos;
+        toTarget.y = 0f;
+        toDoor.y = 0f;
+        if (toTarget.sqrMagnitude <= 0.01f || toDoor.sqrMagnitude <= 0.01f)
+            return false;
+
+        // 벽 바로 앞에서 문은 옆으로 있을 수 있다. 뒤에 있는 문만 제외.
+        return Vector3.Dot(toTarget.normalized, toDoor.normalized) > -0.2f;
     }
 
     void RestoreChaseDoorCarves()
