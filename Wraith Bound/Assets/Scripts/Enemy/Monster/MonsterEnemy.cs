@@ -7,7 +7,6 @@ public class MonsterEnemy : EnemyBase
     [Header("Door Attack")]
     [SerializeField] private float doorAttackStartDistance = 1.0f;
     [SerializeField] private float doorStopDistance = 0.7f;
-    [SerializeField] private string doorAttackState = "Base Layer.Attack";
     [SerializeField] private float doorHitDelay = 0.45f;
     [SerializeField] private float faceRotateSpeed = 360f;
     [SerializeField] private float postAttackCooldown = 0.2f;
@@ -103,10 +102,8 @@ public class MonsterEnemy : EnemyBase
             if (!IsDoorStillAttackable(door)) yield break;
 
             // Enter the attack directly: the controller's trigger only works from Idle.
-            int attackState = Animator.StringToHash(doorAttackState);
-            if (!anim.HasState(0, attackState))
-                attackState = Animator.StringToHash("Base Layer.Rush");
-            if (!anim.HasState(0, attackState))
+            int attackState = ResolveDoorAttackStateHash();
+            if (attackState == 0)
             {
                 yield return FallbackDoorHit(door, reach);
                 yield break;
@@ -160,6 +157,32 @@ public class MonsterEnemy : EnemyBase
             nextPossibleAttackTime = Time.time + Mathf.Max(0.2f, postAttackCooldown);
             EndDoorAttack();
         }
+    }
+
+    int ResolveDoorAttackStateHash()
+    {
+        if (anim == null)
+            return 0;
+
+        string[] candidates =
+        {
+            "Base Layer.Attack",
+            "Attack",
+            "Base Layer.Rush",
+            "Rush"
+        };
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(candidates[i]))
+                continue;
+
+            int hash = Animator.StringToHash(candidates[i].Trim());
+            if (anim.HasState(0, hash))
+                return hash;
+        }
+
+        return 0;
     }
 
     void KeepAgentStoppedForAttack()
