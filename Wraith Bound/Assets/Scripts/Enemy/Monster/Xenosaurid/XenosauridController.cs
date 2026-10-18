@@ -34,6 +34,9 @@ public class XenosauridController : MonoBehaviour
     [SerializeField] Vector3 localStraightenAxis = new Vector3(0f, 0f, 1f);
     [SerializeField] float faceRaise = 1.25f;
 
+    [Header("Taunt 비명")]
+    [SerializeField] AudioSource tauntScream;
+
     [Header("발소리 — AudioSource 클립 하나만")]
     [SerializeField] AudioSource footstepSource;
     [SerializeField] float walkVolume = 0.75f;
@@ -78,6 +81,21 @@ public class XenosauridController : MonoBehaviour
             footstepSource.minDistance = 2f;
             footstepSource.maxDistance = 40f;
         }
+
+        PrepareVoice(tauntScream);
+    }
+
+    static void PrepareVoice(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        source.playOnAwake = false;
+        source.loop = false;
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = 2f;
+        source.maxDistance = 40f;
     }
 
     void LateUpdate()
@@ -162,6 +180,12 @@ public class XenosauridController : MonoBehaviour
         _anim.SetInteger(_enemy.AnimStateHash, -1);
         _anim.CrossFadeInFixedTime(_tauntHash, tauntBlend, 0, 0f);
         _anim.Update(0f);
+        if (tauntScream != null && tauntScream.clip != null)
+        {
+            tauntScream.Stop();
+            tauntScream.time = 0f;
+            tauntScream.Play();
+        }
     }
 
     void HoldTaunt()
