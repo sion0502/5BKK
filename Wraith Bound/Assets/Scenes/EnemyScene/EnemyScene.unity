@@ -2142,6 +2142,7 @@ MonoBehaviour:
   localStraightenAxis: {x: 0, y: 0, z: 1}
   faceRaise: 1.25
   tauntScream: {fileID: 1577723154}
+  screamFadeTime: 1.2
   footstepSource: {fileID: 1577723153}
   walkVolume: 0.75
   runVolume: 1
@@ -2160,8 +2161,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: a5346abbcd0119d41ae06c7fa19b3909, type: 3}
-  m_Resource: {fileID: 8300000, guid: a5346abbcd0119d41ae06c7fa19b3909, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 250e160e1e4cf4041afe88228e949e4c, type: 3}
+  m_Resource: {fileID: 8300000, guid: 250e160e1e4cf4041afe88228e949e4c, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1

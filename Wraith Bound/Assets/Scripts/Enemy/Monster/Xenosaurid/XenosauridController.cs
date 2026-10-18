@@ -33,9 +33,11 @@ public class XenosauridController : MonoBehaviour
     [SerializeField] float[] straightenDegrees = { 42f, 48f, 22f, 20f, 18f, 16f };
     [SerializeField] Vector3 localStraightenAxis = new Vector3(0f, 0f, 1f);
     [SerializeField] float faceRaise = 1.25f;
+    [SerializeField] float deathFaceDistance = 0.58f;
 
     [Header("Taunt 비명")]
     [SerializeField] AudioSource tauntScream;
+    [SerializeField] float screamFadeTime = 1.2f;
 
     [Header("발소리 — AudioSource 클립 하나만")]
     [SerializeField] AudioSource footstepSource;
@@ -49,16 +51,16 @@ public class XenosauridController : MonoBehaviour
     NavMeshAgent _agent;
     Animator _anim;
     Transform _head;
-    readonly List<Transform> _bones = new List<Transform>();
-    readonly List<Quaternion> _deathPose = new List<Quaternion>();
+    Transform _jaw;
+    Transform _tongue;
 
     bool _taunting;
-    bool _poseCaptured;
     float _tauntTimer;
     EnemyBase.State _lastState = EnemyBase.State.Patrol;
     int _tauntHash;
     int _runHash;
     float _stepTime = -1f;
+    float _screamVolume = 1f;
 
     void Awake()
     {
@@ -182,6 +184,8 @@ public class XenosauridController : MonoBehaviour
         _anim.Update(0f);
         if (tauntScream != null && tauntScream.clip != null)
         {
+            _screamVolume = 1f;
+            tauntScream.volume = _screamVolume;
             tauntScream.Stop();
             tauntScream.time = 0f;
             tauntScream.Play();
@@ -195,6 +199,20 @@ public class XenosauridController : MonoBehaviour
         _enemy.RuntimeState.LockAnimator = true;
         StopAgent();
         FaceSound();
+        FadeScreamOut();
+    }
+
+    void FadeScreamOut()
+    {
+        if (tauntScream == null || !tauntScream.isPlaying || _anim == null)
+            return;
+
+        AnimatorStateInfo info = _anim.GetCurrentAnimatorStateInfo(0);
+        if (info.fullPathHash != _tauntHash || info.length <= 0.01f)
+            return;
+
+        float remain = Mathf.Max(0f, (1f - info.normalizedTime) * info.length);
+        tauntScream.volume = _screamVolume * Mathf.Clamp01(remain / Mathf.Max(0.05f, screamFadeTime));
     }
 
     bool TauntFinished()
@@ -213,6 +231,12 @@ public class XenosauridController : MonoBehaviour
 
     void FinishTaunt()
     {
+        if (tauntScream != null)
+        {
+            tauntScream.Stop();
+            tauntScream.volume = _screamVolume;
+        }
+
         int run = _anim.HasState(0, _runHash)
             ? _runHash
             : Animator.StringToHash(runFallbackState);
@@ -265,31 +289,24 @@ public class XenosauridController : MonoBehaviour
 
     void StraightenForJumpscare()
     {
-        if (_head == null || _bones.Count == 0)
+        if (_head == null)
             return;
 
-        if (!_poseCaptured)
-        {
-            _deathPose.Clear();
-            for (int i = 0; i < _bones.Count; i++)
-                _deathPose.Add(_bones[i].localRotation);
-            _poseCaptured = true;
-        }
+        Camera cam = Camera.main;
+        if (cam == null)
+            return;
 
-        Vector3 axis = localStraightenAxis.sqrMagnitude > 0.001f
-            ? localStraightenAxis.normalized
-            : Vector3.forward;
+        Vector3 desired = cam.transform.position + cam.transform.forward * deathFaceDistance;
+        transform.position += desired - MouthPoint();
+    }
 
-        Vector3 framedHead = _head.position;
-        for (int i = 0; i < _bones.Count; i++)
-        {
-            float degrees = i < straightenDegrees.Length ? straightenDegrees[i] : 0f;
-            _bones[i].localRotation = _deathPose[i] * Quaternion.AngleAxis(degrees, axis);
-        }
-
-        Vector3 lift = _head.position - framedHead;
-        transform.position -= lift;
-        transform.position -= Vector3.up * faceRaise;
+    Vector3 MouthPoint()
+    {
+        if (_jaw != null && _tongue != null)
+            return Vector3.Lerp(_jaw.position, _tongue.position, 0.55f);
+        if (_jaw != null)
+            return _jaw.position;
+        return _head.position;
     }
 
     void CacheBones()
@@ -298,13 +315,8 @@ public class XenosauridController : MonoBehaviour
         _head = FindNamed(all, headBoneName);
         if (_head == null)
             _head = FindNamed(all, "Head");
-
-        for (int i = 0; i < straightenBones.Length; i++)
-        {
-            Transform bone = FindNamed(all, straightenBones[i]);
-            if (bone != null)
-                _bones.Add(bone);
-        }
+        _jaw = FindNamed(all, "Xenosaurid_ Jaw");
+        _tongue = FindNamed(all, "Xenosaurid_ Tongue1");
     }
 
     static Transform FindNamed(Transform[] all, string boneName)
