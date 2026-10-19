@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: GlowStick
   m_EditorClassIdentifier: Assembly-CSharp::ActiveItem
   id: 1009
-  itemName: "야광봉"
+  itemName: "\uC57C\uAD11\uBD09"
   type: 0
-  description: ""
-  icon: {fileID: 0}
+  description: 
+  icon: {fileID: 21300000, guid: 4cba3ef7e8aa32d4eb149d90312fe437, type: 3}
   maxCount: 10
   destroyOnUse: 1
   breakageChance: 0

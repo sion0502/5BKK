@@ -16,14 +16,19 @@ MonoBehaviour:
   itemName: "\uC5F4\uC1E0"
   type: 0
   description: "\uC7A0\uAE34 \uBB38\uC744 \uC5F4\uC218\uC788\uB2E4"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e68fd7996c78b1e41b781b2e3ab66df5, type: 3}
   maxCount: 3
   destroyOnUse: 1
   breakageChance: 0
   itemPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 0}
   showInHand: 0
   spawnedInstance: {fileID: 0}
+  effectType: 0
   value: 0
   duration: 0
   isInstantUse: 0
   deployPrefab: {fileID: 0}
+  isThrowable: 0
+  throwForce: 9
+  throwUpwardAngle: 25

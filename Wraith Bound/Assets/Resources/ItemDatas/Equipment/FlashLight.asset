@@ -18,7 +18,7 @@ MonoBehaviour:
   description: "\uCD5C\uC2E0\uD615 \uC190\uC804\uB4F1.\n\uAF64 \uBC1D\uC9C0\uB9CC
     \uBC30\uD130\uB9AC \uC18C\uBAA8\uAC00 \uC2EC\uD558\uB2E4.\n\uC5B4\uB460\uC758
     \uC874\uC7AC\uB4E4\uC740 \uBE5B\uC5D0 \uBBFC\uAC10\uD55C \uBC95\uC774\uB2E4."
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b4db920cccfeca14ab11190e185b10cf, type: 3}
   maxCount: 1
   destroyOnUse: 0
   breakageChance: 0
@@ -29,4 +29,5 @@ MonoBehaviour:
   useMode: 1
   maxEnergy: 100
   consumeRate: 0.4
+  rechargeRate: 0
   range: 15
