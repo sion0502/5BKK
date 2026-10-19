@@ -232,7 +232,7 @@ public class MonsterEnemy : EnemyBase
         if (door == null) return false;
 
         DoorClick click = door.GetComponent<DoorClick>();
-        if (click == null) return false;
+        if (click == null || !EnemyDoorUtility.IsPassageDoor(click)) return false;
         if (click.IsOpen()) return false;
         if (click.IsBroken()) return false;
         if (door.IsBroken()) return false;

@@ -81,6 +81,6 @@ public sealed class PatrolPlanner
                 return true;
         }
 
-        return NavMotor.GetHorizontalDistance(pathEnd, point) >= 1f;
+        return false;
     }
 }

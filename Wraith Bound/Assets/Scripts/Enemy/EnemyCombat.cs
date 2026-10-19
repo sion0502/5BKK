@@ -585,7 +585,8 @@ public sealed class EnemyCombat
 
         if (hit.collider.GetComponentInParent<HidingSpot>() != null)
             return false;
-        if (hit.collider.GetComponentInParent<DoorClick>() != null)
+        DoorClick blockingDoor = hit.collider.GetComponentInParent<DoorClick>();
+        if (blockingDoor != null && EnemyDoorUtility.IsPassageDoor(blockingDoor))
             return false;
         if (_owner.Player != null &&
             (hit.transform == _owner.Player || hit.transform.IsChildOf(_owner.Player)))
@@ -668,7 +669,7 @@ public sealed class EnemyCombat
         for (int i = 0; i < doors.Length; i++)
         {
             DoorClick door = doors[i];
-            if (door == null || door.IsOpen() || door.IsBroken())
+            if (door == null || !EnemyDoorUtility.IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
                 continue;
 
             Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
@@ -849,7 +850,7 @@ public sealed class EnemyCombat
             return false;
 
         door = hit.collider.GetComponentInParent<DoorClick>();
-        if (door == null) return false;
+        if (door == null || !EnemyDoorUtility.IsPassageDoor(door)) return false;
         if (door.IsOpen() || door.IsBroken()) return false;
         if (!IsCurrentDestinationBeyondDoor(hit.point, dir.normalized))
             return false;
@@ -901,7 +902,7 @@ public sealed class EnemyCombat
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick click = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (click == null) continue;
+            if (click == null || !EnemyDoorUtility.IsPassageDoor(click)) continue;
             if (click.IsOpen() || click.IsBroken()) continue;
 
             DoorBrokenTest broken = hits[i].collider.GetComponentInParent<DoorBrokenTest>();
@@ -935,7 +936,7 @@ public sealed class EnemyCombat
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick click = hits[i].GetComponentInParent<DoorClick>();
-            if (click == null) continue;
+            if (click == null || !EnemyDoorUtility.IsPassageDoor(click)) continue;
             if (click.IsOpen() || click.IsBroken()) continue;
 
             DoorBrokenTest broken = hits[i].GetComponentInParent<DoorBrokenTest>();

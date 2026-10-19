@@ -13,6 +13,7 @@ public sealed class PatrolDoorService
     readonly float _openDistance;
     DoorClick _openingDoor;
     float _openingDeadline;
+    float _holdDestinationUntil;
 
     public PatrolDoorService(
         Transform transform,
@@ -28,42 +29,48 @@ public sealed class PatrolDoorService
         _openDistance = openDistance;
     }
 
+    public bool HoldDestination => Time.time < _holdDestinationUntil;
+
     public bool TryOpenNearbyDoor()
     {
         if (_openingDoor != null)
         {
-            if (!_openingDoor.IsPassageReady() && Time.time < _openingDeadline)
+            if (_openingDoor.IsPassageReady())
+            {
+                _openingDoor = null;
+                _holdDestinationUntil = Time.time + 1.5f;
+                ResumePatrolMovement();
+                return false;
+            }
+
+            if (Time.time < _openingDeadline)
             {
                 _motor.Stop();
                 return true;
             }
+
             _openingDoor = null;
-            ResumePatrolMovement();
-            return true;
         }
-        if (!_planner.HasDestination || _doorLayer.value == 0)
+
+        if (!_planner.HasDestination)
             return false;
 
-        DoorClick door = EnemyDoorUtility.FindClosedDoorNearPosition(
-            _transform.position, _doorLayer, _openDistance);
-        if (door == null)
+        if (!TryFindDoorForDestination(out DoorClick door, out Vector3 doorPos))
             return false;
 
-        Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
-        if (!EnemyDoorUtility.IsDoorUsefulForTarget(_transform.position, doorPos, _planner.CurrentDestination))
+        float distance = NavMotor.GetHorizontalDistance(_transform.position, doorPos);
+        bool atCut = _motor.HasPath &&
+                     _motor.PathStatus == NavMeshPathStatus.PathPartial &&
+                     NavMotor.GetHorizontalDistance(_transform.position, _motor.GetPathEnd()) <= 1.1f &&
+                     NavMotor.GetHorizontalDistance(_motor.GetPathEnd(), doorPos) <= 2.5f;
+        if (distance > Mathf.Max(_openDistance, 1.6f) && !atCut)
             return false;
-
-        if (door.IsOpen())
-        {
-            ResumePatrolMovement();
-            return true;
-        }
 
         if (!EnemyDoorUtility.TryOpenDoor(door, _transform.position))
             return false;
 
         _openingDoor = door;
-        _openingDeadline = Time.time + 3f;
+        _openingDeadline = Time.time + 8f;
         _motor.Stop();
         return true;
     }
@@ -83,6 +90,45 @@ public sealed class PatrolDoorService
         DoorClick door = EnemyDoorUtility.FindClosedDoorNearPosition(pathEnd, _doorLayer, 2f);
         return door != null && EnemyDoorUtility.IsDoorUsefulForTarget(
             _transform.position, EnemyDoorUtility.GetDoorWorldPosition(door.transform), _planner.CurrentDestination);
+    }
+
+    bool TryFindDoorForDestination(out DoorClick door, out Vector3 doorPos)
+    {
+        door = null;
+        doorPos = Vector3.zero;
+        Vector3 destination = _planner.CurrentDestination;
+
+        DoorClick routeDoor = EnemyDoorUtility.FindClosedDoorOnRoute(_transform.position, destination, 2.5f);
+        if (routeDoor != null)
+        {
+            Vector3 routePos = EnemyDoorUtility.GetDoorWorldPosition(routeDoor.transform);
+            float distance = NavMotor.GetHorizontalDistance(_transform.position, routePos);
+            bool pathCut = _motor.HasPath &&
+                           _motor.PathStatus == NavMeshPathStatus.PathPartial &&
+                           NavMotor.GetHorizontalDistance(_motor.GetPathEnd(), routePos) <= 2.5f;
+            if (distance <= 3.5f || pathCut)
+            {
+                door = routeDoor;
+                doorPos = routePos;
+                return true;
+            }
+        }
+
+        if (_doorLayer.value == 0)
+            return false;
+
+        DoorClick nearby = EnemyDoorUtility.FindClosedDoorNearPosition(
+            _transform.position, _doorLayer, Mathf.Max(_openDistance, 1.6f));
+        if (nearby == null)
+            return false;
+
+        Vector3 nearbyPos = EnemyDoorUtility.GetDoorWorldPosition(nearby.transform);
+        if (!EnemyDoorUtility.IsDoorUsefulForTarget(_transform.position, nearbyPos, destination))
+            return false;
+
+        door = nearby;
+        doorPos = nearbyPos;
+        return true;
     }
 
     void ResumePatrolMovement()

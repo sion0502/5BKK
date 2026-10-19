@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// 순찰 틱 — 이동, 도착, 가까운 Door 레이어 문 열기.
@@ -41,25 +42,41 @@ public sealed class PatrolBehavior
         if (autoOpenDoors && _door.TryOpenNearbyDoor())
             return PatrolUpdateResult.HandlingDoor;
 
+        if (IsPressedAgainstCut())
+        {
+            _motor.Stop();
+            return PatrolUpdateResult.StuckNeedRepath;
+        }
+
         bool blocked = _motor.IsStuckAtPathEnd() ||
                        _motor.IsNotMakingProgress() ||
                        _motor.IsIdleWithPendingDestination(_planner.CurrentDestination, _reachExtra);
 
         if (blocked)
         {
-            if (autoOpenDoors && _door.IsApproachingDoorToDestination())
+            if (autoOpenDoors && _door.HoldDestination)
             {
                 _motor.Agent.isStopped = false;
                 _motor.EnsureDestination(_planner.CurrentDestination, 0.5f);
                 return PatrolUpdateResult.Moving;
             }
 
+            _motor.Stop();
             return PatrolUpdateResult.StuckNeedRepath;
         }
 
         _motor.Agent.isStopped = false;
         _motor.EnsureDestination(_planner.CurrentDestination, 0.5f);
         return PatrolUpdateResult.Moving;
+    }
+
+    bool IsPressedAgainstCut()
+    {
+        if (!_motor.HasPath || _motor.PathPending || _motor.PathStatus != NavMeshPathStatus.PathPartial)
+            return false;
+
+        Vector3 end = _motor.GetPathEnd();
+        return NavMotor.GetHorizontalDistance(_motor.Agent.transform.position, end) <= 0.85f;
     }
 
     public enum PatrolUpdateResult
