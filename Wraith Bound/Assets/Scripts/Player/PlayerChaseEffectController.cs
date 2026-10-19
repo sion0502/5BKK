@@ -9,6 +9,8 @@ using UnityEngine.Rendering.Universal;
 /// </summary>
 public class PlayerChaseEffectController : MonoBehaviour
 {
+    private const float PositionOverwriteThresholdSqr = 0.25f * 0.25f;
+
     [Header("Volume")]
     [SerializeField] private float volumePriority = 20f;
 
@@ -68,6 +70,7 @@ public class PlayerChaseEffectController : MonoBehaviour
     [SerializeField] private ChaseSceneLightFlicker sceneLightFlicker;
 
     [Header("Debug (Chapter1 테스트)")]
+    [Tooltip("에디터·Development 빌드에서만 동작합니다. 일반 빌드(시연용)에서는 자동으로 꺼집니다.")]
     [SerializeField] private bool enableDebugKeys = true;
     [SerializeField] private KeyCode debugBurstKey = KeyCode.F6;
     [SerializeField] private KeyCode debugChaseToggleKey = KeyCode.F7;
@@ -88,6 +91,12 @@ public class PlayerChaseEffectController : MonoBehaviour
     private Transform shakeTransform;
     private Vector3 lastShakePosOffset;
     private Quaternion lastShakeRotOffset = Quaternion.identity;
+    // 흔들림 적용 직후 카메라 포즈. 다음 프레임에 그대로면 오프셋을 되돌리고,
+    // 다른 스크립트(MouseLook 등)가 덮어썼으면 되돌리지 않음 → 누적 방지
+    private Vector3 shakeAppliedLocalPos;
+    private Quaternion shakeAppliedLocalRot;
+    private bool shakeApplied;
+    private bool fovPunchApplied;
 
     private bool isBeingChased;
     private float sustainWeight;
@@ -124,7 +133,7 @@ public class PlayerChaseEffectController : MonoBehaviour
 
     void Update()
     {
-        if (enableDebugKeys)
+        if (enableDebugKeys && (Application.isEditor || Debug.isDebugBuild))
         {
             HandleDebugInput();
         }
@@ -254,8 +263,25 @@ public class PlayerChaseEffectController : MonoBehaviour
         return hidingController != null && hidingController.isHiding;
     }
 
+    private void RestoreFovPunch()
+    {
+        if (!fovPunchApplied || mainCamera == null)
+        {
+            return;
+        }
+
+        mainCamera.fieldOfView = baseFieldOfView;
+        fovPunchApplied = false;
+    }
+
     private bool ShouldSuppressCameraImpact()
     {
+        // 사망 점프스케어가 카메라를 직접 제어하는 동안에는 손대지 않음
+        if (PlayerDeathDebug.IsDying)
+        {
+            return true;
+        }
+
         if (hidingController != null && hidingController.isHiding)
         {
             return true;
@@ -343,14 +369,27 @@ public class PlayerChaseEffectController : MonoBehaviour
 
         if (ShouldSuppressCameraImpact())
         {
-            mainCamera.fieldOfView = baseFieldOfView;
+            RestoreFovPunch();
             return;
         }
 
+        // FOV는 발각 줌이 진행 중일 때만 건드리고, 끝나면 한 번만 원래 값으로 돌려놓음
+        // (매 프레임 덮어쓰면 점프스케어 등 다른 FOV 연출이 무시됨)
         float impact = impactIntensity;
-        mainCamera.fieldOfView = impact > 0.001f
-            ? baseFieldOfView + impact * impactFovPunch
-            : baseFieldOfView;
+        if (impact > 0.001f)
+        {
+            if (!fovPunchApplied)
+            {
+                baseFieldOfView = mainCamera.fieldOfView;
+                fovPunchApplied = true;
+            }
+
+            mainCamera.fieldOfView = baseFieldOfView + impact * impactFovPunch;
+        }
+        else
+        {
+            RestoreFovPunch();
+        }
 
         if (shakeTransform == null || shakeTimeRemaining <= 0f)
         {
@@ -403,11 +442,23 @@ public class PlayerChaseEffectController : MonoBehaviour
 
     private void ClearShakeOffset()
     {
-        if (shakeTransform != null && lastShakePosOffset.sqrMagnitude > 0.000001f)
+        if (shakeApplied && shakeTransform != null)
         {
-            shakeTransform.localPosition -= lastShakePosOffset;
+            // 위치: PlayerController가 웅크리기 높이를 상대적으로 보정하므로 항상 되돌림.
+            // 단, 순간이동(숨기 진입 등)처럼 크게 바뀌었으면 이미 덮어쓴 것이라 되돌리지 않음.
+            if ((shakeTransform.localPosition - shakeAppliedLocalPos).sqrMagnitude < PositionOverwriteThresholdSqr)
+            {
+                shakeTransform.localPosition -= lastShakePosOffset;
+            }
+
+            // 회전: MouseLook이 매 프레임 절대값으로 덮어쓰므로, 지난 프레임 그대로일 때만 되돌림
+            if (shakeTransform.localRotation == shakeAppliedLocalRot)
+            {
+                shakeTransform.localRotation *= Quaternion.Inverse(lastShakeRotOffset);
+            }
         }
 
+        shakeApplied = false;
         lastShakePosOffset = Vector3.zero;
         lastShakeRotOffset = Quaternion.identity;
     }
@@ -421,6 +472,9 @@ public class PlayerChaseEffectController : MonoBehaviour
 
         shakeTransform.localPosition += lastShakePosOffset;
         shakeTransform.localRotation *= lastShakeRotOffset;
+        shakeAppliedLocalPos = shakeTransform.localPosition;
+        shakeAppliedLocalRot = shakeTransform.localRotation;
+        shakeApplied = true;
     }
 
     private IEnumerator BurstRoutine()
@@ -555,10 +609,6 @@ public class PlayerChaseEffectController : MonoBehaviour
         }
 
         ClearShakeOffset();
-
-        if (mainCamera != null)
-        {
-            mainCamera.fieldOfView = baseFieldOfView;
-        }
+        RestoreFovPunch();
     }
 }

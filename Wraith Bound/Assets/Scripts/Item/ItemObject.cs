@@ -13,6 +13,13 @@ public class ItemObject : MonoBehaviour, IInteractable
 
         if (inv != null)
         {
+            // 손전등을 이미 갖고 있으면 슬롯에 추가하지 않고 배터리만 리필
+            if (FlashlightDuplicatePickup.TryRefill(interactor, inv, itemData))
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             if (inv.TryAcquireItem(itemData, 1, out Items droppedFromInv, out int droppedAmt))
             {
                 if (droppedFromInv != null && droppedAmt > 0)
@@ -36,6 +43,11 @@ public class ItemObject : MonoBehaviour, IInteractable
     {
         if (itemData != null)
         {
+            if (FlashlightDuplicatePickup.WouldRefill(itemData))
+            {
+                return $"[E] {itemData.itemName} 획득 (배터리 충전)";
+            }
+
             return $"[E] {itemData.itemName} 획득";
         }
         return "[E] 아이템 획득";

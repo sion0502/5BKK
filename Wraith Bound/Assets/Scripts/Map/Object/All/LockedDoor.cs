@@ -26,7 +26,7 @@ public class LockedDoor : MonoBehaviour
     [SerializeField] private Camera viewCamera;
     [SerializeField] private float keyUseDistance = 3f;
 
-    [Tooltip("InventoryManager에 HashKey/UseKey가 추가되기 전 테스트용입니다.")]
+    [Tooltip("InventoryManager에 HasKey/UseKey가 추가되기 전 테스트용입니다.")]
     [SerializeField] private bool temporaryHasKey;
 
     [Tooltip("아이템 연동 전 잠금 해제를 시험할 키입니다. 문을 바라본 상태에서 누르세요.")]
@@ -43,6 +43,7 @@ public class LockedDoor : MonoBehaviour
     private DoorClick doorClick;
 
     public bool IsLocked => isLocked;
+    public UnlockType UnlockMethod => unlockType;
 
     private void Awake()
     {
@@ -99,7 +100,7 @@ public class LockedDoor : MonoBehaviour
         }
 
         MethodInfo hashKey = typeof(InventoryManager).GetMethod(
-            "HashKey",
+            "HasKey",
             BindingFlags.Instance | BindingFlags.Public,
             null,
             System.Type.EmptyTypes,

@@ -45,6 +45,15 @@ public class FlashlightEnergyController : MonoBehaviour
         }
     }
 
+    public bool IsFullyCharged
+    {
+        get
+        {
+            EnsureInitialized();
+            return flashlightEquipment != null && currentEnergy >= flashlightEquipment.maxEnergy - 0.01f;
+        }
+    }
+
     public bool IsFlashlightEquipment(Equipment equipment)
     {
         return equipment != null && equipment == flashlightEquipment;
@@ -181,6 +190,18 @@ public class FlashlightEnergyController : MonoBehaviour
         currentEnergy = Mathf.Min(flashlightEquipment.maxEnergy, currentEnergy + batteryItem.value);
         Debug.Log($"[Flashlight] 충전됨 ({Mathf.CeilToInt(currentEnergy)}/{flashlightEquipment.maxEnergy})");
         return true;
+    }
+
+    /// <summary>손전등을 이미 가진 상태에서 손전등을 또 주웠을 때 배터리를 가득 채움.</summary>
+    public void RefillToFull()
+    {
+        if (flashlightEquipment == null)
+        {
+            return;
+        }
+
+        currentEnergy = flashlightEquipment.maxEnergy;
+        Debug.Log($"[Flashlight] 손전등을 추가로 획득해 배터리가 가득 찼습니다 ({flashlightEquipment.maxEnergy}/{flashlightEquipment.maxEnergy})");
     }
 
     private void EnsureInitialized()

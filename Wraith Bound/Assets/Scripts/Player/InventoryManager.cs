@@ -274,7 +274,7 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    private void PlayItemPickupSound()
+    public void PlayItemPickupSound()
     {
         EnsurePickupClip();
         if (pickupClip == null)

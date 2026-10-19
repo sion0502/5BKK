@@ -163,6 +163,12 @@ public class ChaseSceneLightFlicker : MonoBehaviour
             return false;
         }
 
+        // 던진/바닥의 야광봉 불빛은 점멸 대상에서 제외
+        if (light.GetComponentInParent<GlowStickController>() != null)
+        {
+            return false;
+        }
+
         if (light.type == LightType.Directional && light.intensity > maxDirectionalIntensity)
         {
             return false;
