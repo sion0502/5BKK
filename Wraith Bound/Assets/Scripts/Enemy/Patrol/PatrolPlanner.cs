@@ -13,6 +13,10 @@ public sealed class PatrolPlanner
 
     public Vector3 CurrentDestination { get; private set; }
     public bool HasDestination { get; private set; }
+    public string CurrentPointLabel =>
+        _pointSelector != null && _pointSelector.CurrentPoint != null
+            ? _pointSelector.CurrentPoint.name
+            : string.Empty;
 
     public PatrolPlanner(NavMotor motor, PatrolPointSelector pointSelector)
     {

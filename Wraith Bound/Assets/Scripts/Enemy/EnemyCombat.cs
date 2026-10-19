@@ -301,7 +301,7 @@ public sealed class EnemyCombat
         switch (s.CurrentState)
         {
             case EnemyBase.State.Patrol:
-                _owner.Anim.SetInteger(_owner.AnimStateHash, IsAgentVisuallyMoving() ? 1 : 0);
+                _owner.Anim.SetInteger(_owner.AnimStateHash, s.HasPatDestination ? 1 : 0);
                 break;
 
             case EnemyBase.State.Chase:

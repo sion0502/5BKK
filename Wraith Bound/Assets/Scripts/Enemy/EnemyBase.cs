@@ -394,24 +394,73 @@ public abstract class EnemyBase : MonoBehaviour
             case PatrolBehavior.PatrolUpdateResult.ReachedDestination:
                 LogAI("순찰 목적지 도착 → 새 순찰 목적지 선택");
                 SetNextGlobalPatDestination();
+                LogAI("순찰 포인트 " + _patrol.CurrentPointLabel);
                 break;
 
             case PatrolBehavior.PatrolUpdateResult.NeedDestination:
-                LogAI("순찰 목적지 선택");
                 SetNextGlobalPatDestination();
+                LogAI("순찰 포인트 " + _patrol.CurrentPointLabel);
                 break;
 
             case PatrolBehavior.PatrolUpdateResult.HandlingDoor:
-                LogAI("순찰 중 닫힌 문 자동 열기");
+                LogAI("순찰 중 닫힌 문 자동 열기 → " + _patrol.CurrentPointLabel);
                 break;
 
             case PatrolBehavior.PatrolUpdateResult.StuckNeedRepath:
                 LogAI("벽/코너 막힘 → 새 순찰 목적지 선택");
                 SetNextGlobalPatDestination();
+                LogAI("순찰 포인트 " + _patrol.CurrentPointLabel);
                 break;
         }
 
         SyncPatrolDestinationFromRuntime();
+        UpdatePatrolDebugLabel();
+    }
+
+    TextMesh _patrolDebugLabel;
+
+    void UpdatePatrolDebugLabel()
+    {
+        if (patrolPointZone == null)
+            return;
+
+        if (_patrolDebugLabel == null)
+        {
+            GameObject marker = new GameObject("PatrolDebug");
+            marker.transform.SetParent(transform, false);
+            marker.transform.localPosition = new Vector3(0f, 2.4f, 0f);
+            _patrolDebugLabel = marker.AddComponent<TextMesh>();
+            _patrolDebugLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (_patrolDebugLabel.font == null)
+                _patrolDebugLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _patrolDebugLabel.fontSize = 64;
+            _patrolDebugLabel.characterSize = 0.06f;
+            _patrolDebugLabel.anchor = TextAnchor.MiddleCenter;
+            _patrolDebugLabel.alignment = TextAlignment.Center;
+            _patrolDebugLabel.color = Color.yellow;
+        }
+
+        string point = _patrol.CurrentPointLabel;
+        _patrolDebugLabel.text = string.IsNullOrEmpty(point)
+            ? "Patrol 없음"
+            : "Patrol " + point + "\n" + _patrol.DebugStatus;
+
+        if (_patrol.HasDestination)
+            Debug.DrawLine(transform.position + Vector3.up, _patrol.CurrentDestination, Color.yellow);
+    }
+
+    void LateUpdate()
+    {
+        if (_patrolDebugLabel == null)
+            return;
+
+        Camera view = Camera.main;
+        if (view == null)
+            return;
+
+        Vector3 toCamera = _patrolDebugLabel.transform.position - view.transform.position;
+        if (toCamera.sqrMagnitude > 0.001f)
+            _patrolDebugLabel.transform.rotation = Quaternion.LookRotation(toCamera);
     }
 
     internal void SetNextGlobalPatDestination()
