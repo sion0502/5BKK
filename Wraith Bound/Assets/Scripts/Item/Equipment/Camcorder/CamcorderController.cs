@@ -211,6 +211,17 @@ public class CamcorderController : MonoBehaviour
 
     /// <summary>뷰파인더·야간투시가 켜진 상태(배터리 소모 중).</summary>
     public bool IsViewfinderActive => isHeldView && active;
+
+    // 게임오버의 떨어진 캠코더 화면이 같은 뷰파인더 모양을 쓰도록 읽기 전용 공개
+    public Sprite FrameSprite => frameSprite;
+    public Sprite RecordingDotSprite => recordingDotSprite;
+    public Sprite LowestBatterySprite => batteryLevelSprites != null && batteryLevelSprites.Length > 0 && batteryLevelSprites[0] != null
+        ? batteryLevelSprites[0] : batteryEmptySprite;
+    public string NightVisionLayerName => nightVisionLayerName;
+    public float IrIntensity => irIntensity;
+    public float IrRange => irRange;
+    public float IrSpotAngle => irSpotAngle;
+
     private float targetFov;
     private float screenLevel; // 0 = 꺼짐(검정), 1 = 완전 표시
     private Coroutine sequenceRoutine;
@@ -1222,67 +1233,30 @@ public class CamcorderController : MonoBehaviour
 
         nightVisionProfile = ScriptableObject.CreateInstance<VolumeProfile>();
         nightVisionVolume.sharedProfile = nightVisionProfile;
-
-        // 실사 캠코더 나이트샷: 휘도만 남긴 초록 단색 + 밝은 곳은 하얗게 + 높은 대비 + 센서 노이즈
-        ColorAdjustments color = nightVisionProfile.Add<ColorAdjustments>(true);
-        color.postExposure.overrideState = true;
-        color.postExposure.value = postExposure;
-        color.contrast.overrideState = true;
-        color.contrast.value = contrast;
-
-        // 채도(Saturation)는 색 보정 마지막 단계라 −100이면 초록 틴트까지 지워짐 → Channel Mixer로 단색화
-        ChannelMixer mixer = nightVisionProfile.Add<ChannelMixer>(true);
-        SetMonochromeRow(mixer.redOutRedIn, mixer.redOutGreenIn, mixer.redOutBlueIn, monochromeTint.r);
-        SetMonochromeRow(mixer.greenOutRedIn, mixer.greenOutGreenIn, mixer.greenOutBlueIn, monochromeTint.g);
-        SetMonochromeRow(mixer.blueOutRedIn, mixer.blueOutGreenIn, mixer.blueOutBlueIn, monochromeTint.b);
-
-        ShadowsMidtonesHighlights tones = nightVisionProfile.Add<ShadowsMidtonesHighlights>(true);
-        tones.shadows.overrideState = true;
-        tones.shadows.value = shadowsTint;
-        tones.highlights.overrideState = true;
-        tones.highlights.value = highlightsTint;
-        tones.highlightsStart.overrideState = true;
-        tones.highlightsStart.value = highlightsStart;
-        tones.highlightsEnd.overrideState = true;
-        tones.highlightsEnd.value = highlightsEnd;
-
-        Bloom bloom = nightVisionProfile.Add<Bloom>(true);
-        bloom.intensity.overrideState = true;
-        bloom.intensity.value = bloomIntensity;
-        bloom.threshold.overrideState = true;
-        bloom.threshold.value = bloomThreshold;
-        bloom.scatter.overrideState = true;
-        bloom.scatter.value = bloomScatter;
-
-        Vignette vignette = nightVisionProfile.Add<Vignette>(true);
-        vignette.intensity.overrideState = true;
-        vignette.intensity.value = vignetteIntensity;
-        vignette.smoothness.overrideState = true;
-        vignette.smoothness.value = 0.5f;
-
-        ChromaticAberration aberration = nightVisionProfile.Add<ChromaticAberration>(true);
-        aberration.intensity.overrideState = true;
-        aberration.intensity.value = chromaticAberration;
-
-        // URP FilmGrain은 매 프레임 오프셋이 바뀌어 자글거림
-        FilmGrain grain = nightVisionProfile.Add<FilmGrain>(true);
-        grain.type.overrideState = true;
-        grain.type.value = filmGrainType;
-        grain.intensity.overrideState = true;
-        grain.intensity.value = filmGrainIntensity;
-        grain.response.overrideState = true;
-        grain.response.value = filmGrainResponse;
+        CreateNightVisionLook().ApplyTo(nightVisionProfile);
     }
 
-    /// <summary>출력 채널 하나를 휘도(Rec.601 가중치) × tint로 설정. Channel Mixer 값은 % 단위.</summary>
-    private static void SetMonochromeRow(ClampedFloatParameter fromRed, ClampedFloatParameter fromGreen, ClampedFloatParameter fromBlue, float tint)
+    /// <summary>인스펙터 값으로 나이트비전 색감 생성 (게임오버의 떨어진 캠코더 화면도 사용)</summary>
+    public CamcorderNightVisionLook CreateNightVisionLook()
     {
-        fromRed.overrideState = true;
-        fromRed.value = 30f * tint;
-        fromGreen.overrideState = true;
-        fromGreen.value = 59f * tint;
-        fromBlue.overrideState = true;
-        fromBlue.value = 11f * tint;
+        return new CamcorderNightVisionLook
+        {
+            postExposure = postExposure,
+            contrast = contrast,
+            monochromeTint = monochromeTint,
+            shadowsTint = shadowsTint,
+            highlightsTint = highlightsTint,
+            highlightsStart = highlightsStart,
+            highlightsEnd = highlightsEnd,
+            bloomIntensity = bloomIntensity,
+            bloomThreshold = bloomThreshold,
+            bloomScatter = bloomScatter,
+            vignetteIntensity = vignetteIntensity,
+            chromaticAberration = chromaticAberration,
+            filmGrainIntensity = filmGrainIntensity,
+            filmGrainResponse = filmGrainResponse,
+            filmGrainType = filmGrainType
+        };
     }
 
     private void BuildIrSpot()
