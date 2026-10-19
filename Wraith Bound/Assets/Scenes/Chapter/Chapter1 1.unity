@@ -11055,7 +11055,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 199.164
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalPosition.y
@@ -11099,7 +11099,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3091259007560268559, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7179670969302359134, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: patrolPointZone
@@ -26119,7 +26119,7 @@ Transform:
   m_GameObject: {fileID: 991898574}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 17.524, y: 0.026670933, z: -2.997}
+  m_LocalPosition: {x: -16.6, y: 0.026670933, z: 0.33}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
