@@ -139,11 +139,11 @@ public class CamcorderController : MonoBehaviour
     [Tooltip("지직거림 최고점에서 더해지는 색수차")]
     [SerializeField] private float zoomGlitchAberration = 1f;
     [Tooltip("렌즈 왜곡 떨림 폭")]
-    [SerializeField] private float zoomGlitchDistortion = 0.25f;
+    [SerializeField] private float zoomGlitchDistortion = 0.05f;
     [Tooltip("밝기 깜빡임 폭(EV)")]
-    [SerializeField] private float zoomGlitchExposureFlicker = 0.8f;
+    [SerializeField] private float zoomGlitchExposureFlicker = 0.25f;
     [Tooltip("LCD 영상이 가로로 튀는 폭(UV)")]
-    [SerializeField] private float zoomGlitchScreenTear = 0.03f;
+    [SerializeField] private float zoomGlitchScreenTear = 0.006f;
 
     [Header("IR Spot Light (펼친 동안 ON)")]
     [Tooltip("적외선 조명 세기. 어두운 곳을 비추는 정도. 너무 높으면 가까운 면이 날아갑니다.")]
@@ -185,6 +185,7 @@ public class CamcorderController : MonoBehaviour
     private Vector3 displayActiveLocalScaleResolved = Vector3.one;
     private MaterialPropertyBlock displayBezelPropertyBlock;
     private Canvas viewfinderCanvas;
+    private CamcorderViewfinderDetails viewfinderDetails; // HD·AUTO·F값, 줌 바
     private Image recDot;
     private Image batteryImage;
     private Material hudMaterial;
@@ -382,9 +383,13 @@ public class CamcorderController : MonoBehaviour
             float previousFov = targetFov;
             targetFov = Mathf.Clamp(targetFov - scroll * zoomStep, minFov, maxFov);
             if (!Mathf.Approximately(previousFov, targetFov))
+            {
                 zoomGlitch?.Trigger();
+                viewfinderDetails?.OnZoomChanged();
+            }
         }
         zoomGlitch?.Tick(Time.deltaTime, screenMaterial);
+        viewfinderDetails?.Tick(Time.deltaTime, targetFov);
         float lensTargetFov = GetLensVerticalFov(targetFov);
         lensCamera.fieldOfView = Mathf.Lerp(lensCamera.fieldOfView, lensTargetFov, Time.deltaTime * 10f);
 
@@ -636,6 +641,8 @@ public class CamcorderController : MonoBehaviour
     {
         if (viewfinderCanvas != null)
             viewfinderCanvas.gameObject.SetActive(visible);
+        if (!visible)
+            viewfinderDetails?.HideZoomBar();
 
         // 켤 때(visible) 최신 배터리 반영, 끌 때는 Empty를 잠깐 표시한 뒤 캔버스 숨김
         RefreshBatteryHud();
@@ -1381,6 +1388,8 @@ public class CamcorderController : MonoBehaviour
             batteryImage.material = GetOrCreateHudMaterial();
             RefreshBatteryHud();
         }
+
+        viewfinderDetails = new CamcorderViewfinderDetails(canvasGo.transform, GetOrCreateHudMaterial(), minFov, maxFov);
 
         canvasGo.SetActive(false);
     }

@@ -47,7 +47,13 @@ public class QuickInventoryHudUI : MonoBehaviour
     [Header("Font")]
     [SerializeField] private TMP_FontAsset font;
 
+    [Header("Camcorder")]
+    [Tooltip("캠코더 뷰파인더를 보는 동안 인벤토리를 숨기는 페이드 시간")]
+    [SerializeField] private float viewfinderHideFade = 0.15f;
+
     private RectTransform rootRect;
+    private CanvasGroup rootGroup;
+    private CamcorderController camcorder;
     private RectTransform slotsContainer;
     private SlotView camcorderView;
     private SlotView passiveView;
@@ -100,6 +106,26 @@ public class QuickInventoryHudUI : MonoBehaviour
         EnsureSlotPool(inventory.capacity);
         DetectAndAnimateSlotChange();
         Refresh();
+        UpdateViewfinderVisibility();
+    }
+
+    // 캠코더 뷰파인더를 보는 동안은 인벤토리를 숨김
+    private void UpdateViewfinderVisibility()
+    {
+        if (rootGroup == null)
+        {
+            return;
+        }
+
+        // 캠코더 뷰는 들고 있을 때만 생성되므로 그때만 찾음
+        if (camcorder == null && inventory.IsCamcorderHeld())
+        {
+            camcorder = FindFirstObjectByType<CamcorderController>();
+        }
+
+        bool hide = camcorder != null && camcorder.IsViewfinderActive;
+        float step = viewfinderHideFade > 0f ? Time.unscaledDeltaTime / viewfinderHideFade : 1f;
+        rootGroup.alpha = Mathf.MoveTowards(rootGroup.alpha, hide ? 0f : 1f, step);
     }
 
     private void EnsureHudRoot()
@@ -141,6 +167,8 @@ public class QuickInventoryHudUI : MonoBehaviour
         rootRect.anchorMax = new Vector2(0f, 1f);
         rootRect.pivot = new Vector2(0f, 1f);
         rootRect.anchoredPosition = rootAnchoredPosition;
+        rootGroup = rootPanel.AddComponent<CanvasGroup>();
+        rootGroup.blocksRaycasts = false;
         float rootHeight = slotSize + camcorderOffsetY + slotSize + passiveOffsetY + passiveSlotSize;
         rootRect.sizeDelta = new Vector2(slotSize, rootHeight);
 
