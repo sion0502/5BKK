@@ -104,23 +104,52 @@ public class CamcorderController : MonoBehaviour
     [Header("NightVision Volume")]
     [SerializeField] private string nightVisionLayerName = "NightVision";
     [Tooltip("노출 부스트(EV). 너무 높으면 화면 중앙이 하얗게 날아갑니다.")]
-    [SerializeField] private float postExposure = 0.6f;
-    [Tooltip("초록 색조 틴트")]
-    [SerializeField] private Color colorFilter = new Color(0.55f, 1f, 0.6f, 1f);
-    [Tooltip("탈색(−100이면 완전 흑백 후 초록 틴트 = 전형적 나이트비전)")]
-    [Range(-100f, 0f)]
-    [SerializeField] private float saturation = -65f;
-    [Tooltip("밝은 부위만 약하게 번지도록")]
-    [SerializeField] private float bloomIntensity = 0.7f;
-    [SerializeField] private float bloomThreshold = 0.9f;
-    [SerializeField] private float vignetteIntensity = 0.45f;
-    [Tooltip("필름 그레인(거친 입자) 강도")]
+    [SerializeField] private float postExposure = 2.5f;
+    [Tooltip("대비. 높을수록 IR이 닿는 곳은 밝고 먼 곳은 어둡게 떨어짐")]
+    [SerializeField] private float contrast = 40f;
+    [Tooltip("단색 틴트: 휘도를 채널별로 이 비율만큼 출력(Channel Mixer). 초록이 1이고 빨강·파랑이 낮을수록 초록빛")]
+    [SerializeField] private Color monochromeTint = new Color(0.62f, 0.85f, 0.58f, 1f);
+    [Tooltip("어두운 부분 색조(Shadows). 초록을 약간 더 얹음")]
+    [SerializeField] private Vector4 shadowsTint = new Vector4(0.9f, 1.1f, 0.9f, 0f);
+    [Tooltip("밝은 부분 색조(Highlights). 빨강·파랑을 올려 초록 틴트를 상쇄 → 밝은 곳은 하얗게")]
+    [SerializeField] private Vector4 highlightsTint = new Vector4(1.6f, 1.15f, 1.6f, 0.35f);
+    [SerializeField] private float highlightsStart = 0.35f;
+    [SerializeField] private float highlightsEnd = 0.9f;
+    [Tooltip("밝은 부위 번짐")]
+    [SerializeField] private float bloomIntensity = 1.2f;
+    [SerializeField] private float bloomThreshold = 0.75f;
+    [SerializeField] private float bloomScatter = 0.75f;
+    [SerializeField] private float vignetteIntensity = 0.5f;
+    [Tooltip("색수차(렌즈 가장자리 색 번짐)")]
     [Range(0f, 1f)]
-    [SerializeField] private float filmGrainIntensity = 0.35f;
+    [SerializeField] private float chromaticAberration = 0.2f;
+    [Tooltip("센서 노이즈(자글거림) 강도")]
+    [Range(0f, 1f)]
+    [SerializeField] private float filmGrainIntensity = 0.55f;
+    [Tooltip("낮을수록 밝은 부분에도 노이즈가 남음")]
+    [Range(0f, 1f)]
+    [SerializeField] private float filmGrainResponse = 0.4f;
+    [SerializeField] private FilmGrainLookup filmGrainType = FilmGrainLookup.Medium4;
+
+    [Header("Zoom Glitch (줌 중 지직거림)")]
+    [Tooltip("줌 입력 후 지직거림이 사라지기까지 시간(초)")]
+    [SerializeField] private float zoomGlitchDuration = 0.3f;
+    [Tooltip("지직거림 최고점에서 더해지는 그레인")]
+    [SerializeField] private float zoomGlitchGrain = 0.8f;
+    [Tooltip("지직거림 최고점에서 더해지는 색수차")]
+    [SerializeField] private float zoomGlitchAberration = 1f;
+    [Tooltip("렌즈 왜곡 떨림 폭")]
+    [SerializeField] private float zoomGlitchDistortion = 0.25f;
+    [Tooltip("밝기 깜빡임 폭(EV)")]
+    [SerializeField] private float zoomGlitchExposureFlicker = 0.8f;
+    [Tooltip("LCD 영상이 가로로 튀는 폭(UV)")]
+    [SerializeField] private float zoomGlitchScreenTear = 0.03f;
 
     [Header("IR Spot Light (펼친 동안 ON)")]
     [Tooltip("적외선 조명 세기. 어두운 곳을 비추는 정도. 너무 높으면 가까운 면이 날아갑니다.")]
-    [SerializeField] private float irIntensity = 1.3f;
+    [SerializeField] private float irIntensity = 6f;
+    [Tooltip("벽에 가까이 붙었을 때 적외선 조명 감쇠 기준(SpotLightProximityDimmer). 노출을 크게 올리므로 손전등(1)보다 낮게. 낮출수록 가까운 벽이 어두워짐")]
+    [SerializeField] private float irNearSurfaceBrightnessCap = 0.1f;
     [SerializeField] private float irRange = 22f;
     [SerializeField] private float irSpotAngle = 75f;
 
@@ -144,6 +173,7 @@ public class CamcorderController : MonoBehaviour
     private Light irSpot;
     private Volume nightVisionVolume;
     private VolumeProfile nightVisionProfile;
+    private CamcorderZoomGlitch zoomGlitch;
     private int nightVisionLayer = -1;
 
     private Transform screenTransform;
@@ -329,13 +359,21 @@ public class CamcorderController : MonoBehaviour
 
     private void Update()
     {
-        if (!isHeldView || !active || lensCamera == null) return;
+        if (!isHeldView || !active || lensCamera == null)
+        {
+            zoomGlitch?.Reset();
+            return;
+        }
 
         float scroll = Input.mouseScrollDelta.y;
         if (Mathf.Abs(scroll) > 0.01f)
         {
+            float previousFov = targetFov;
             targetFov = Mathf.Clamp(targetFov - scroll * zoomStep, minFov, maxFov);
+            if (!Mathf.Approximately(previousFov, targetFov))
+                zoomGlitch?.Trigger();
         }
+        zoomGlitch?.Tick(Time.deltaTime, screenMaterial);
         float lensTargetFov = GetLensVerticalFov(targetFov);
         lensCamera.fieldOfView = Mathf.Lerp(lensCamera.fieldOfView, lensTargetFov, Time.deltaTime * 10f);
 
@@ -1143,6 +1181,8 @@ public class CamcorderController : MonoBehaviour
         }
 
         BuildNightVisionVolume();
+        zoomGlitch = new CamcorderZoomGlitch(nightVisionProfile, zoomGlitchDuration, zoomGlitchGrain,
+            zoomGlitchAberration, zoomGlitchDistortion, zoomGlitchExposureFlicker, zoomGlitchScreenTear);
         BuildIrSpot();
     }
 
@@ -1183,19 +1223,36 @@ public class CamcorderController : MonoBehaviour
         nightVisionProfile = ScriptableObject.CreateInstance<VolumeProfile>();
         nightVisionVolume.sharedProfile = nightVisionProfile;
 
+        // 실사 캠코더 나이트샷: 휘도만 남긴 초록 단색 + 밝은 곳은 하얗게 + 높은 대비 + 센서 노이즈
         ColorAdjustments color = nightVisionProfile.Add<ColorAdjustments>(true);
         color.postExposure.overrideState = true;
         color.postExposure.value = postExposure;
-        color.saturation.overrideState = true;
-        color.saturation.value = saturation;
-        color.colorFilter.overrideState = true;
-        color.colorFilter.value = colorFilter;
+        color.contrast.overrideState = true;
+        color.contrast.value = contrast;
+
+        // 채도(Saturation)는 색 보정 마지막 단계라 −100이면 초록 틴트까지 지워짐 → Channel Mixer로 단색화
+        ChannelMixer mixer = nightVisionProfile.Add<ChannelMixer>(true);
+        SetMonochromeRow(mixer.redOutRedIn, mixer.redOutGreenIn, mixer.redOutBlueIn, monochromeTint.r);
+        SetMonochromeRow(mixer.greenOutRedIn, mixer.greenOutGreenIn, mixer.greenOutBlueIn, monochromeTint.g);
+        SetMonochromeRow(mixer.blueOutRedIn, mixer.blueOutGreenIn, mixer.blueOutBlueIn, monochromeTint.b);
+
+        ShadowsMidtonesHighlights tones = nightVisionProfile.Add<ShadowsMidtonesHighlights>(true);
+        tones.shadows.overrideState = true;
+        tones.shadows.value = shadowsTint;
+        tones.highlights.overrideState = true;
+        tones.highlights.value = highlightsTint;
+        tones.highlightsStart.overrideState = true;
+        tones.highlightsStart.value = highlightsStart;
+        tones.highlightsEnd.overrideState = true;
+        tones.highlightsEnd.value = highlightsEnd;
 
         Bloom bloom = nightVisionProfile.Add<Bloom>(true);
         bloom.intensity.overrideState = true;
         bloom.intensity.value = bloomIntensity;
         bloom.threshold.overrideState = true;
         bloom.threshold.value = bloomThreshold;
+        bloom.scatter.overrideState = true;
+        bloom.scatter.value = bloomScatter;
 
         Vignette vignette = nightVisionProfile.Add<Vignette>(true);
         vignette.intensity.overrideState = true;
@@ -1203,13 +1260,29 @@ public class CamcorderController : MonoBehaviour
         vignette.smoothness.overrideState = true;
         vignette.smoothness.value = 0.5f;
 
+        ChromaticAberration aberration = nightVisionProfile.Add<ChromaticAberration>(true);
+        aberration.intensity.overrideState = true;
+        aberration.intensity.value = chromaticAberration;
+
+        // URP FilmGrain은 매 프레임 오프셋이 바뀌어 자글거림
         FilmGrain grain = nightVisionProfile.Add<FilmGrain>(true);
         grain.type.overrideState = true;
-        grain.type.value = FilmGrainLookup.Medium2;
+        grain.type.value = filmGrainType;
         grain.intensity.overrideState = true;
         grain.intensity.value = filmGrainIntensity;
         grain.response.overrideState = true;
-        grain.response.value = 0.8f;
+        grain.response.value = filmGrainResponse;
+    }
+
+    /// <summary>출력 채널 하나를 휘도(Rec.601 가중치) × tint로 설정. Channel Mixer 값은 % 단위.</summary>
+    private static void SetMonochromeRow(ClampedFloatParameter fromRed, ClampedFloatParameter fromGreen, ClampedFloatParameter fromBlue, float tint)
+    {
+        fromRed.overrideState = true;
+        fromRed.value = 30f * tint;
+        fromGreen.overrideState = true;
+        fromGreen.value = 59f * tint;
+        fromBlue.overrideState = true;
+        fromBlue.value = 11f * tint;
     }
 
     private void BuildIrSpot()
@@ -1232,6 +1305,8 @@ public class CamcorderController : MonoBehaviour
         irSpot.renderingLayerMask = ~0;
         irSpot.cullingMask = BuildIrSpotCullingMask();
         irSpot.enabled = false;
+
+        spotGo.AddComponent<SpotLightProximityDimmer>().Configure(irNearSurfaceBrightnessCap);
     }
 
     private int BuildIrSpotCullingMask()

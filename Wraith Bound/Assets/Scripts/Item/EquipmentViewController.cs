@@ -136,7 +136,7 @@ public class EquipmentViewController : MonoBehaviour
         StripWorldOnlyComponents(view);
         SetLayerRecursively(view, LayerMask.NameToLayer(viewLayerName));
         EnsureHeldItemSway(view);
-        EnsureFlashlightClipPreventer(equipment, view);
+        EnsureFlashlightBeamComponents(equipment, view);
         view.SetActive(false);
 
         spawnedViews[equipment] = view;
@@ -174,17 +174,28 @@ public class EquipmentViewController : MonoBehaviour
         }
     }
 
-    private void EnsureFlashlightClipPreventer(Equipment equipment, GameObject view)
+    /// <summary>
+    /// 손전등 뷰에 빛 보정 컴포넌트를 붙임:
+    /// 카메라(눈) 위치에서 빛이 나오게(그림자 어긋남 방지) + 벽에 가까우면 밝기 감쇠(화면 하얗게 날아감 방지).
+    /// FlashlightEnergyController는 SelectedItemUseController가 런타임에 AddComponent할 수 있어
+    /// Awake 시점엔 없을 수 있으므로 여기서 다시 찾음.
+    /// </summary>
+    private void EnsureFlashlightBeamComponents(Equipment equipment, GameObject view)
     {
         if (view == null)
             return;
 
-        bool isFlashlight = flashlightEnergy != null && flashlightEnergy.IsFlashlightEquipment(equipment);
-        if (!isFlashlight)
+        if (flashlightEnergy == null)
+            flashlightEnergy = GetComponent<FlashlightEnergyController>();
+
+        if (flashlightEnergy == null || !flashlightEnergy.IsFlashlightEquipment(equipment))
             return;
 
-        if (view.GetComponent<FlashlightClipPreventer>() == null)
-            view.AddComponent<FlashlightClipPreventer>();
+        if (view.GetComponent<FlashlightBeamCameraAlign>() == null)
+            view.AddComponent<FlashlightBeamCameraAlign>();
+
+        if (view.GetComponent<SpotLightProximityDimmer>() == null)
+            view.AddComponent<SpotLightProximityDimmer>();
     }
 
     private bool TryGetView(Equipment equipment, out GameObject view)

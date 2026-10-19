@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 튜토리얼 대상(데스크 위 손전등)에 외곽선을 상시 표시합니다.
+/// 튜토리얼 대상(데스크 위 손전등, 로비 캐비닛 등)에 외곽선을 상시 표시합니다.
 /// 대상의 SpotOutline(조준 시에만 표시)은 하이라이트 동안 잠시 꺼 두고, 끝나면 되돌립니다.
+/// 대상 하위에 Outline이 여러 개면(캐비닛 양쪽 문 등) 전부 표시합니다.
 /// </summary>
 public class TutorialHighlight : MonoBehaviour
 {
@@ -16,18 +17,30 @@ public class TutorialHighlight : MonoBehaviour
     [SerializeField] private float maxWidth = 7f;
     [SerializeField] private float pulseSpeed = 3f;
 
-    private Outline outline;
-    private bool addedOutline;
-    private Color originalColor;
-    private float originalWidth;
+    private struct OutlineState
+    {
+        public Outline outline;
+        public bool added;
+        public bool wasEnabled;
+        public Color color;
+        public float width;
+    }
+
+    private readonly List<OutlineState> outlines = new List<OutlineState>();
     private readonly List<SpotOutline> pausedSpotOutlines = new List<SpotOutline>();
     private bool isActive;
 
+    /// <summary>아이템 하이라이트. 인스펙터 target이 비어 있으면 가장 가까운 해당 아이템을 찾습니다.</summary>
     public void Begin(Items itemData, Transform player)
+    {
+        Begin(target != null ? target : FindNearestItem(itemData, player));
+    }
+
+    /// <summary>지정한 오브젝트 하이라이트.</summary>
+    public void Begin(Transform resolved)
     {
         End();
 
-        Transform resolved = target != null ? target : FindNearestItem(itemData, player);
         if (resolved == null)
         {
             Debug.LogWarning("[Tutorial] 하이라이트 대상을 찾지 못했습니다.");
@@ -43,18 +56,35 @@ public class TutorialHighlight : MonoBehaviour
             }
         }
 
-        outline = resolved.GetComponentInChildren<Outline>();
-        addedOutline = outline == null;
-        if (addedOutline)
+        Outline[] existing = resolved.GetComponentsInChildren<Outline>(true);
+        if (existing.Length == 0)
         {
-            outline = resolved.gameObject.AddComponent<Outline>();
+            AddOutline(resolved.gameObject.AddComponent<Outline>(), true);
+        }
+        else
+        {
+            foreach (Outline outline in existing)
+            {
+                AddOutline(outline, false);
+            }
         }
 
-        originalColor = outline.OutlineColor;
-        originalWidth = outline.OutlineWidth;
+        isActive = true;
+    }
+
+    private void AddOutline(Outline outline, bool added)
+    {
+        outlines.Add(new OutlineState
+        {
+            outline = outline,
+            added = added,
+            wasEnabled = outline.enabled,
+            color = outline.OutlineColor,
+            width = outline.OutlineWidth
+        });
+
         outline.OutlineColor = highlightColor;
         outline.enabled = true;
-        isActive = true;
     }
 
     public void End()
@@ -67,19 +97,26 @@ public class TutorialHighlight : MonoBehaviour
         isActive = false;
 
         // 손전등을 주우면 오브젝트가 파괴되므로 null 체크
-        if (outline != null)
+        foreach (OutlineState state in outlines)
         {
-            if (addedOutline)
+            if (state.outline == null)
             {
-                Destroy(outline);
+                continue;
+            }
+
+            if (state.added)
+            {
+                Destroy(state.outline);
             }
             else
             {
-                outline.OutlineColor = originalColor;
-                outline.OutlineWidth = originalWidth;
-                outline.enabled = false;
+                state.outline.OutlineColor = state.color;
+                state.outline.OutlineWidth = state.width;
+                state.outline.enabled = state.wasEnabled;
             }
         }
+
+        outlines.Clear();
 
         foreach (SpotOutline spot in pausedSpotOutlines)
         {
@@ -90,18 +127,24 @@ public class TutorialHighlight : MonoBehaviour
         }
 
         pausedSpotOutlines.Clear();
-        outline = null;
     }
 
     void Update()
     {
-        if (!isActive || outline == null)
+        if (!isActive)
         {
             return;
         }
 
         float t = (Mathf.Sin(Time.unscaledTime * pulseSpeed) + 1f) * 0.5f;
-        outline.OutlineWidth = Mathf.Lerp(minWidth, maxWidth, t);
+        float width = Mathf.Lerp(minWidth, maxWidth, t);
+        foreach (OutlineState state in outlines)
+        {
+            if (state.outline != null)
+            {
+                state.outline.OutlineWidth = width;
+            }
+        }
     }
 
     void OnDisable()

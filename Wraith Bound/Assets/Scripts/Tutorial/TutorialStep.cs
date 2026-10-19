@@ -1,7 +1,10 @@
 using System;
 using UnityEngine;
 
-/// <summary>기본 진행 단계의 완료 조건 종류. 판정은 TutorialConditions에서 합니다.</summary>
+/// <summary>
+/// 기본 진행 단계의 완료 조건 종류. 판정은 TutorialConditions에서 합니다.
+/// 프리팹에 숫자로 직렬화되므로 새 값은 반드시 맨 뒤에 추가 (진행 순서는 TutorialDefaults 목록 순서가 결정).
+/// </summary>
 public enum TutorialCondition
 {
     Move,
@@ -14,15 +17,20 @@ public enum TutorialCondition
     PickUpFlashlight,
     SelectFlashlight,
     FlashlightOn,
-    ExpandInventory
+    ExpandInventory,
+    OpenCabinet
 }
 
-/// <summary>상황형 팁이 뜨는 계기. 각 팁은 한 번만 표시됩니다.</summary>
+/// <summary>상황형 팁이 뜨는 계기. 각 팁은 한 번만 표시됩니다. 직렬화 숫자 유지를 위해 새 값은 맨 뒤에 추가.</summary>
 public enum TutorialTipTrigger
 {
     AcquireUsableItem,
     AcquireBattery,
-    AimHidingSpot
+    AimHidingSpot,
+    AimDoor,
+    AimLockedDoorKey,
+    AimLockedDoorLever,
+    AimLampSwitch
 }
 
 /// <summary>좌상단에 표시되는 기본 진행 단계. 직접 해봐야 다음 단계로 넘어갑니다.</summary>
@@ -40,7 +48,7 @@ public class TutorialStep
     [Tooltip("Move: 이동 거리(m) / Sprint·Crouch: 유지 시간(초) / CamcorderZoom: 휠 입력 횟수. 그 외 무시.")]
     public float requiredAmount;
 
-    [Tooltip("이 단계 동안 하이라이트 대상(손전등)에 외곽선을 상시 표시")]
+    [Tooltip("이 단계 동안 하이라이트 대상에 외곽선을 상시 표시 (OpenCabinet: 가장 가까운 닫힌 캐비닛, 그 외: 손전등)")]
     public bool highlightTarget;
 
     public TutorialStep() { }

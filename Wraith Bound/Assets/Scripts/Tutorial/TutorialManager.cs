@@ -69,15 +69,9 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        if (steps.Count == 0)
-        {
-            steps = TutorialDefaults.CreateSteps();
-        }
-
-        if (tips.Count == 0)
-        {
-            tips = TutorialDefaults.CreateTips();
-        }
+        // 비어 있으면 전부, 아니면 나중에 추가된 기본 단계·팁만 채움 (기존 문구는 유지)
+        TutorialDefaultsMerger.MergeMissingSteps(steps);
+        TutorialDefaultsMerger.MergeMissingTips(tips);
 
         GameObject player = GameObject.FindWithTag("Player");
         if (player == null)
@@ -195,7 +189,11 @@ public class TutorialManager : MonoBehaviour
 
         if (highlight != null)
         {
-            if (step.highlightTarget)
+            if (step.highlightTarget && step.condition == TutorialCondition.OpenCabinet)
+            {
+                highlight.Begin(conditions.FindNearestClosedCabinet());
+            }
+            else if (step.highlightTarget)
             {
                 highlight.Begin(conditions.FlashlightItem, playerTransform);
             }

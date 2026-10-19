@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,9 @@ public class TutorialConditions
     private Vector3 lastPosition;
     private int lastSelectedSlot;
     private bool hasSwitchedSlot;
+    private readonly List<DoorClick> closedCabinetDoors = new List<DoorClick>();
+    private TutorialWorldObjects.AimTarget cachedAimTarget;
+    private int cachedAimFrame = -1;
 
     public Equipment FlashlightItem => flashlightItem;
     public bool IsValid => player != null && playerController != null && inventory != null;
@@ -59,6 +63,11 @@ public class TutorialConditions
         lastPosition = player != null ? player.transform.position : Vector3.zero;
         lastSelectedSlot = inventory != null ? inventory.selectedSlotIndex : 0;
         hasSwitchedSlot = false;
+
+        if (step != null && step.condition == TutorialCondition.OpenCabinet)
+        {
+            TutorialWorldObjects.CollectClosedCabinetDoors(closedCabinetDoors);
+        }
     }
 
     /// <summary>현재 단계 진행도(0~1). 1이면 완료.</summary>
@@ -104,6 +113,9 @@ public class TutorialConditions
             case TutorialCondition.FlashlightOn:
                 return ToProgress(IsFlashlightOn());
 
+            case TutorialCondition.OpenCabinet:
+                return ToProgress(HasOpenedCabinet());
+
             case TutorialCondition.ExpandInventory:
                 return ToProgress(Input.GetKeyDown(KeyCode.Tab));
         }
@@ -123,6 +135,18 @@ public class TutorialConditions
 
             case TutorialTipTrigger.AimHidingSpot:
                 return IsAimingHidingSpot();
+
+            case TutorialTipTrigger.AimDoor:
+                return IsAimingAt(TutorialWorldObjects.AimTarget.Door);
+
+            case TutorialTipTrigger.AimLockedDoorKey:
+                return IsAimingAt(TutorialWorldObjects.AimTarget.LockedDoorKey);
+
+            case TutorialTipTrigger.AimLockedDoorLever:
+                return IsAimingAt(TutorialWorldObjects.AimTarget.LockedDoorLever);
+
+            case TutorialTipTrigger.AimLampSwitch:
+                return IsAimingAt(TutorialWorldObjects.AimTarget.LampSwitch);
         }
 
         return false;
@@ -211,6 +235,66 @@ public class TutorialConditions
                 && slot.item is ActiveItem active
                 && active != batteryItem
                 && (active.effectType != ActiveEffectType.None || active.isThrowable))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsAimingAt(TutorialWorldObjects.AimTarget target)
+    {
+        if (hidingController != null && hidingController.isHiding)
+        {
+            return false;
+        }
+
+        // 조준형 팁 여러 개가 같은 프레임에 판정하므로 레이캐스트는 프레임당 한 번만
+        if (cachedAimFrame != Time.frameCount)
+        {
+            cachedAimFrame = Time.frameCount;
+            cachedAimTarget = TutorialWorldObjects.GetAimTarget(playerCamera);
+        }
+
+        return cachedAimTarget == target;
+    }
+
+    /// <summary>OpenCabinet 단계에서 하이라이트할, 플레이어와 가장 가까운 닫힌 캐비닛.</summary>
+    public Transform FindNearestClosedCabinet()
+    {
+        Transform nearest = null;
+        float nearestSqr = float.MaxValue;
+
+        foreach (DoorClick door in closedCabinetDoors)
+        {
+            if (door == null)
+            {
+                continue;
+            }
+
+            float sqr = (door.transform.position - player.transform.position).sqrMagnitude;
+            if (sqr < nearestSqr)
+            {
+                nearestSqr = sqr;
+                nearest = TutorialWorldObjects.GetCabinetRoot(door);
+            }
+        }
+
+        return nearest;
+    }
+
+    private bool HasOpenedCabinet()
+    {
+        // 캐비닛이 없는 씬(테스트 씬 등)에서는 막히지 않도록 바로 완료
+        if (closedCabinetDoors.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (DoorClick door in closedCabinetDoors)
+        {
+            if (door != null && door.IsOpen())
             {
                 return true;
             }
