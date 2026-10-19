@@ -13,6 +13,8 @@ public sealed class PatrolPointSelector
 
     PatrolPoint _lastPoint;
 
+    public PatrolPoint CurrentPoint => _lastPoint;
+
     public PatrolPointSelector(
         Transform transform,
         NavMotor motor,

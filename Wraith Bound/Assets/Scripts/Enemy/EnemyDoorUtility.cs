@@ -2,6 +2,24 @@ using System.Reflection;
 using UnityEngine;
 
 public static class EnemyDoorUtility{
+    public static bool IsPassageDoor(DoorClick door)
+    {
+        if (door == null)
+            return false;
+
+        Transform t = door.transform;
+        while (t != null)
+        {
+            if (t.CompareTag("Cabinet"))
+                return false;
+            if (t.name.IndexOf("Cabinet", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return false;
+            t = t.parent;
+        }
+
+        return true;
+    }
+
     public static void EnsureDoorsUseLayer(int doorLayer)
     {
         if (doorLayer < 0)
@@ -80,7 +98,7 @@ public static class EnemyDoorUtility{
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick door = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (door == null || door.IsOpen() || door.IsBroken())
+            if (door == null || !IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
                 continue;
 
             if (hits[i].distance < closestDist)
@@ -126,7 +144,7 @@ public static class EnemyDoorUtility{
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick door = hits[i].GetComponentInParent<DoorClick>();
-            if (door == null || door.IsOpen() || door.IsBroken())
+            if (door == null || !IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
                 continue;
 
             float dist = Vector3.Distance(referencePosition, GetDoorWorldPosition(door.transform));
@@ -161,7 +179,7 @@ public static class EnemyDoorUtility{
         for (int i = 0; i < doors.Length; i++)
         {
             DoorClick door = doors[i];
-            if (door == null || door.IsOpen() || door.IsBroken())
+            if (door == null || !IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
                 continue;
 
             Vector3 doorPos = GetDoorWorldPosition(door.transform);
@@ -211,7 +229,7 @@ public static class EnemyDoorUtility{
     /// </summary>
     public static bool TryOpenDoor(DoorClick door, Vector3 openerPosition)
     {
-        if (door == null || door.IsOpen() || door.IsBroken())
+        if (door == null || !IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
             return false;
 
         System.Type doorType = typeof(DoorClick);

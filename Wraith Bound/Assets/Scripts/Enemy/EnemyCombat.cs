@@ -1,10 +1,15 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 public sealed class EnemyCombat
 {
     readonly EnemyBase _owner;
+    readonly List<DoorClick> _chaseUnblockedDoors = new List<DoorClick>();
+    DoorClick _cachedChaseDoor;
+    Vector3 _cachedChaseDoorTarget;
+    int _cachedChaseDoorFrame = -1;
 
     public EnemyCombat(EnemyBase owner)
     {
@@ -19,6 +24,8 @@ public sealed class EnemyCombat
             return;
 
         _owner.Agent.speed = GetChaseSpeed();
+        _owner.Agent.autoBraking = false;
+        PrepareChasePathThroughDoors(s.LastKnownPosition);
         _owner.HandleChaseSpecial();
 
         if (s.IsBusy)
@@ -57,7 +64,7 @@ public sealed class EnemyCombat
             }
             else
             {
-                SetChaseDestination(s.LastKnownPosition, true);
+                SetChaseDestination(s.LastKnownPosition);
                 _owner.Sense.TryKillOnColliderTouch();
                 return;
             }
@@ -87,6 +94,8 @@ public sealed class EnemyCombat
         float limit = GetTargetLostTime();
         s.LastDetectTime = Time.time;
         s.ChaseGraceEndTime = Time.time + limit;
+        s.NextChaseRepathTime = 0f;
+        s.LastChaseDestination = _owner.transform.position - Vector3.one * 999f;
     }
 
     float GetChaseGraceEndTime(float limit)
@@ -111,6 +120,21 @@ public sealed class EnemyCombat
     bool HasReachedLastKnownPosition()
     {
         EnemyState s = _owner.RuntimeState;
+        if (_owner.Agent != null && _owner.Agent.pathPending)
+            return false;
+
+        if (_owner.Agent != null && _owner.Agent.hasPath &&
+            _owner.Agent.pathStatus == NavMeshPathStatus.PathPartial)
+            return false;
+
+        if (NavMesh.Raycast(
+                _owner.transform.position,
+                s.LastKnownPosition,
+                out NavMeshHit navHit,
+                NavMesh.AllAreas) &&
+            NavMotor.GetHorizontalDistance(navHit.position, s.LastKnownPosition) > 0.6f)
+            return false;
+
         float dist = Vector3.Distance(_owner.transform.position, s.LastKnownPosition);
         return dist <= _owner.InvestigateStartDistance ||
                (_owner.Agent.hasPath && !_owner.Agent.pathPending &&
@@ -271,13 +295,13 @@ public sealed class EnemyCombat
     {
         EnemyState s = _owner.RuntimeState;
 
-        if (_owner.Anim == null) return;
+        if (!_owner.HasPlayableAnimator) return;
         if (s.LockAnimator) return;
 
         switch (s.CurrentState)
         {
             case EnemyBase.State.Patrol:
-                _owner.Anim.SetInteger(_owner.AnimStateHash, IsAgentVisuallyMoving() ? 1 : 0);
+                _owner.Anim.SetInteger(_owner.AnimStateHash, s.HasPatDestination ? 1 : 0);
                 break;
 
             case EnemyBase.State.Chase:
@@ -300,20 +324,26 @@ public sealed class EnemyCombat
         EnemyBase.State prevState = s.CurrentState;
         s.CurrentState = nextState;
 
+        if (prevState == EnemyBase.State.Chase && nextState != EnemyBase.State.Chase)
+            RestoreChaseDoorCarves();
+
         switch (s.CurrentState)
         {
             case EnemyBase.State.Patrol:
                 _owner.Agent.speed = GetPatrolSpeed();
+                _owner.Agent.autoBraking = true;
                 break;
 
             case EnemyBase.State.Chase:
                 _owner.Agent.speed = GetChaseSpeed();
+                _owner.Agent.autoBraking = false;
                 s.NextChaseRepathTime = 0f;
                 s.LastChaseDestination = _owner.transform.position - Vector3.one * 999f;
                 break;
 
             case EnemyBase.State.Investigate:
                 _owner.Agent.speed = GetPatrolSpeed();
+                _owner.Agent.autoBraking = true;
                 s.NextInvestigateRepathTime = 0f;
                 break;
 
@@ -439,20 +469,257 @@ public sealed class EnemyCombat
 
     void SetChaseDestinationInternal(Vector3 target)
     {
+        PrepareChasePathThroughDoors(target);
+
+        if (!TryResolveChaseNavPoint(target, out Vector3 dest))
+            dest = target;
+
         if (_owner.NavMotor != null)
         {
-            if (_owner.NavMotor.EnsureDestination(target, 3f))
+            if (_owner.NavMotor.EnsureDestination(dest, 0.75f))
                 return;
         }
 
         if (!_owner.Agent.isOnNavMesh)
             return;
 
-        if (!NavMesh.SamplePosition(target, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+        if (!NavMesh.SamplePosition(dest, out NavMeshHit hit, 0.75f, NavMesh.AllAreas) &&
+            !NavMesh.SamplePosition(target, out hit, 3f, NavMesh.AllAreas))
             return;
 
         _owner.Agent.isStopped = false;
         _owner.Agent.SetDestination(hit.position);
+    }
+
+    bool TryResolveChaseNavPoint(Vector3 target, out Vector3 dest)
+    {
+        dest = target;
+        Vector3 best = default;
+        float bestScore = float.MaxValue;
+        bool found = false;
+
+        TryScoreChaseSample(target, 0.5f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 1.2f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 2f, ref found, ref best, ref bestScore);
+        TryScoreChaseSample(target, 3f, ref found, ref best, ref bestScore);
+
+        Vector3[] offsets =
+        {
+            Vector3.forward, Vector3.back, Vector3.left, Vector3.right,
+            (Vector3.forward + Vector3.right).normalized,
+            (Vector3.forward + Vector3.left).normalized,
+            (Vector3.back + Vector3.right).normalized,
+            (Vector3.back + Vector3.left).normalized
+        };
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            TryScoreChaseSample(target + offsets[i] * 0.9f, 0.8f, ref found, ref best, ref bestScore);
+            TryScoreChaseSample(target + offsets[i] * 1.6f, 0.8f, ref found, ref best, ref bestScore);
+        }
+
+        if (!found)
+            return false;
+
+        dest = PushChasePointOffWall(best);
+        return true;
+    }
+
+    void TryScoreChaseSample(
+        Vector3 point,
+        float radius,
+        ref bool found,
+        ref Vector3 best,
+        ref float bestScore)
+    {
+        if (!NavMesh.SamplePosition(point, out NavMeshHit hit, radius, NavMesh.AllAreas))
+            return;
+
+        Vector3 sampled = hit.position;
+        if (IsChaseSampleOnWrongSideOfWall(sampled, point))
+            return;
+
+        if (_owner.NavMotor == null || !_owner.NavMotor.CalculatePath(sampled, out NavMeshPathStatus status))
+            return;
+
+        if (status == NavMeshPathStatus.PathInvalid)
+            return;
+
+        if (status == NavMeshPathStatus.PathPartial)
+        {
+            float sampleToAgent = NavMotor.GetHorizontalDistance(_owner.transform.position, sampled);
+            float sampleToTarget = NavMotor.GetHorizontalDistance(sampled, point);
+            if (sampleToAgent + 0.5f < sampleToTarget && !IsClosedDoorOnChaseRoute(sampled) &&
+                FindUsefulChaseDoor(point) == null)
+                return;
+        }
+
+        float score = NavMotor.GetHorizontalDistance(sampled, point);
+        if (status == NavMeshPathStatus.PathComplete)
+            score -= 0.5f;
+
+        if (found && score >= bestScore)
+            return;
+
+        found = true;
+        best = sampled;
+        bestScore = score;
+    }
+
+    bool IsChaseSampleOnWrongSideOfWall(Vector3 navPoint, Vector3 target)
+    {
+        Vector3 from = navPoint + Vector3.up;
+        Vector3 to = target + Vector3.up;
+        Vector3 delta = to - from;
+        float dist = delta.magnitude;
+        if (dist < 0.35f)
+            return false;
+
+        int mask = (1 << 0) | _owner.ObstacleLayer.value;
+        int defaultLayer = LayerMask.NameToLayer("Default");
+        if (defaultLayer >= 0)
+            mask |= 1 << defaultLayer;
+
+        if (!Physics.Raycast(from, delta / dist, out RaycastHit hit, dist - 0.12f, mask, QueryTriggerInteraction.Ignore))
+            return false;
+
+        if (hit.collider.GetComponentInParent<HidingSpot>() != null)
+            return false;
+        DoorClick blockingDoor = hit.collider.GetComponentInParent<DoorClick>();
+        if (blockingDoor != null && EnemyDoorUtility.IsPassageDoor(blockingDoor))
+            return false;
+        if (_owner.Player != null &&
+            (hit.transform == _owner.Player || hit.transform.IsChildOf(_owner.Player)))
+            return false;
+
+        // 벽 너머 숨은 위치여도, 그 방으로 가는 문이 있으면 벽 앞 내비 지점에 붙지 않는다.
+        if (FindUsefulChaseDoor(target) != null)
+            return false;
+
+        return true;
+    }
+
+    bool IsClosedDoorOnChaseRoute(Vector3 target)
+    {
+        return EnemyDoorUtility.FindClosedDoorBetween(
+                   _owner.transform.position,
+                   target,
+                   _owner.DoorLayer,
+                   _owner.DoorCheckHeight,
+                   _owner.PathDoorCheckRadius) != null ||
+               EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 5f) != null ||
+               FindUsefulChaseDoor(target) != null;
+    }
+
+    Vector3 PushChasePointOffWall(Vector3 pos)
+    {
+        if (EnemyDoorUtility.FindClosedDoorNearPosition(pos, _owner.DoorLayer, 1.4f) != null)
+            return pos;
+
+        float want = Mathf.Max(0.28f, _owner.Agent.radius + 0.12f);
+        if (!NavMesh.FindClosestEdge(pos, out NavMeshHit edge, NavMesh.AllAreas))
+            return pos;
+        if (edge.distance >= want)
+            return pos;
+
+        Vector3 pushed = pos + edge.normal * (want - edge.distance);
+        if (NavMesh.SamplePosition(pushed, out NavMeshHit hit, 0.8f, NavMesh.AllAreas))
+            return hit.position;
+
+        return pos;
+    }
+
+    void PrepareChasePathThroughDoors(Vector3 target)
+    {
+        DoorClick door = EnemyDoorUtility.FindClosedDoorBetween(
+            _owner.transform.position,
+            target,
+            _owner.DoorLayer,
+            _owner.DoorCheckHeight,
+            _owner.PathDoorCheckRadius);
+
+        if (door == null)
+            door = EnemyDoorUtility.FindClosedDoorOnRoute(_owner.transform.position, target, 5f);
+
+        if (door == null)
+            door = FindUsefulChaseDoor(target);
+
+        if (door == null)
+            return;
+
+        DoorNavMeshUtility.SetNavMeshBlocked(door.transform, false);
+        if (!_chaseUnblockedDoors.Contains(door))
+            _chaseUnblockedDoors.Add(door);
+    }
+
+    DoorClick FindUsefulChaseDoor(Vector3 target)
+    {
+        if (Time.frameCount == _cachedChaseDoorFrame &&
+            (_cachedChaseDoorTarget - target).sqrMagnitude < 0.0001f)
+            return _cachedChaseDoor;
+
+        _cachedChaseDoorFrame = Time.frameCount;
+        _cachedChaseDoorTarget = target;
+
+        Vector3 agentPos = _owner.transform.position;
+        DoorClick[] doors = Object.FindObjectsByType<DoorClick>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        DoorClick best = null;
+        float bestScore = float.MaxValue;
+
+        for (int i = 0; i < doors.Length; i++)
+        {
+            DoorClick door = doors[i];
+            if (door == null || !EnemyDoorUtility.IsPassageDoor(door) || door.IsOpen() || door.IsBroken())
+                continue;
+
+            Vector3 doorPos = EnemyDoorUtility.GetDoorWorldPosition(door.transform);
+            if (Vector3.Distance(agentPos, doorPos) > _owner.ChaseDoorSearchRadius)
+                continue;
+            if (!IsChaseDoorUseful(agentPos, doorPos, target))
+                continue;
+
+            float score = Vector3.Distance(agentPos, doorPos) + Vector3.Distance(doorPos, target);
+            if (score >= bestScore)
+                continue;
+
+            bestScore = score;
+            best = door;
+        }
+
+        _cachedChaseDoor = best;
+        return best;
+    }
+
+    static bool IsChaseDoorUseful(Vector3 agentPos, Vector3 doorPos, Vector3 target)
+    {
+        float agentToTarget = Vector3.Distance(agentPos, target);
+        float doorToTarget = Vector3.Distance(doorPos, target);
+        if (doorToTarget >= agentToTarget - 0.2f)
+            return false;
+
+        Vector3 toTarget = target - agentPos;
+        Vector3 toDoor = doorPos - agentPos;
+        toTarget.y = 0f;
+        toDoor.y = 0f;
+        if (toTarget.sqrMagnitude <= 0.01f || toDoor.sqrMagnitude <= 0.01f)
+            return false;
+
+        // 벽 바로 앞에서 문은 옆으로 있을 수 있다. 뒤에 있는 문만 제외.
+        return Vector3.Dot(toTarget.normalized, toDoor.normalized) > -0.2f;
+    }
+
+    void RestoreChaseDoorCarves()
+    {
+        for (int i = 0; i < _chaseUnblockedDoors.Count; i++)
+        {
+            DoorClick door = _chaseUnblockedDoors[i];
+            if (door == null || door.IsOpen() || door.IsBroken())
+                continue;
+
+            DoorNavMeshUtility.SetNavMeshBlocked(door.transform, true);
+        }
+
+        _chaseUnblockedDoors.Clear();
     }
 
     void SetRandomInvestigatePointAround(Vector3 center, float radius)
@@ -583,7 +850,7 @@ public sealed class EnemyCombat
             return false;
 
         door = hit.collider.GetComponentInParent<DoorClick>();
-        if (door == null) return false;
+        if (door == null || !EnemyDoorUtility.IsPassageDoor(door)) return false;
         if (door.IsOpen() || door.IsBroken()) return false;
         if (!IsCurrentDestinationBeyondDoor(hit.point, dir.normalized))
             return false;
@@ -635,7 +902,7 @@ public sealed class EnemyCombat
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick click = hits[i].collider.GetComponentInParent<DoorClick>();
-            if (click == null) continue;
+            if (click == null || !EnemyDoorUtility.IsPassageDoor(click)) continue;
             if (click.IsOpen() || click.IsBroken()) continue;
 
             DoorBrokenTest broken = hits[i].collider.GetComponentInParent<DoorBrokenTest>();
@@ -669,7 +936,7 @@ public sealed class EnemyCombat
         for (int i = 0; i < hits.Length; i++)
         {
             DoorClick click = hits[i].GetComponentInParent<DoorClick>();
-            if (click == null) continue;
+            if (click == null || !EnemyDoorUtility.IsPassageDoor(click)) continue;
             if (click.IsOpen() || click.IsBroken()) continue;
 
             DoorBrokenTest broken = hits[i].GetComponentInParent<DoorBrokenTest>();
