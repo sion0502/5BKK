@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -21,6 +22,7 @@ public class GameOverDroppedCameraView : MonoBehaviour
     private const float MaxPullBack = 3f;
     private const float NearSurfaceBrightnessCap = 0.06f; // 캠코더 IR(0.1)보다 낮게 — 위에 글자가 얹히므로 화면이 너무 밝지 않게
     private const int TextureWidth = 1280;
+    private const float PatrolReleaseDelay = 2.5f; // 괴물이 쓰러진 캠코더 앞에 서 있다가 순찰을 떠나기까지 (실제 시간)
 
     private Camera lensCamera;
     private RenderTexture renderTexture;
@@ -50,6 +52,7 @@ public class GameOverDroppedCameraView : MonoBehaviour
         int nightVisionLayer = LayerMask.NameToLayer(camcorder != null ? camcorder.NightVisionLayerName : "NightVision");
 
         EnemyBase monster = FindNearestEnemy(eye.transform.position);
+        StartCoroutine(ReleaseToPatrol(monster));
         PlaceOnFloor(eye.transform.position, eye.transform.forward, monster, out Vector3 position, out Quaternion rotation);
 
         int height = Mathf.Max(1, Mathf.RoundToInt(TextureWidth * (float)Screen.height / Mathf.Max(1, Screen.width)));
@@ -152,6 +155,56 @@ public class GameOverDroppedCameraView : MonoBehaviour
         rotation = Quaternion.LookRotation(look, Vector3.up) * Quaternion.Euler(0f, 0f, RollAngle);
     }
 
+    /// <summary>
+    /// 떨어진 캠코더 앞에서 괴물이 잠깐 서 있다가 다시 순찰을 떠나게 한다.
+    /// 점프스케어가 3초 뒤 ReleaseEnemiesToPatrol을 부르지만, 게임오버 화면이 점프스케어를 즉시 지워 그 호출이 사라지므로 여기서 대신 부른다.
+    /// </summary>
+    private IEnumerator ReleaseToPatrol(EnemyBase monster)
+    {
+        Animator anim = monster != null ? (monster.Anim != null ? monster.Anim : monster.GetComponentInChildren<Animator>(true)) : null;
+        AnimatorUpdateMode originalUpdateMode = anim != null ? anim.updateMode : AnimatorUpdateMode.Normal;
+        bool originalRootMotion = anim != null && anim.applyRootMotion;
+        AnimateInPlace(monster, anim);
+
+        yield return new WaitForSecondsRealtime(PatrolReleaseDelay);
+
+        if (anim != null)
+        {
+            anim.updateMode = originalUpdateMode;
+            anim.applyRootMotion = originalRootMotion;
+        }
+        PlayerDeathDebug.ReleaseEnemiesToPatrol();
+    }
+
+    /// <summary>
+    /// 사망 처리(SnapToPatrolAnimation(hold))가 애니메이터 속도를 0으로 묶어 괴물이 굳어 있으므로,
+    /// 순찰을 떠나기 전까지 제자리 대기 동작을 재생해 떨어진 캠코더 화면 속에서 숨 쉬듯 움직이게 한다.
+    /// 제자리를 벗어나지 않게 루트 모션은 끄고, timeScale=0이어도 돌도록 unscaled 시간으로 갱신.
+    /// </summary>
+    private static void AnimateInPlace(EnemyBase monster, Animator anim)
+    {
+        if (monster == null || anim == null || anim.runtimeAnimatorController == null)
+            return;
+
+        anim.enabled = true;
+        anim.applyRootMotion = false;
+        anim.updateMode = AnimatorUpdateMode.UnscaledTime;
+        anim.speed = 1f;
+        anim.SetInteger(monster.AnimStateHash, 0);
+
+        // Idle이 없는 괴물(TheMimic 등)은 걷기 동작을 제자리에서 재생
+        string[] names = { "Base Layer.Idle", "Idle", "Base Layer.Patrol", "Patrol", "Base Layer.Walk", "Walk", "Armature|Walk" };
+        foreach (string name in names)
+        {
+            int hash = Animator.StringToHash(name);
+            if (!anim.HasState(0, hash))
+                continue;
+            anim.Play(hash, 0, Random.value);
+            anim.Update(0f);
+            return;
+        }
+    }
+
     private static EnemyBase FindNearestEnemy(Vector3 from)
     {
         EnemyBase nearest = null;
@@ -248,7 +301,7 @@ public class GameOverDroppedCameraView : MonoBehaviour
 
     /// <summary>
     /// 빛 원뿔 안 여러 방향으로 레이를 쏴 표면 밝기 계수(입사각 cos / 거리²) 평균을 구함.
-    /// 장면이 멈춰 있어 한 번만 계산 (SpotLightProximityDimmer와 같은 기준, 그쪽은 deltaTime 기반이라 정지 중 동작 안 함).
+    /// 캠코더는 움직이지 않으므로 처음 괴물이 앞에 서 있을 때 한 번만 계산 (SpotLightProximityDimmer와 같은 기준, 그쪽은 deltaTime 기반이라 정지 중 동작 안 함).
     /// </summary>
     private static float AverageSurfaceFactor(Transform lens, Light ir)
     {
