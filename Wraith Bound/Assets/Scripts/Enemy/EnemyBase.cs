@@ -249,8 +249,17 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Update()
     {
-        if (PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
+        if (PlayerDeathDebug.IsDying)
             return;
+
+        if (PlayerDeathDebug.IsDead)
+        {
+            if (!PlayerDeathDebug.EnemiesReleased)
+                return;
+
+            TickPatrolAfterDeath();
+            return;
+        }
 
         if (player == null && Sense != null)
             Sense.AutoFindPlayerReferences();
@@ -290,6 +299,67 @@ public abstract class EnemyBase : MonoBehaviour
 
         if (!_state.LockAnimator)
             Combat.TickAnimation();
+    }
+
+    void TickPatrolAfterDeath()
+    {
+        if (_patrol == null || agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        if (_state.CurrentState != State.Patrol)
+            _state.CurrentState = State.Patrol;
+
+        UpdatePatrol();
+        if (!_state.LockAnimator && Combat != null)
+            Combat.TickAnimation();
+    }
+
+    internal void ReturnToPatrolAfterDeath()
+    {
+        _state.CurrentState = State.Patrol;
+        _state.IsBusy = false;
+        _state.LockAnimator = false;
+        _state.CanDetectPlayer = false;
+        _state.PlayerDeadLogged = true;
+        _state.HiddenKillTargetActive = false;
+        _state.HiddenSearchTargetActive = false;
+        _state.InvestigateRoutineRunning = false;
+        _state.HasPatDestination = false;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+            agent.updateRotation = true;
+            agent.ResetPath();
+        }
+
+        if (_patrol != null)
+            SetNextGlobalPatDestination();
+
+        SnapToPatrolAnimation(false);
+    }
+
+    internal void SnapToPatrolAnimation(bool hold)
+    {
+        if (anim == null)
+            return;
+
+        if (!anim.enabled)
+            anim.enabled = true;
+
+        anim.speed = hold ? 0f : 1f;
+        anim.SetInteger(AnimState, 1);
+        string[] names = { "Base Layer.Patrol", "Patrol", "Base Layer.Walk", "Walk" };
+        for (int i = 0; i < names.Length; i++)
+        {
+            int hash = Animator.StringToHash(names[i]);
+            if (!anim.HasState(0, hash))
+                continue;
+
+            anim.Play(hash, 0, 0f);
+            anim.Update(0f);
+            return;
+        }
     }
 
     protected virtual void OnCollisionEnter(Collision collision)
