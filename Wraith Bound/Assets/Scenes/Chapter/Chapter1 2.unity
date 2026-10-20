@@ -16444,7 +16444,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.026529
+      value: 2.2312
       objectReference: {fileID: 0}
     - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
       propertyPath: m_LocalPosition.y
@@ -17443,7 +17443,6 @@ Transform:
   m_Children:
   - {fileID: 1119954610}
   - {fileID: 1442125218}
-  - {fileID: 10275098}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1320447598
@@ -17981,9 +17980,6 @@ PrefabInstance:
       insertIndex: 48
       addedObject: {fileID: 1706409477}
     - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
-      insertIndex: 49
-      addedObject: {fileID: 1577780386}
-    - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
       insertIndex: 50
       addedObject: {fileID: 14773157}
     - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
@@ -17998,6 +17994,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
       insertIndex: 54
       addedObject: {fileID: 751955544}
+    - targetCorrespondingSourceObject: {fileID: 4660874335345244466, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1577780386}
     - targetCorrespondingSourceObject: {fileID: 5373262934332683288, guid: daedc0cb78c1f1343a1453282560ccd4, type: 3}
       insertIndex: 0
       addedObject: {fileID: 1120427101}
@@ -20891,6 +20890,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4a81df737a6e8964785e4848c7238366, type: 3}
+--- !u!4 &1577780386 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5677623708677578036, guid: 4a81df737a6e8964785e4848c7238366, type: 3}
+  m_PrefabInstance: {fileID: 1577780385}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1587094086 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2857418358850030583, guid: ada7de60708e5ce499f4df2f3caf3ea6, type: 3}
@@ -29060,5 +29064,4 @@ SceneRoots:
   - {fileID: 89565926}
   - {fileID: 2034108669}
   - {fileID: 90740818}
-  - {fileID: 1582030119}
   - {fileID: 1308880778}
