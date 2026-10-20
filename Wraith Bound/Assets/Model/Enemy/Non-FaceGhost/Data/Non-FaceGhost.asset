@@ -16,7 +16,7 @@ MonoBehaviour:
   monsterType: 1
   description: 
   hp: 3000
-  moveSpeed: 5
+  moveSpeed: 3.5
   detectRange: 60
   viewAngle: 200
   checkInterval: 0
@@ -27,5 +27,5 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   targetLostTIme: 10
-  hearingRange: 60
+  hearingRange: 30
   eyeFrontArcAngle: 180
