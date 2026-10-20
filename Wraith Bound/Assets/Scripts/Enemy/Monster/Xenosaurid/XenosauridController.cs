@@ -39,6 +39,17 @@ public class XenosauridController : MonoBehaviour
     [SerializeField] AudioSource tauntScream;
     [SerializeField] float screamFadeTime = 1.2f;
 
+    [Header("추적 비명")]
+    [SerializeField] AudioClip chaseScream;
+    [SerializeField] float chaseScreamFadeIn = 0.45f;
+    [SerializeField] float chaseScreamFadeOut = 0.9f;
+    [SerializeField] float chaseScreamPitchMin = 0.62f;
+    [SerializeField] float chaseScreamPitchMax = 1.55f;
+
+    [Header("추적 중 입")]
+    [SerializeField] float chaseJawOpen = 55f;
+    [SerializeField] float jawOpenSpeed = 280f;
+
     [Header("발소리 — AudioSource 클립 하나만")]
     [SerializeField] AudioSource footstepSource;
     [SerializeField] float walkVolume = 0.75f;
@@ -61,6 +72,13 @@ public class XenosauridController : MonoBehaviour
     int _runHash;
     float _stepTime = -1f;
     float _screamVolume = 1f;
+    AudioSource _chaseVoice;
+    AudioSource _chaseVoiceB;
+    bool _chaseUsingB;
+    bool _chaseOverlapStarted;
+    float _chasePitch = 1f;
+    float _jawOpen;
+    int _attackHash;
 
     void Awake()
     {
@@ -69,6 +87,7 @@ public class XenosauridController : MonoBehaviour
         _anim = GetComponentInChildren<Animator>();
         _tauntHash = Animator.StringToHash(tauntState);
         _runHash = Animator.StringToHash(runState);
+        _attackHash = Animator.StringToHash("Base Layer.Attack");
         CacheBones();
         if (_enemy != null && _head != null)
             _enemy.jumpscareFacePoint = _head;
@@ -85,6 +104,22 @@ public class XenosauridController : MonoBehaviour
         }
 
         PrepareVoice(tauntScream);
+        PrepareChaseVoice();
+    }
+
+    void PrepareChaseVoice()
+    {
+        if (chaseScream == null)
+            return;
+
+        _chaseVoice = gameObject.AddComponent<AudioSource>();
+        _chaseVoiceB = gameObject.AddComponent<AudioSource>();
+        PrepareVoice(_chaseVoice);
+        PrepareVoice(_chaseVoiceB);
+        _chaseVoice.clip = chaseScream;
+        _chaseVoiceB.clip = chaseScream;
+        _chaseVoice.volume = 0f;
+        _chaseVoiceB.volume = 0f;
     }
 
     static void PrepareVoice(AudioSource source)
@@ -107,7 +142,8 @@ public class XenosauridController : MonoBehaviour
 
         if (PlayerDeathDebug.IsDying && _enemy.RuntimeState.PlayerDeadLogged)
         {
-            StraightenForJumpscare();
+            PresentDeathFace();
+            TickChaseScream(false, true);
             return;
         }
 
@@ -116,6 +152,8 @@ public class XenosauridController : MonoBehaviour
             HoldTaunt();
             if (TauntFinished())
                 FinishTaunt();
+            TickChaseScream(false, false);
+            PoseJaw(false);
             return;
         }
 
@@ -124,7 +162,164 @@ public class XenosauridController : MonoBehaviour
             BeginTaunt();
 
         _lastState = _enemy.RuntimeState.CurrentState;
-        TickFootsteps();
+        bool doorAttack = InDoorAttack();
+        bool chasing = state == EnemyBase.State.Chase && !_taunting && !doorAttack;
+        if (doorAttack)
+            StopDoorAttackSounds();
+        TickChaseScream(chasing, doorAttack);
+        if (!doorAttack)
+            TickFootsteps();
+        PoseJaw(chasing && IsChaseRun());
+    }
+
+    bool IsChaseRun()
+    {
+        if (_anim == null || _enemy == null)
+            return false;
+
+        if (_anim.GetInteger(_enemy.AnimStateHash) == 2)
+            return true;
+
+        AnimatorStateInfo info = _anim.GetCurrentAnimatorStateInfo(0);
+        return info.fullPathHash == _runHash || info.IsName("Run") || info.IsName("Run 0");
+    }
+
+    void StopDoorAttackSounds()
+    {
+        if (tauntScream != null && tauntScream.isPlaying)
+            tauntScream.Stop();
+        if (footstepSource != null && footstepSource.isPlaying)
+            footstepSource.Stop();
+    }
+
+    bool InDoorAttack()
+    {
+        if (_anim == null || _enemy == null || _taunting || !_enemy.RuntimeState.IsBusy)
+            return false;
+
+        AnimatorStateInfo info = _anim.GetCurrentAnimatorStateInfo(0);
+        if (info.fullPathHash == _attackHash || info.IsName("Attack"))
+            return true;
+
+        return _anim.GetInteger(_enemy.AnimStateHash) != 2;
+    }
+
+    void PoseJaw(bool open)
+    {
+        if (_jaw == null)
+            return;
+
+        float target = open ? chaseJawOpen : 0f;
+        _jawOpen = Mathf.MoveTowards(_jawOpen, target, jawOpenSpeed * Time.deltaTime);
+        if (_jawOpen <= 0.01f)
+            return;
+
+        _jaw.localRotation *= Quaternion.AngleAxis(_jawOpen, Vector3.forward);
+    }
+
+    void TickChaseScream(bool chasing, bool cut)
+    {
+        if (_chaseVoice == null || _chaseVoiceB == null || chaseScream == null)
+            return;
+
+        AudioSource lead = _chaseUsingB ? _chaseVoiceB : _chaseVoice;
+        AudioSource follow = _chaseUsingB ? _chaseVoice : _chaseVoiceB;
+
+        if (!chasing)
+        {
+            _chaseOverlapStarted = false;
+            FadeChaseSource(lead, cut);
+            FadeChaseSource(follow, cut);
+            return;
+        }
+
+        if (!lead.isPlaying)
+        {
+            if (follow.isPlaying)
+            {
+                _chaseUsingB = !_chaseUsingB;
+                _chaseOverlapStarted = false;
+                lead = _chaseUsingB ? _chaseVoiceB : _chaseVoice;
+                follow = _chaseUsingB ? _chaseVoice : _chaseVoiceB;
+            }
+            else
+            {
+                PlayChaseVoice(lead);
+                _chaseOverlapStarted = false;
+            }
+        }
+
+        float length = Mathf.Max(0.05f, lead.clip.length);
+        float overlap = Mathf.Min(chaseScreamFadeOut, length * 0.42f);
+        if (!_chaseOverlapStarted && length - lead.time <= overlap)
+        {
+            PlayChaseVoice(follow);
+            _chaseOverlapStarted = true;
+        }
+
+        lead.volume = _screamVolume * ChaseEnvelope(lead, true, overlap);
+        if (follow.isPlaying)
+            follow.volume = _screamVolume * ChaseEnvelope(follow, false, overlap);
+
+        if (_chaseOverlapStarted && (!lead.isPlaying || lead.time >= length - 0.02f))
+        {
+            lead.Stop();
+            lead.volume = 0f;
+            _chaseUsingB = !_chaseUsingB;
+            _chaseOverlapStarted = false;
+        }
+    }
+
+    void FadeChaseSource(AudioSource source, bool cut)
+    {
+        if (source == null || !source.isPlaying)
+            return;
+
+        if (cut)
+        {
+            source.Stop();
+            source.volume = 0f;
+            return;
+        }
+
+        float outTime = Mathf.Max(0.05f, chaseScreamFadeOut);
+        source.volume = Mathf.MoveTowards(source.volume, 0f, Time.deltaTime * (_screamVolume / outTime));
+        if (source.volume <= 0.01f)
+        {
+            source.Stop();
+            source.volume = 0f;
+        }
+    }
+
+    void PlayChaseVoice(AudioSource source)
+    {
+        _chasePitch = NextChasePitch();
+        source.clip = chaseScream;
+        source.loop = false;
+        source.pitch = _chasePitch;
+        source.time = 0f;
+        source.volume = 0f;
+        source.Play();
+    }
+
+    float ChaseEnvelope(AudioSource source, bool lead, float overlap)
+    {
+        float length = Mathf.Max(0.05f, source.clip.length);
+        float time = source.time;
+        float fadeIn = lead ? Mathf.Min(chaseScreamFadeIn, length * 0.3f) : overlap;
+        float level = time < fadeIn ? time / Mathf.Max(0.05f, fadeIn) : 1f;
+        if (lead && _chaseOverlapStarted && time > length - overlap)
+            level = Mathf.Min(level, Mathf.Clamp01((length - time) / Mathf.Max(0.05f, overlap)));
+        return Mathf.Clamp01(level);
+    }
+
+    float NextChasePitch()
+    {
+        float min = Mathf.Min(chaseScreamPitchMin, chaseScreamPitchMax);
+        float max = Mathf.Max(chaseScreamPitchMin, chaseScreamPitchMax);
+        float mid = (min + max) * 0.5f;
+        bool goHigh = _chasePitch <= mid;
+        return Random.Range(goHigh ? mid : min, goHigh ? max : mid);
     }
 
     void TickFootsteps()
@@ -287,17 +482,66 @@ public class XenosauridController : MonoBehaviour
             transform.rotation, look, faceTurnSpeed * Time.deltaTime);
     }
 
-    void StraightenForJumpscare()
+    Quaternion _deathJawBase;
+    Vector3 _snoutLocal = Vector3.left;
+    bool _deathPoseReady;
+
+    void PresentDeathFace()
     {
-        if (_head == null)
-            return;
-
         Camera cam = Camera.main;
-        if (cam == null)
+        if (cam == null || _head == null)
             return;
 
+        CaptureDeathPose();
+        ApplyDeathPose();
+        MeetFaceToFace(cam);
+
+        Vector3 facePoint = Vector3.Lerp(MouthPoint(), _head.position, 0.2f);
         Vector3 desired = cam.transform.position + cam.transform.forward * deathFaceDistance;
-        transform.position += desired - MouthPoint();
+        transform.position += desired - facePoint;
+    }
+
+    void CaptureDeathPose()
+    {
+        if (_deathPoseReady)
+            return;
+
+        _deathPoseReady = true;
+        if (_jaw != null)
+            _deathJawBase = _jaw.localRotation;
+
+        Vector3 snout = _tongue != null ? _tongue.position - _head.position : _head.forward;
+        if (snout.sqrMagnitude > 0.0001f)
+            _snoutLocal = _head.InverseTransformDirection(snout.normalized);
+    }
+
+    void ApplyDeathPose()
+    {
+        if (_jaw != null)
+            _jaw.localRotation = _deathJawBase * Quaternion.AngleAxis(Mathf.Max(0f, chaseJawOpen), Vector3.forward);
+    }
+
+    void MeetFaceToFace(Camera cam)
+    {
+        Vector3 snout = _head.TransformDirection(_snoutLocal);
+        Vector3 flatSnout = snout;
+        flatSnout.y = 0f;
+        Vector3 want = -cam.transform.forward;
+        want.y = 0f;
+        if (flatSnout.sqrMagnitude > 0.0001f && want.sqrMagnitude > 0.0001f)
+            transform.Rotate(0f, Vector3.SignedAngle(flatSnout, want, Vector3.up), 0f, Space.World);
+
+        Vector3 axis = _head.TransformDirection(Vector3.forward);
+        if (axis.sqrMagnitude < 0.0001f)
+            return;
+
+        Vector3 face = Vector3.ProjectOnPlane(_head.TransformDirection(_snoutLocal), axis);
+        Vector3 look = Vector3.ProjectOnPlane(-cam.transform.forward, axis);
+        if (face.sqrMagnitude < 0.0001f || look.sqrMagnitude < 0.0001f)
+            return;
+
+        float pitch = Mathf.Clamp(Vector3.SignedAngle(face, look, axis), -12f, 48f);
+        _head.localRotation *= Quaternion.AngleAxis(pitch, Vector3.forward);
     }
 
     Vector3 MouthPoint()

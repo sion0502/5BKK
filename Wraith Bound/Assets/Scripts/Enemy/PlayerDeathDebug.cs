@@ -9,6 +9,7 @@ public static class PlayerDeathDebug
 {
     public static bool IsDead { get; private set; }
     public static bool IsDying { get; private set; }
+    public static bool EnemiesReleased { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetState()
@@ -61,6 +62,61 @@ public static class PlayerDeathDebug
         FreezeAllEnemies();
     }
 
+    public static void KeepViewAfterJumpscare()
+    {
+        IsDead = true;
+        IsDying = false;
+        EnemiesReleased = false;
+        Debug.Log("Death");
+        Time.timeScale = 1f;
+        FreezePlayer();
+        EnableMouseLook();
+        SnapEnemiesToPatrol(true);
+    }
+
+    public static void ReleaseEnemiesToPatrol()
+    {
+        if (!IsDead)
+            return;
+
+        EnemiesReleased = true;
+        Time.timeScale = 1f;
+        EnemyBase[] enemies = Object.FindObjectsByType<EnemyBase>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            EnemyBase enemy = enemies[i];
+            if (enemy == null)
+                continue;
+
+            enemy.enabled = true;
+            if (enemy.Anim != null)
+                enemy.Anim.enabled = true;
+
+            NavMeshAgent agent = enemy.Agent;
+            if (agent != null)
+            {
+                agent.enabled = true;
+                if (agent.isOnNavMesh)
+                {
+                    agent.isStopped = false;
+                    agent.updateRotation = true;
+                }
+            }
+
+            enemy.ReturnToPatrolAfterDeath();
+        }
+    }
+
+    static void SnapEnemiesToPatrol(bool hold)
+    {
+        EnemyBase[] enemies = Object.FindObjectsByType<EnemyBase>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            if (enemies[i] != null)
+                enemies[i].SnapToPatrolAnimation(hold);
+        }
+    }
+
     static void FreezePlayer(bool markDead = true)
     {
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -104,6 +160,20 @@ public static class PlayerDeathDebug
 
             enemy.StopAllCoroutines();
             enemy.enabled = false;
+        }
+    }
+
+    static void EnableMouseLook()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null)
+            return;
+
+        MouseLook[] looks = player.GetComponentsInChildren<MouseLook>(true);
+        for (int i = 0; i < looks.Length; i++)
+        {
+            if (looks[i] != null)
+                looks[i].enabled = true;
         }
     }
 

@@ -1001,9 +1001,14 @@ MonoBehaviour:
   - 12
   localStraightenAxis: {x: 0, y: 0, z: 1}
   faceRaise: 1.25
-  deathFaceDistance: 0.58
+  deathFaceDistance: 0.85
   tauntScream: {fileID: 2872518254603673372}
   screamFadeTime: 1.2
+  chaseScream: {fileID: 8300000, guid: af7ecbb3748ca2149b55d56a596edcae, type: 3}
+  chaseScreamFadeIn: 0.45
+  chaseScreamFadeOut: 0.9
+  chaseScreamPitchMin: 0.62
+  chaseScreamPitchMax: 1.55
   footstepSource: {fileID: 5576607412871598602}
   walkVolume: 0.75
   runVolume: 1

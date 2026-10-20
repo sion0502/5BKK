@@ -100,15 +100,22 @@ public sealed class EnemyJumpscare : MonoBehaviour
                     Mathf.Sin(elapsed * 67f) * shake * 1.2f,
                     Mathf.Sin(elapsed * 57f) * shake * 1.8f));
             view.fieldOfView = Mathf.Lerp(originalFov, 48f, lunge);
-            blackout = Mathf.InverseLerp(duration * 0.78f, duration, elapsed);
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        blackout = 1f;
-        faceLight.enabled = false;
+        if (faceLight != null)
+            faceLight.enabled = false;
+        RestoreScareView();
+        if (enemy.Anim != null)
+            enemy.Anim.enabled = true;
+        if (enemy.Agent != null)
+            enemy.Agent.enabled = true;
         finished = true;
-        PlayerDeathDebug.TriggerDeath();
+        PlayerDeathDebug.KeepViewAfterJumpscare();
+        yield return new WaitForSecondsRealtime(3f);
+        PlayerDeathDebug.ReleaseEnemiesToPatrol();
+        Destroy(gameObject);
     }
 
     static void FaceCamera(Transform monster, Vector3 cameraForward)
@@ -261,6 +268,22 @@ public sealed class EnemyJumpscare : MonoBehaviour
         }
 
         return Mathf.Max(0.55f, -nearestSurface + view.nearClipPlane + 0.22f);
+    }
+
+    void RestoreScareView()
+    {
+        if (view != null)
+        {
+            view.transform.SetPositionAndRotation(cameraPosition, cameraRotation);
+            view.fieldOfView = originalFov;
+            view.nearClipPlane = originalNearClip;
+        }
+
+        if (monster != null)
+            monster.SetPositionAndRotation(monsterPosition, monsterRotation);
+
+        view = null;
+        monster = null;
     }
 
     void OnGUI()

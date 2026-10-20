@@ -85,6 +85,12 @@ public class MonsterEnemy : EnemyBase
                 yield return null;
             }
 
+            if (IsNurseGhost())
+            {
+                BreakDoorAndKeepChasing(door, reach);
+                yield break;
+            }
+
             // Stop translation before turning; never walk backwards to align an attack.
             agent.isStopped = true;
             agent.ResetPath();
@@ -157,6 +163,23 @@ public class MonsterEnemy : EnemyBase
             nextPossibleAttackTime = Time.time + Mathf.Max(0.2f, postAttackCooldown);
             EndDoorAttack();
         }
+    }
+
+    bool IsNurseGhost()
+    {
+        return name.IndexOf("NurseGhost", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    void BreakDoorAndKeepChasing(DoorBrokenTest door, float reach)
+    {
+        anim.SetInteger(AnimState, 2);
+        if (!IsDoorStillAttackable(door) || GetDistanceToDoorCollider(door) > reach + 0.15f)
+            return;
+
+        resumeDoorPos = GetDoorClosestPoint(door);
+        resumeThrough = GetDoorThroughDirection(door, RuntimeState.LastKnownPosition);
+        resumeThroughDoor = true;
+        door.BreakByEnemy(transform.position);
     }
 
     int ResolveDoorAttackStateHash()
