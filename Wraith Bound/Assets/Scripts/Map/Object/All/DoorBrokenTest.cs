@@ -8,6 +8,7 @@ public class DoorBrokenTest : MonoBehaviour
     [SerializeField] private float torqueImpulse = 50f;
     [SerializeField] private float fadeStartDelay = 5f;
     [SerializeField] private float fadeDuration = 2f;
+    [SerializeField] private AudioClip breakSound;
 
     private int currentHits;
     private bool isBroken;
@@ -54,17 +55,22 @@ public class DoorBrokenTest : MonoBehaviour
             BreakDoor(attackerPosition);
     }
 
-    public void BreakByEnemy(Vector3 attackerPosition)
+    public void BreakByEnemy(Vector3 attackerPosition, AudioClip breakClip = null)
     {
         if (isBroken) return;
 
         Debug.Log("Enemy Force Break Door");
 
         currentHits = hitsToBreak;
-        BreakDoor(attackerPosition);
+        BreakDoor(attackerPosition, breakClip);
     }
 
     private void BreakDoor(Vector3 attackerPosition)
+    {
+        BreakDoor(attackerPosition, null);
+    }
+
+    private void BreakDoor(Vector3 attackerPosition, AudioClip breakClip)
     {
         if (isBroken) return;
 
@@ -97,8 +103,40 @@ public class DoorBrokenTest : MonoBehaviour
 
         dir.Normalize();
 
+        PlayBreakSound(breakClip);
         StartCoroutine(AnimateDebris(dir));
         StartCoroutine(FadeAndDestroy());
+    }
+
+    static AudioClip defaultBangClip;
+
+    void PlayBreakSound(AudioClip overrideClip = null)
+    {
+        AudioClip clip = overrideClip != null
+            ? overrideClip
+            : breakSound != null ? breakSound : LoadBang();
+        if (clip == null)
+            return;
+
+        GameObject speaker = new GameObject("DoorBreakSound");
+        speaker.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        speaker.transform.SetParent(transform, true);
+        AudioSource source = speaker.AddComponent<AudioSource>();
+        source.spatialBlend = 0.45f;
+        source.minDistance = 18f;
+        source.maxDistance = 55f;
+        source.rolloffMode = AudioRolloffMode.Logarithmic;
+        source.dopplerLevel = 0f;
+        source.playOnAwake = false;
+        source.PlayOneShot(clip, 1f);
+        Destroy(speaker, clip.length + 0.2f);
+    }
+
+    static AudioClip LoadBang()
+    {
+        if (defaultBangClip == null)
+            defaultBangClip = Resources.Load<AudioClip>("Sound/Door_Break_Bang");
+        return defaultBangClip;
     }
 
     IEnumerator AnimateDebris(Vector3 direction)

@@ -53,6 +53,8 @@ public class MonsterEnemy : EnemyBase
         anim.applyRootMotion = false;
         agent.stoppingDistance = 0f;
         float reach = Mathf.Max(doorAttackStartDistance, agent.radius + 0.2f);
+        if (IsXenosaurid())
+            reach = 2.4f;
 
         try
         {
@@ -66,7 +68,9 @@ public class MonsterEnemy : EnemyBase
                 if (through.sqrMagnitude < 0.001f) through = transform.forward;
                 through.Normalize();
             }
-            Vector3 approach = doorPoint - through * Mathf.Min(doorStopDistance, reach * 0.75f);
+            Vector3 approach = doorPoint - through * (IsXenosaurid()
+                ? 2.4f
+                : Mathf.Min(doorStopDistance, reach * 0.75f));
             approach.y = transform.position.y;
             float timer = 0f;
             float nextApproachUpdate = 0f;
@@ -88,6 +92,12 @@ public class MonsterEnemy : EnemyBase
             if (IsNurseGhost())
             {
                 BreakDoorAndKeepChasing(door, reach);
+                yield break;
+            }
+
+            if (IsXenosaurid())
+            {
+                yield return XenosauridDoorAttack(door);
                 yield break;
             }
 
@@ -168,6 +178,137 @@ public class MonsterEnemy : EnemyBase
     bool IsNurseGhost()
     {
         return name.IndexOf("NurseGhost", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    bool IsXenosaurid()
+    {
+        return name.IndexOf("Xenosaurid", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    IEnumerator XenosauridDoorAttack(DoorBrokenTest door)
+    {
+        agent.isStopped = true;
+        agent.ResetPath();
+        agent.velocity = Vector3.zero;
+        agent.updateRotation = false;
+        anim.SetInteger(AnimState, 0);
+
+        float timer = 0f;
+        while (GetAngleToDoorCollider(door) > Mathf.Max(attackFaceAngle, 5f))
+        {
+            if (!IsDoorStillAttackable(door) || timer >= finalAlignTimeout) yield break;
+            FaceDoorCollider(door);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        if (!IsDoorStillAttackable(door)) yield break;
+
+        PlaceXenosauridAwayFromDoor(door);
+
+        int attackState = ResolveDoorAttackStateHash();
+        if (attackState == 0)
+        {
+            yield return FallbackDoorHit(door, 2.4f);
+            yield break;
+        }
+
+        anim.SetInteger(AnimState, -1);
+        anim.ResetTrigger(AnimAttack);
+        anim.CrossFadeInFixedTime(attackState, 0.05f, 0, 0f);
+
+        const float firstClaw = 0.22f;
+        const float secondClaw = 0.62f;
+        const float thudPeak = 0.04f;
+        int step = 0;
+        float length = 1.67f;
+        timer = 0f;
+        while (timer < length + 0.25f)
+        {
+            if (step == 0 && !IsDoorStillAttackable(door))
+                yield break;
+
+            AnimatorStateInfo info = anim.GetCurrentAnimatorStateInfo(0);
+            if (info.fullPathHash == attackState)
+            {
+                if (info.length > 0.2f)
+                    length = info.length;
+                float t = info.normalizedTime;
+                if (step == 0 && t >= firstClaw - thudPeak / length)
+                {
+                    step = 1;
+                    PlayDoorClip(XenoThud, door.transform.position);
+                }
+                else if (step == 1 && t >= secondClaw)
+                {
+                    step = 2;
+                    resumeDoorPos = GetDoorClosestPoint(door);
+                    resumeThrough = GetDoorThroughDirection(door, RuntimeState.LastKnownPosition);
+                    resumeThroughDoor = true;
+                    door.BreakByEnemy(transform.position, XenoBang);
+                }
+
+                if (t >= 0.92f)
+                    break;
+            }
+            else if (timer > 0.5f)
+            {
+                break;
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        anim.SetInteger(AnimState, 2);
+    }
+
+    static AudioClip _xenoThud;
+    static AudioClip _xenoBang;
+    AudioSource _doorHit;
+
+    static AudioClip XenoThud => _xenoThud ??= Resources.Load<AudioClip>("Sound/XenoDoorThud");
+    static AudioClip XenoBang => _xenoBang ??= Resources.Load<AudioClip>("Sound/DragonStudioBang");
+
+    void PlayDoorClip(AudioClip clip, Vector3 position)
+    {
+        if (clip == null)
+            return;
+        if (_doorHit == null)
+        {
+            var speaker = new GameObject("DoorHit");
+            speaker.transform.SetParent(transform, false);
+            _doorHit = speaker.AddComponent<AudioSource>();
+            _doorHit.spatialBlend = 0.7f;
+            _doorHit.minDistance = 8f;
+            _doorHit.maxDistance = 36f;
+            _doorHit.rolloffMode = AudioRolloffMode.Logarithmic;
+            _doorHit.dopplerLevel = 0f;
+            _doorHit.playOnAwake = false;
+        }
+        _doorHit.transform.position = position;
+        _doorHit.PlayOneShot(clip, 1f);
+    }
+
+    void PlaceXenosauridAwayFromDoor(DoorBrokenTest door)
+    {
+        const float standOff = 2.4f;
+        Vector3 doorPoint = GetDoorClosestPoint(door);
+        Vector3 away = transform.position - doorPoint;
+        away.y = 0f;
+        if (away.sqrMagnitude < 0.001f)
+            away = -transform.forward;
+        away.Normalize();
+
+        Vector3 spot = doorPoint + away * standOff;
+        spot.y = transform.position.y;
+        if (agent != null && agent.enabled && agent.isOnNavMesh &&
+            NavMesh.SamplePosition(spot, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+        {
+            agent.Warp(hit.position);
+            return;
+        }
+
+        transform.position = spot;
     }
 
     void BreakDoorAndKeepChasing(DoorBrokenTest door, float reach)

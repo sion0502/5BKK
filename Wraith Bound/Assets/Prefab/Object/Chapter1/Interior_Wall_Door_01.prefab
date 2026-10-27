@@ -528,6 +528,7 @@ MonoBehaviour:
   torqueImpulse: 50
   fadeStartDelay: 5
   fadeDuration: 2
+  breakSound: {fileID: 8300000, guid: 4f8a1c6e2b9d4a07c5e3d71f0a28b694, type: 3}
 --- !u!54 &8661561345253493244
 Rigidbody:
   m_ObjectHideFlags: 0
