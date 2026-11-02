@@ -35,43 +35,53 @@ public class PlayerInteractor : MonoBehaviour
         if (interactionUI == null) interactionUI = gameObject.AddComponent<InteractionCrosshairUI>();
     }
 
-    // World geometry, including Floor, always blocks interaction.
-    // RaycastAll avoids losing the nearest wall when a fixed buffer fills up.
+    // First gather interaction candidates, then test visibility to their actual hit surface.
+    // Movement collision, target detection and occlusion are separate responsibilities.
     public static bool TryGetInteractionHit(Ray ray, float range, Transform playerRoot, out RaycastHit closest)
     {
-        // Do not exclude world objects by their layer: imported walls can use any layer.
-        RaycastHit[] hits;
+        RaycastHit[] hits = CastInteractionRay(ray, range, QueryTriggerInteraction.Collide);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        closest = default;
+        RaycastHit surface = default;
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (playerRoot != null && hit.transform.IsChildOf(playerRoot)) continue;
+            if (!hit.collider.isTrigger && surface.collider == null) surface = hit;
+
+            IInteractable candidate = ResolveTarget(hit.collider);
+            if (candidate == null || hit.distance > GetTargetRange(candidate)) continue;
+            Component owner = candidate as Component;
+            if (owner != null && HasClearPath(ray.origin, hit.point, owner.transform, playerRoot))
+            {
+                closest = hit;
+                return true;
+            }
+        }
+
+        // Keep a solid-surface fallback for hiding-spot detection and useful diagnostics.
+        closest = surface;
+        return closest.collider != null;
+    }
+
+    private static RaycastHit[] CastInteractionRay(Ray ray, float range, QueryTriggerInteraction triggers)
+    {
         bool backfaces = Physics.queriesHitBackfaces;
         try
         {
             Physics.queriesHitBackfaces = true;
-            hits = Physics.RaycastAll(ray, range, ~0, QueryTriggerInteraction.Ignore);
+            return Physics.RaycastAll(ray, Mathf.Max(0f, range), ~0, triggers);
         }
         finally { Physics.queriesHitBackfaces = backfaces; }
-        closest = default;
-        float distance = float.PositiveInfinity;
-        foreach (RaycastHit hit in hits)
-        {
-            if (playerRoot != null && hit.transform.IsChildOf(playerRoot)) continue;
-            if (hit.distance >= distance) continue;
-            distance = hit.distance;
-            closest = hit;
-        }
-        return closest.collider != null;
     }
 
     public static bool HasClearPath(Vector3 origin, Vector3 destination, Transform target, Transform playerRoot)
     {
         Vector3 delta = destination - origin;
         if (delta.sqrMagnitude < 0.000001f) return true;
-        bool backfaces = Physics.queriesHitBackfaces;
-        RaycastHit[] hits;
-        try
-        {
-            Physics.queriesHitBackfaces = true;
-            hits = Physics.RaycastAll(origin, delta.normalized, delta.magnitude, ~0, QueryTriggerInteraction.Ignore);
-        }
-        finally { Physics.queriesHitBackfaces = backfaces; }
+        // Stop just before the visible surface, not at a switch pivot buried in a wall.
+        RaycastHit[] hits = CastInteractionRay(new Ray(origin, delta.normalized),
+            Mathf.Max(0f, delta.magnitude - 0.001f), QueryTriggerInteraction.Ignore);
         foreach (RaycastHit hit in hits)
         {
             if (hit.transform.IsChildOf(target)) continue;
@@ -121,7 +131,7 @@ public class PlayerInteractor : MonoBehaviour
         else if (logInteractionFailures && Input.GetButtonDown("Interact"))
         {
             string reason = CurrentHitCollider != null
-                ? $"Blocked by {GetObjectPath(CurrentHitCollider.transform)} ({CurrentHitCollider.GetType().Name}, layer {LayerMask.LayerToName(CurrentHitCollider.gameObject.layer)})"
+                ? $"No usable target selected. Crosshair surface: {GetObjectPath(CurrentHitCollider.transform)} ({CurrentHitCollider.GetType().Name}, distance {CurrentHitDistance:F2}m). Aim, target range, or occlusion prevented interaction."
                 : "No visible collider in interaction range, or player is hiding/transitioning";
             Debug.Log($"[Interaction] {reason}", CurrentHitCollider);
         }

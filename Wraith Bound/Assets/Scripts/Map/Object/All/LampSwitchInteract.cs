@@ -68,12 +68,9 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
             return;
         }
 
-        Camera camera = interactor != null ? interactor.GetComponentInChildren<Camera>() : Camera.main;
-        MeshFilter mesh = GetComponent<MeshFilter>();
-        Vector3 point = mesh != null && mesh.sharedMesh != null
-            ? transform.TransformPoint(mesh.sharedMesh.bounds.center) : transform.position;
-        if (camera == null || !PlayerInteractor.HasClearPath(camera.transform.position, point,
-                transform, interactor != null ? interactor.transform : null)) return;
+        PlayerInteractor controller = interactor != null ? interactor.GetComponent<PlayerInteractor>() : null;
+        float range = controller != null ? controller.interactRange : 3f;
+        if (!PlayerInteractor.CanInteractWith(interactor, this, range)) return;
 
         EnsureLightCache();
         if (controlledLights.Length == 0) return;
