@@ -15,6 +15,11 @@ public static class InteractionRegressionChecks
             GameObject cabinet = UnityEngine.Object.Instantiate(prefab);
             cabinet.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             cabinet.transform.localScale = Vector3.one;
+            Transform shell = cabinet.transform.Find("HH_Wall_Cabinet_01");
+            Require(shell.GetComponents<BoxCollider>().Length == 5,
+                "Cabinet shell must use five hollow box colliders");
+            Require(shell.GetComponent<MeshCollider>() == null,
+                "Cabinet interaction must not depend on mesh cooking/read access");
             Physics.SyncTransforms();
             foreach (float z in new[] { -0.35f, 0.35f })
             {

@@ -6,6 +6,10 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] public float interactRange = 3f;
     [SerializeField] private InteractionCrosshairUI interactionUI;
+    [SerializeField] private bool logInteractionFailures = true;
+
+    public Collider CurrentHitCollider { get; private set; }
+    public float CurrentHitDistance { get; private set; }
 
     void Awake()
     {
@@ -72,6 +76,8 @@ public class PlayerInteractor : MonoBehaviour
 
     void Update()
     {
+        CurrentHitCollider = null;
+        CurrentHitDistance = float.PositiveInfinity;
         IInteractable target = null;
         string label = null;
         PlayerHidingController hiding = GetComponent<PlayerHidingController>();
@@ -79,6 +85,8 @@ public class PlayerInteractor : MonoBehaviour
             TryGetInteractionHit(new Ray(playerCamera.transform.position, playerCamera.transform.forward),
                 interactRange, transform, out RaycastHit hit))
         {
+            CurrentHitCollider = hit.collider;
+            CurrentHitDistance = hit.distance;
             target = ResolveTarget(hit.collider);
             if (target != null)
             {
@@ -92,5 +100,23 @@ public class PlayerInteractor : MonoBehaviour
         if (interactionUI != null) interactionUI.SetItemName(label);
         if (target != null && Input.GetButtonDown("Interact"))
             target.Interact(gameObject);
+        else if (logInteractionFailures && Input.GetButtonDown("Interact"))
+        {
+            string reason = CurrentHitCollider != null
+                ? $"Blocked by {GetObjectPath(CurrentHitCollider.transform)} ({CurrentHitCollider.GetType().Name}, layer {LayerMask.LayerToName(CurrentHitCollider.gameObject.layer)})"
+                : "No visible collider in interaction range, or player is hiding/transitioning";
+            Debug.Log($"[Interaction] {reason}", CurrentHitCollider);
+        }
+    }
+
+    private static string GetObjectPath(Transform target)
+    {
+        string path = target.name;
+        while (target.parent != null)
+        {
+            target = target.parent;
+            path = target.name + "/" + path;
+        }
+        return path;
     }
 }

@@ -15,7 +15,8 @@ public class SpotOutline : MonoBehaviour
         viewCamera = Camera.main;
     }
 
-    void Update()
+    // Read the central selection after PlayerInteractor.Update, not before it.
+    void LateUpdate()
     {
         if (viewCamera == null)
         {
@@ -31,7 +32,12 @@ public class SpotOutline : MonoBehaviour
         Transform playerRoot = null;
         PlayerInteractor interactor = viewCamera.GetComponentInParent<PlayerInteractor>();
         if (interactor != null) playerRoot = interactor.transform;
-        if (PlayerInteractor.TryGetInteractionHit(ray, maxDistance, playerRoot, out RaycastHit hit))
+        if (interactor != null && interactor.isActiveAndEnabled)
+        {
+            shouldShow = interactor.CurrentHitDistance <= maxDistance &&
+                IsTargetCollider(interactor.CurrentHitCollider);
+        }
+        else if (PlayerInteractor.TryGetInteractionHit(ray, maxDistance, playerRoot, out RaycastHit hit))
         {
             shouldShow = IsTargetCollider(hit.collider);
         }
@@ -47,6 +53,11 @@ public class SpotOutline : MonoBehaviour
         }
 
         Transform hitTransform = col.transform;
+        // Some assets put the mesh/outline below the collider's door object.
+        // Match only that same interaction owner, never an arbitrary common tile root.
+        IInteractable owner = GetComponentInParent<IInteractable>();
+        if (owner != null && ReferenceEquals(owner, PlayerInteractor.ResolveTarget(col)))
+            return true;
         if (hitTransform == transform)
         {
             return true;
