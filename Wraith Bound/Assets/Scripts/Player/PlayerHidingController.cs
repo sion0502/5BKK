@@ -164,13 +164,19 @@ public class PlayerHidingController : MonoBehaviour
                 playerCamera.position,
                 playerCamera.forward);
 
-        if (Physics.Raycast(
+        if (PlayerInteractor.TryGetInteractionHit(
             ray,
-            out RaycastHit hit,
             interactionDistance,
-            interactableLayer,
-            QueryTriggerInteraction.Ignore))
+            transform,
+            out RaycastHit hit))
         {
+            // Let the central interactor handle a visible door, switch or item.
+            if (PlayerInteractor.ResolveTarget(hit.collider) != null)
+            {
+                currentSpot = null;
+                return;
+            }
+
             HidingSpot spot =
                 hit.collider.GetComponent<HidingSpot>();
 

@@ -5,8 +5,6 @@ public class SpotOutline : MonoBehaviour
 {
     public float maxDistance = 3f;
 
-    private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
-
     private Outline outline;
     private Camera viewCamera;
 
@@ -30,15 +28,12 @@ public class SpotOutline : MonoBehaviour
 
         bool shouldShow = false;
         Ray ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
-        int hitCount = Physics.RaycastNonAlloc(ray, HitBuffer, maxDistance);
-
-        for (int i = 0; i < hitCount; i++)
+        Transform playerRoot = null;
+        PlayerInteractor interactor = viewCamera.GetComponentInParent<PlayerInteractor>();
+        if (interactor != null) playerRoot = interactor.transform;
+        if (PlayerInteractor.TryGetInteractionHit(ray, maxDistance, playerRoot, out RaycastHit hit))
         {
-            if (IsTargetCollider(HitBuffer[i].collider))
-            {
-                shouldShow = true;
-                break;
-            }
+            shouldShow = IsTargetCollider(hit.collider);
         }
 
         outline.enabled = shouldShow;
@@ -57,7 +52,7 @@ public class SpotOutline : MonoBehaviour
             return true;
         }
 
-        if (hitTransform.IsChildOf(transform) || transform.IsChildOf(hitTransform))
+        if (hitTransform.IsChildOf(transform))
         {
             return true;
         }

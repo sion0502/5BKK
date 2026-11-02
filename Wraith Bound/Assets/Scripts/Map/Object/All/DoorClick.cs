@@ -1,10 +1,8 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-public class DoorClick : MonoBehaviour
+public class DoorClick : MonoBehaviour, IInteractable
 {
-    private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
-
     private bool open;
   
     [Header("Door Settings")]
@@ -37,8 +35,6 @@ public class DoorClick : MonoBehaviour
     public int fontSize = 24;
     public Color fontColor = Color.white;
     public Vector2 messagePosition = new Vector2(0.5f, 0.5f);
-
-    private string doorMessage = "";
 
     [Header("Audio Settings")]
     public AudioClip openSound;
@@ -121,20 +117,7 @@ public class DoorClick : MonoBehaviour
             );
         }
 
-        if (WasInteractPressed() && IsAimedAtDoor())
-        {
-            if (!open)
-            {
-                SetDoorDirection();
-            }
 
-            open = !open;
-
-            PlayDoorSound();
-            SyncNavMeshObstacle(true);
-        }
-
-        UpdateDoorMessage();
         SyncNavMeshObstacle(false);
     }
 
@@ -151,94 +134,22 @@ public class DoorClick : MonoBehaviour
         DoorNavMeshUtility.SetNavMeshBlocked(transform, blocked);
     }
 
-    private bool WasInteractPressed()
+    public void Interact(GameObject interactor)
     {
-        return Input.GetButtonDown("Interact") || Input.GetKeyDown(interactKey);
+        if (!isActiveAndEnabled) return;
+        LockedDoor lockedDoor = GetComponent<LockedDoor>();
+        if (lockedDoor != null && lockedDoor.IsLocked) return;
+        Camera camera = interactor.GetComponentInChildren<Camera>();
+        if (camera != null) viewCamera = camera;
+        if (!open) SetDoorDirection();
+        open = !open;
+        PlayDoorSound();
+        SyncNavMeshObstacle(true);
     }
 
-    private bool IsAimedAtDoor()
+    public string GetInteractPrompt()
     {
-        if (viewCamera == null)
-        {
-            return false;
-        }
-
-        Ray ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
-        int hitCount = Physics.RaycastNonAlloc(ray, HitBuffer, interactDistance);
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            if (IsDoorCollider(HitBuffer[i].collider))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool IsDoorCollider(Collider col)
-    {
-        if (col == null)
-        {
-            return false;
-        }
-
-        Transform hitTransform = col.transform;
-        if (hitTransform == transform)
-        {
-            return true;
-        }
-
-        return hitTransform.IsChildOf(transform) || transform.IsChildOf(hitTransform);
-    }
-
-    private void UpdateDoorMessage()
-    {
-        if (IsAimedAtDoor())
-        {
-            doorMessage = open ? closeMessage : openMessage;
-            return;
-        }
-
-        doorMessage = "";
-    }
-
-    private void OnGUI()
-    {
-        if (!string.IsNullOrEmpty(doorMessage))
-        {
-            GUIStyle style = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = fontSize,
-                normal = { textColor = fontColor }
-            };
-
-            if (messageFont != null)
-            {
-                style.font = messageFont;
-            }
-
-            float screenWidth = Screen.width;
-            float screenHeight = Screen.height;
-
-            Vector2 labelSize = style.CalcSize(
-                new GUIContent(doorMessage)
-            );
-
-            float labelX =
-                screenWidth * messagePosition.x - labelSize.x / 2;
-
-            float labelY =
-                screenHeight * messagePosition.y - labelSize.y / 2;
-
-            GUI.Label(
-                new Rect(labelX, labelY, labelSize.x, labelSize.y),
-                doorMessage,
-                style
-            );
-        }
+        return open ? closeMessage : openMessage;
     }
 
     private void PlayDoorSound()

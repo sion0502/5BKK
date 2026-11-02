@@ -41,6 +41,15 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
 
     private void Awake()
     {
+        // The imported prefab used a 1.1 x 1.1 x 0.5 box, extending through walls.
+        MeshFilter mesh = GetComponent<MeshFilter>();
+        BoxCollider box = GetComponent<BoxCollider>();
+        if (mesh != null && mesh.sharedMesh != null && box != null)
+        {
+            box.center = mesh.sharedMesh.bounds.center;
+            box.size = mesh.sharedMesh.bounds.size;
+        }
+
         if (button == null)
         {
             button = FindChildByName(transform, "Button");
@@ -53,6 +62,13 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         {
             return;
         }
+
+        Camera camera = interactor != null ? interactor.GetComponentInChildren<Camera>() : Camera.main;
+        MeshFilter mesh = GetComponent<MeshFilter>();
+        Vector3 point = mesh != null && mesh.sharedMesh != null
+            ? transform.TransformPoint(mesh.sharedMesh.bounds.center) : transform.position;
+        if (camera == null || !PlayerInteractor.HasClearPath(camera.transform.position, point,
+                transform, interactor != null ? interactor.transform : null)) return;
 
         hasActivated = true;
         PlaySwitchSound();
