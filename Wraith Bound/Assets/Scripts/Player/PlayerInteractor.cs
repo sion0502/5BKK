@@ -10,6 +10,23 @@ public class PlayerInteractor : MonoBehaviour
 
     public Collider CurrentHitCollider { get; private set; }
     public float CurrentHitDistance { get; private set; }
+    public Camera InteractionCamera => playerCamera;
+
+    public static float GetTargetRange(IInteractable target)
+    {
+        if (target is DoorClick door) return Mathf.Max(0f, door.interactDistance);
+        if (target is WardrobeDoorInteract wardrobe) return Mathf.Max(0f, wardrobe.interactDistance);
+        return float.PositiveInfinity;
+    }
+
+    public static bool CanInteractWith(GameObject player, IInteractable target, float range)
+    {
+        if (player == null || range <= 0f) return false;
+        PlayerInteractor interactor = player.GetComponent<PlayerInteractor>();
+        Camera camera = interactor != null ? interactor.InteractionCamera : player.GetComponentInChildren<Camera>();
+        return camera != null && TryGetInteractionHit(new Ray(camera.transform.position, camera.transform.forward),
+            range, player.transform, out RaycastHit hit) && ReferenceEquals(ResolveTarget(hit.collider), target);
+    }
 
     void Awake()
     {
@@ -88,6 +105,7 @@ public class PlayerInteractor : MonoBehaviour
             CurrentHitCollider = hit.collider;
             CurrentHitDistance = hit.distance;
             target = ResolveTarget(hit.collider);
+            if (hit.distance > GetTargetRange(target)) target = null;
             if (target != null)
             {
                 label = target.GetInteractPrompt();

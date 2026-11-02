@@ -3,11 +3,12 @@ using UnityEngine;
 public class WardrobeDoorInteract : MonoBehaviour, IInteractable
 {
     public float openAngle = 90f;
-    public float interactDistance = 5f;
+    public float interactDistance = 1.5f;
     private bool isOpen;
 
     public void Interact(GameObject interactor)
     {
+        if (!PlayerInteractor.CanInteractWith(interactor, this, interactDistance)) return;
         // DoorClick, if present, owns this door's animation and sound.
         DoorClick door = GetComponent<DoorClick>();
         if (door != null)

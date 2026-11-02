@@ -137,6 +137,7 @@ public class DoorClick : MonoBehaviour, IInteractable
     public void Interact(GameObject interactor)
     {
         if (!isActiveAndEnabled) return;
+        if (!PlayerInteractor.CanInteractWith(interactor, this, interactDistance)) return;
         LockedDoor lockedDoor = GetComponent<LockedDoor>();
         if (lockedDoor != null && lockedDoor.IsLocked) return;
         Camera camera = interactor.GetComponentInChildren<Camera>();

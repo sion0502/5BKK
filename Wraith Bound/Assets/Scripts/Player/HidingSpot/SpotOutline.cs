@@ -34,7 +34,8 @@ public class SpotOutline : MonoBehaviour
         if (interactor != null) playerRoot = interactor.transform;
         if (interactor != null && interactor.isActiveAndEnabled)
         {
-            shouldShow = interactor.CurrentHitDistance <= maxDistance &&
+            float range = Mathf.Min(maxDistance, PlayerInteractor.GetTargetRange(GetComponentInParent<IInteractable>()));
+            shouldShow = interactor.CurrentHitDistance <= range &&
                 IsTargetCollider(interactor.CurrentHitCollider);
         }
         else if (PlayerInteractor.TryGetInteractionHit(ray, maxDistance, playerRoot, out RaycastHit hit))

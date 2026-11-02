@@ -280,7 +280,7 @@ MonoBehaviour:
   isSlidingDoor: 0
   slideOffset: {x: 1, y: 0, z: 0}
   autoDirection: 1
-  interactDistance: 2
+  interactDistance: 1.5
   interactKey: 101
   openMessage: 
   closeMessage: 
@@ -514,7 +514,7 @@ MonoBehaviour:
   isSlidingDoor: 0
   slideOffset: {x: 1, y: 0, z: 0}
   autoDirection: 1
-  interactDistance: 3
+  interactDistance: 1.5
   interactKey: 101
   openMessage: 
   closeMessage: 

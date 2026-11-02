@@ -17,7 +17,6 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
 
     [Header("Light Pulse")]
     [SerializeField] private float offDuration = 0.25f;
-    [SerializeField] private bool restoreOriginalLightState = true;
 
     [Header("Sound")]
     [SerializeField] private AudioClip switchSound;
@@ -35,9 +34,14 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
 
     [Header("Prompt")]
     [SerializeField] private string interactPrompt = "[E] Switch";
-    [SerializeField] private string usedPrompt = "";
 
-    private bool hasActivated;
+
+    private bool isSwitching;
+    private Light[] controlledLights;
+    private float[] onIntensities;
+    private GameObject[] controlledCovers;
+    private Quaternion originalButtonRotation;
+    private Coroutine startupRoutine;
 
     private void Awake()
     {
@@ -54,11 +58,12 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         {
             button = FindChildByName(transform, "Button");
         }
+        if (button != null) originalButtonRotation = button.localRotation;
     }
 
     public void Interact(GameObject interactor)
     {
-        if (hasActivated)
+        if (isSwitching)
         {
             return;
         }
@@ -70,90 +75,89 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         if (camera == null || !PlayerInteractor.HasClearPath(camera.transform.position, point,
                 transform, interactor != null ? interactor.transform : null)) return;
 
-        hasActivated = true;
+        EnsureLightCache();
+        if (controlledLights.Length == 0) return;
+
+        bool lightsAreOn = false;
+        foreach (Light light in controlledLights)
+        {
+            if (light != null && light.enabled && light.intensity > 0f)
+            {
+                lightsAreOn = true;
+                break;
+            }
+        }
+
         PlaySwitchSound();
-        PressButton();
-        StartCoroutine(StartupLights());
+        PressButton(!lightsAreOn);
+        if (lightsAreOn)
+        {
+            SetLightsEnabled(controlledLights, false, null);
+            SetPowerOffCoversActive(controlledCovers, true);
+        }
+        else
+        {
+            isSwitching = true;
+            startupRoutine = StartCoroutine(StartupLights());
+        }
     }
 
     public string GetInteractPrompt()
     {
-        return hasActivated ? usedPrompt : interactPrompt;
+        return isSwitching ? "" : (string.IsNullOrEmpty(interactPrompt) ? "[E] Switch" : interactPrompt);
+    }
+
+    private void EnsureLightCache()
+    {
+        if (controlledLights != null) return;
+        controlledLights = ResolveLights();
+        controlledCovers = ResolvePowerOffCovers();
+        onIntensities = new float[controlledLights.Length];
+        for (int i = 0; i < controlledLights.Length; i++)
+        {
+            Light light = controlledLights[i];
+            onIntensities[i] = light != null && light.intensity > 0f ? light.intensity : 1f;
+        }
     }
 
     private IEnumerator StartupLights()
     {
-        Light[] lights = ResolveLights();
-        GameObject[] powerOffCovers = ResolvePowerOffCovers();
-        if (lights.Length == 0)
-        {
-            yield break;
-        }
-
-        bool[] originalEnabled = new bool[lights.Length];
-        float[] originalIntensity = new float[lights.Length];
-
-        for (int i = 0; i < lights.Length; i++)
-        {
-            Light light = lights[i];
-            if (light == null)
-            {
-                continue;
-            }
-
-            originalEnabled[i] = light.enabled;
-            originalIntensity[i] = light.intensity;
-            light.enabled = false;
-        }
-
-        SetPowerOffCoversActive(powerOffCovers, true);
-
+        SetLightsEnabled(controlledLights, false, null);
+        SetPowerOffCoversActive(controlledCovers, true);
         yield return new WaitForSeconds(offDuration);
 
-        if (tickDelays != null && tickDelays.Length > 0)
+        if (tickDelays != null)
         {
             foreach (float delay in tickDelays)
             {
-                if (delay > 0f)
-                {
-                    yield return new WaitForSeconds(delay);
-                }
-
-                PlayLampSound(tickSound, lights);
-                SetLightsEnabled(lights, true, originalIntensity);
-                SetPowerOffCoversActive(powerOffCovers, false);
+                if (delay > 0f) yield return new WaitForSeconds(delay);
+                PlayLampSound(tickSound, controlledLights);
+                SetLightsEnabled(controlledLights, true, onIntensities);
+                SetPowerOffCoversActive(controlledCovers, false);
                 yield return new WaitForSeconds(tickLightOnDuration);
-
-                SetLightsEnabled(lights, false, originalIntensity);
-                SetPowerOffCoversActive(powerOffCovers, true);
+                SetLightsEnabled(controlledLights, false, null);
+                SetPowerOffCoversActive(controlledCovers, true);
                 yield return new WaitForSeconds(tickLightOffDuration);
             }
         }
 
-        if (finalClickDelay > 0f)
-        {
-            yield return new WaitForSeconds(finalClickDelay);
-        }
+        if (finalClickDelay > 0f) yield return new WaitForSeconds(finalClickDelay);
+        PlayLampSound(finalClickSound, controlledLights);
+        SetLightsEnabled(controlledLights, true, onIntensities);
+        SetPowerOffCoversActive(controlledCovers, false);
+        startupRoutine = null;
+        isSwitching = false;
+    }
 
-        PlayLampSound(finalClickSound, lights);
-        SetLightsEnabled(lights, !restoreOriginalLightState, originalIntensity);
-        SetPowerOffCoversActive(powerOffCovers, false);
-
-        for (int i = 0; i < lights.Length; i++)
-        {
-            Light light = lights[i];
-            if (light == null)
-            {
-                continue;
-            }
-
-            if (restoreOriginalLightState)
-            {
-                light.enabled = originalEnabled[i];
-            }
-
-            light.intensity = originalIntensity[i];
-        }
+    private void OnDisable()
+    {
+        if (!isSwitching) return;
+        if (startupRoutine != null) StopCoroutine(startupRoutine);
+        SetLightsEnabled(controlledLights, false, null);
+        SetPowerOffCoversActive(controlledCovers, true);
+        PressButton(false);
+        startupRoutine = null;
+        isSwitching = false;
     }
 
     private Light[] ResolveLights()
@@ -271,16 +275,16 @@ public class LampSwitchInteract : MonoBehaviour, IInteractable
         }
     }
 
-    private void PressButton()
+    private void PressButton(bool on)
     {
         if (button == null)
         {
             return;
         }
 
-        Vector3 euler = button.localEulerAngles;
-        euler.y = pressedButtonYAngle;
-        button.localEulerAngles = euler;
+        button.localRotation = on
+            ? originalButtonRotation * Quaternion.Euler(0f, pressedButtonYAngle, 0f)
+            : originalButtonRotation;
     }
 
     private void PlaySwitchSound()
