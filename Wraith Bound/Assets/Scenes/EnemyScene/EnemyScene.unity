@@ -1403,6 +1403,7 @@ MonoBehaviour:
   torqueImpulse: 50
   fadeStartDelay: 5
   fadeDuration: 2
+  breakSound: {fileID: 8300000, guid: 92605723a793bfd4a9e6d4a7dfa62c10, type: 3}
 --- !u!114 &964519619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3287,7 +3288,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5337591576704304548, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
       propertyPath: patrolPointZone
@@ -3312,7 +3313,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3663160499361178377, guid: 46623345a337f4c4c88ac347ad9be416, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5312608284086481316, guid: 46623345a337f4c4c88ac347ad9be416, type: 3}
       propertyPath: patrolPointZone
