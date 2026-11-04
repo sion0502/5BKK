@@ -22,6 +22,12 @@ public class ActiveItem : Items
     public float throwForce = 9f; // 던지는 힘
     public float throwUpwardAngle = 25f; // 던지는 각도(도)
 
+    /// <summary>
+    /// 우클릭 홀드로 사용할 수 있는지. 회복 효과·투척·설치 중 하나라도 있어야 함.
+    /// 열쇠(잠긴 문 좌클릭)·건전지(R 충전)처럼 다른 경로로만 소모되는 아이템은 false — 홀드로 쓰면 효과 없이 사라졌음.
+    /// </summary>
+    public bool IsHoldUsable => effectType != ActiveEffectType.None || isThrowable || deployPrefab != null;
+
     public override void Use(PlayerController player)
     {
         // 1. 설치형 아이템 로직

@@ -50,7 +50,8 @@ public class InteractableItem : MonoBehaviour, IInteractable
                 droppedFromInv,
                 droppedAmt,
                 interactor.transform.position,
-                interactor.transform.forward);
+                interactor.transform.forward,
+                gameObject);
         }
 
         Debug.Log($"[Item Pickup] {item.itemName} x{amount} 획득");

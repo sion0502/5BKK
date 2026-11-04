@@ -6,6 +6,10 @@ public class ItemObject : MonoBehaviour, IInteractable
     [Header("연결된 아이템 데이터")]
     public Items itemData;
 
+    [Tooltip("주울 때 얻는 수량. 인벤 교체로 바닥에 놓일 때 WorldItemSpawnHelper가 빠진 슬롯 수량으로 설정합니다.")]
+    [Min(1)]
+    public int amount = 1;
+
     // 1. 상호작용 실행 (플레이어가 E키를 눌렀을 때 호출됨)
     public void Interact(GameObject interactor)
     {
@@ -20,7 +24,7 @@ public class ItemObject : MonoBehaviour, IInteractable
                 return;
             }
 
-            if (inv.TryAcquireItem(itemData, 1, out Items droppedFromInv, out int droppedAmt))
+            if (inv.TryAcquireItem(itemData, Mathf.Max(1, amount), out Items droppedFromInv, out int droppedAmt))
             {
                 if (droppedFromInv != null && droppedAmt > 0)
                 {
@@ -28,7 +32,8 @@ public class ItemObject : MonoBehaviour, IInteractable
                         droppedFromInv,
                         droppedAmt,
                         interactor.transform.position,
-                        interactor.transform.forward);
+                        interactor.transform.forward,
+                        gameObject);
                 }
 
                 // 아이템을 인벤토리에 넣은 후, 기존에 만드셨던 로그/효과 로직 실행
