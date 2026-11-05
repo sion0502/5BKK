@@ -8,27 +8,29 @@ using UnityEngine;
 public class ShadowGhostVisual : MonoBehaviour
 {
     [Header("Body")]
-    [SerializeField] float bodyHeight = 1.75f;
-    [SerializeField] float bodyRadius = 0.72f;
-    [SerializeField] int coreBillboards = 7;
-    [SerializeField] float coreAlpha = 0.78f;
-    [SerializeField] float swirlSpeed = 18f;
-    [SerializeField] float bobAmount = 0.08f;
-    [SerializeField] float bobSpeed = 1.1f;
+    [SerializeField] float bodyHeight = 2.55f;
+    [SerializeField] float bodyRadius = 1.45f;
+    [SerializeField] int coreBillboards = 12;
+    [SerializeField] float coreAlpha = 0.82f;
+    [SerializeField] float swirlSpeed = 11f;
+    [SerializeField] float bobAmount = 0.22f;
+    [SerializeField] float bobSpeed = 0.75f;
+    [SerializeField] float driftAmount = 0.18f;
 
     [Header("Particles")]
-    [SerializeField] int maxParticles = 70;
-    [SerializeField] float particleLife = 2.4f;
-    [SerializeField] float particleSize = 1.15f;
-    [SerializeField] float emitRate = 28f;
+    [SerializeField] int maxParticles = 140;
+    [SerializeField] float particleLife = 3.6f;
+    [SerializeField] float particleSize = 2.1f;
+    [SerializeField] float emitRate = 48f;
 
     [Header("Look")]
-    [SerializeField] Color fogColor = new Color(0.015f, 0.015f, 0.02f, 0.94f);
-    [SerializeField] float density = 1.45f;
+    [SerializeField] Color fogColor = new Color(0.01f, 0.01f, 0.015f, 0.96f);
+    [SerializeField] float density = 1.7f;
 
     Transform _visualRoot;
     Transform[] _cores;
     Vector3[] _coreLocal;
+    Vector3[] _coreScale;
     float[] _corePhase;
     Material _fogMat;
     Texture2D _softTex;
@@ -67,11 +69,13 @@ public class ShadowGhostVisual : MonoBehaviour
                 continue;
 
             float spin = Time.time * swirlSpeed + _corePhase[i];
+            float breathe = 1f + Mathf.Sin(Time.time * 0.55f + _corePhase[i]) * 0.08f;
             Vector3 offset = _coreLocal[i];
-            offset.x += Mathf.Sin(spin * 0.07f + i) * 0.05f;
-            offset.y += bob * (0.55f + (i % 3) * 0.12f);
-            offset.z += Mathf.Cos(spin * 0.05f + i * 0.7f) * 0.05f;
+            offset.x += Mathf.Sin(spin * 0.07f + i) * driftAmount;
+            offset.y += bob * (0.55f + (i % 3) * 0.18f);
+            offset.z += Mathf.Cos(spin * 0.05f + i * 0.7f) * driftAmount;
             core.localPosition = offset;
+            core.localScale = _coreScale[i] * breathe;
             core.rotation = face;
         }
     }
@@ -94,11 +98,19 @@ public class ShadowGhostVisual : MonoBehaviour
             _fogMat.SetColor(ColorId, fogColor);
         if (_fogMat.HasProperty(DensityId))
             _fogMat.SetFloat(DensityId, density);
+        if (_fogMat.HasProperty("_NoiseStrength"))
+            _fogMat.SetFloat("_NoiseStrength", 0.62f);
+        if (_fogMat.HasProperty("_EdgeSoftness"))
+            _fogMat.SetFloat("_EdgeSoftness", 0.72f);
+        if (_fogMat.HasProperty("_NoiseScale"))
+            _fogMat.SetFloat("_NoiseScale", 1.55f);
+        if (_fogMat.HasProperty("_Scroll"))
+            _fogMat.SetVector("_Scroll", new Vector4(0.045f, 0.028f, -0.035f, 0.04f));
         _fogMat.renderQueue = 3000;
 
         _visualRoot = new GameObject("ShadowFog").transform;
         _visualRoot.SetParent(transform, false);
-        _visualRoot.localPosition = new Vector3(0f, bodyHeight * 0.48f, 0f);
+        _visualRoot.localPosition = new Vector3(0f, bodyHeight * 0.42f, 0f);
 
         BuildCoreBillboards();
         BuildMistParticles();
@@ -106,24 +118,27 @@ public class ShadowGhostVisual : MonoBehaviour
 
     void BuildCoreBillboards()
     {
-        int count = Mathf.Max(4, coreBillboards + 1);
+        int count = Mathf.Max(6, coreBillboards + 2);
         _cores = new Transform[count];
         _coreLocal = new Vector3[count];
+        _coreScale = new Vector3[count];
         _corePhase = new float[count];
 
-        // Extra-dense center slab so walls behind only ghost through faintly.
-        SpawnCore(0, Vector3.zero, bodyRadius * 2.6f, Mathf.Clamp01(coreAlpha * 1.08f), 0f);
+        // Dense center mass.
+        SpawnCore(0, Vector3.zero, bodyRadius * 3.15f, Mathf.Clamp01(coreAlpha * 1.1f), 0f);
+        // Tall eerie column behind/around the mass.
+        SpawnCore(1, new Vector3(0f, bodyHeight * 0.08f, 0f), bodyRadius * 2.55f, coreAlpha * 0.9f, 12f);
 
-        for (int i = 1; i < count; i++)
+        for (int i = 2; i < count; i++)
         {
-            float t = (i - 1) / (float)Mathf.Max(1, count - 2);
-            float height = Mathf.Lerp(-bodyHeight * 0.28f, bodyHeight * 0.34f, t);
+            float t = (i - 2) / (float)Mathf.Max(1, count - 3);
+            float height = Mathf.Lerp(-bodyHeight * 0.38f, bodyHeight * 0.48f, t);
             float ring = Mathf.Sin(t * Mathf.PI);
             float angle = i * 2.399963f;
-            float radial = bodyRadius * (0.12f + ring * 0.5f);
-            Vector3 local = new Vector3(Mathf.Cos(angle) * radial, height, Mathf.Sin(angle) * radial * 0.65f);
-            float size = Mathf.Lerp(bodyRadius * 1.7f, bodyRadius * 2.45f, 1f - Mathf.Abs(t - 0.5f) * 1.35f);
-            float alpha = coreAlpha * Mathf.Lerp(0.75f, 1f, 1f - Mathf.Abs(t - 0.55f));
+            float radial = bodyRadius * (0.22f + ring * 0.85f);
+            Vector3 local = new Vector3(Mathf.Cos(angle) * radial, height, Mathf.Sin(angle) * radial * 0.8f);
+            float size = Mathf.Lerp(bodyRadius * 2.1f, bodyRadius * 3.4f, 1f - Mathf.Abs(t - 0.5f) * 1.2f);
+            float alpha = coreAlpha * Mathf.Lerp(0.55f, 0.95f, 1f - Mathf.Abs(t - 0.5f));
             SpawnCore(i, local, size, alpha, Random.Range(0f, 100f));
         }
     }
@@ -137,7 +152,11 @@ public class ShadowGhostVisual : MonoBehaviour
         Transform tr = go.transform;
         tr.SetParent(_visualRoot, false);
         tr.localPosition = local;
-        tr.localScale = Vector3.one * size;
+        Vector3 scale = Vector3.one * size;
+        // Stretch a few outer wisps into tall tendrils.
+        if (index > 1 && index % 3 == 0)
+            scale = new Vector3(size * 0.85f, size * 1.55f, size);
+        tr.localScale = scale;
 
         var renderer = go.GetComponent<MeshRenderer>();
         renderer.sharedMaterial = _fogMat;
@@ -152,6 +171,7 @@ public class ShadowGhostVisual : MonoBehaviour
 
         _cores[index] = tr;
         _coreLocal[index] = local;
+        _coreScale[index] = scale;
         _corePhase[index] = phase;
     }
 
@@ -166,12 +186,12 @@ public class ShadowGhostVisual : MonoBehaviour
         main.loop = true;
         main.playOnAwake = true;
         main.startLifetime = particleLife;
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.22f);
-        main.startSize = new ParticleSystem.MinMaxCurve(particleSize * 0.7f, particleSize * 1.35f);
-        main.startColor = new Color(fogColor.r, fogColor.g, fogColor.b, 0.72f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.04f, 0.28f);
+        main.startSize = new ParticleSystem.MinMaxCurve(particleSize * 0.85f, particleSize * 1.7f);
+        main.startColor = new Color(fogColor.r, fogColor.g, fogColor.b, 0.8f);
         main.maxParticles = maxParticles;
         main.simulationSpace = ParticleSystemSimulationSpace.Local;
-        main.gravityModifier = -0.015f;
+        main.gravityModifier = -0.03f;
         main.scalingMode = ParticleSystemScalingMode.Hierarchy;
 
         var emission = _mist.emission;
@@ -179,8 +199,8 @@ public class ShadowGhostVisual : MonoBehaviour
 
         var shape = _mist.shape;
         shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = bodyRadius * 0.55f;
-        shape.radiusThickness = 0.85f;
+        shape.radius = bodyRadius * 0.95f;
+        shape.radiusThickness = 0.7f;
 
         var colorOverLifetime = _mist.colorOverLifetime;
         colorOverLifetime.enabled = true;
@@ -194,22 +214,22 @@ public class ShadowGhostVisual : MonoBehaviour
             new[]
             {
                 new GradientAlphaKey(0f, 0f),
-                new GradientAlphaKey(0.82f, 0.2f),
-                new GradientAlphaKey(0.78f, 0.65f),
+                new GradientAlphaKey(0.88f, 0.18f),
+                new GradientAlphaKey(0.72f, 0.7f),
                 new GradientAlphaKey(0f, 1f)
             });
         colorOverLifetime.color = grad;
 
         var sizeOverLifetime = _mist.sizeOverLifetime;
         sizeOverLifetime.enabled = true;
-        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.75f, 1f, 1.35f));
+        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.7f, 1f, 1.7f));
 
         var velocity = _mist.velocityOverLifetime;
         velocity.enabled = true;
         velocity.space = ParticleSystemSimulationSpace.Local;
-        velocity.x = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
-        velocity.y = new ParticleSystem.MinMaxCurve(0.04f, 0.18f);
-        velocity.z = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
+        velocity.x = new ParticleSystem.MinMaxCurve(-0.28f, 0.28f);
+        velocity.y = new ParticleSystem.MinMaxCurve(0.06f, 0.32f);
+        velocity.z = new ParticleSystem.MinMaxCurve(-0.28f, 0.28f);
 
         var renderer = go.GetComponent<ParticleSystemRenderer>();
         renderer.sharedMaterial = _fogMat;

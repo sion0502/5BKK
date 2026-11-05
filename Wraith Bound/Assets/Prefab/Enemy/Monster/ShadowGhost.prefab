@@ -161,19 +161,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4e1a7b3d8f4e62a0b5c7d9e1f20345, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShadowGhostVisual
-  bodyHeight: 1.75
-  bodyRadius: 0.72
-  coreBillboards: 7
-  coreAlpha: 0.78
-  swirlSpeed: 18
-  bobAmount: 0.08
-  bobSpeed: 1.1
-  maxParticles: 70
-  particleLife: 2.4
-  particleSize: 1.15
-  emitRate: 28
-  fogColor: {r: 0.015, g: 0.015, b: 0.02, a: 0.94}
-  density: 1.45
+  bodyHeight: 2.55
+  bodyRadius: 1.45
+  coreBillboards: 12
+  coreAlpha: 0.82
+  swirlSpeed: 11
+  bobAmount: 0.22
+  bobSpeed: 0.75
+  driftAmount: 0.18
+  maxParticles: 140
+  particleLife: 3.6
+  particleSize: 2.1
+  emitRate: 48
+  fogColor: {r: 0.01, g: 0.01, b: 0.015, a: 0.96}
+  density: 1.7
 --- !u!1 &1000000011
 GameObject:
   m_ObjectHideFlags: 0
