@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 화면 중앙 상황형 팁 팝업. 표시 중에는 시간을 멈추고(timeScale=0) 입력을 잠그며,
-/// Space / Enter / 클릭으로 닫습니다.
+/// Space / ESC / 클릭으로 닫습니다. 떠 있는 동안 ESC는 일시정지 메뉴가 아니라 팝업 닫기(PauseMenuSuppressor).
 /// </summary>
 public class TutorialTipPopupUI : MonoBehaviour
 {
@@ -24,6 +24,10 @@ public class TutorialTipPopupUI : MonoBehaviour
     private float shownAt;
     private bool isClosing;
     private int unblockFrame = -1;
+    private bool suppressingPauseMenu;
+
+    private const string ContinueText = "Space · ESC · 클릭으로 계속";
+    private const string LegacyContinueText = "Space · Enter · 클릭으로 계속"; // 프리팹에 저장된 예전 문구
 
     public bool IsShowing { get; private set; }
 
@@ -55,9 +59,9 @@ public class TutorialTipPopupUI : MonoBehaviour
             messageText.text = tip.message;
         }
 
-        if (continueText != null && string.IsNullOrEmpty(continueText.text))
+        if (continueText != null && (string.IsNullOrEmpty(continueText.text) || continueText.text == LegacyContinueText))
         {
-            continueText.text = "Space · Enter · 클릭으로 계속";
+            continueText.text = ContinueText;
         }
 
         inputBlocker = blocker;
@@ -65,6 +69,13 @@ public class TutorialTipPopupUI : MonoBehaviour
         shownAt = Time.unscaledTime;
         isClosing = false;
         IsShowing = true;
+
+        // 팝업 중 ESC는 일시정지 메뉴가 아니라 팝업 닫기 (이미 메뉴가 열려 있으면 = 커서 보임, 메뉴에 맡김)
+        if (!suppressingPauseMenu && !Cursor.visible)
+        {
+            PauseMenuSuppressor.Suppress();
+            suppressingPauseMenu = true;
+        }
 
         inputBlocker?.Block();
         Time.timeScale = 0f;
@@ -123,8 +134,7 @@ public class TutorialTipPopupUI : MonoBehaviour
         }
 
         if (Input.GetKeyDown(KeyCode.Space)
-            || Input.GetKeyDown(KeyCode.Return)
-            || Input.GetKeyDown(KeyCode.KeypadEnter)
+            || Input.GetKeyDown(KeyCode.Escape)
             || Input.GetMouseButtonDown(0))
         {
             Close();
@@ -137,6 +147,7 @@ public class TutorialTipPopupUI : MonoBehaviour
         isClosing = true;
         Time.timeScale = 1f;
         unblockFrame = Time.frameCount;
+        ReleasePauseMenu(); // 이번 프레임까지는 계속 막힘 — 닫은 ESC로 메뉴가 열리지 않음
 
         Action callback = onClosed;
         onClosed = null;
@@ -153,6 +164,16 @@ public class TutorialTipPopupUI : MonoBehaviour
 
         inputBlocker?.Unblock();
         unblockFrame = -1;
+        ReleasePauseMenu();
+    }
+
+    private void ReleasePauseMenu()
+    {
+        if (suppressingPauseMenu)
+        {
+            suppressingPauseMenu = false;
+            PauseMenuSuppressor.Release();
+        }
     }
 
     private void ApplyFallbackFont()

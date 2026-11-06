@@ -51,7 +51,8 @@ public class PauseMenuController : MonoBehaviour
 
     void Update()
     {
-        if (isTransitioning || PlayerDeathDebug.IsDying)
+        // 튜토리얼 팝업 등이 떠 있으면 ESC는 그쪽(팝업 닫기)이 씀
+        if (isTransitioning || PlayerDeathDebug.IsDying || PauseMenuSuppressor.IsSuppressed)
         {
             return;
         }

@@ -39,14 +39,14 @@ public static class PrologueSceneBuilder
     // 정문 바깥 → 로비 안쪽 (바닥 위치). 끝 지점이 곧 플레이 시작 위치
     private static readonly Vector3[] WalkPath =
     {
-        new Vector3(6.0f, 0f, -3.4f),
-        new Vector3(6.0f, 0f, -0.6f),
-        new Vector3(5.9f, 0f, 2.4f),
+        new Vector3(5.1f, 0f, -3.4f),
+        new Vector3(5.1f, 0f, -0.6f),
+        new Vector3(5.5f, 0f, 2.4f),
         new Vector3(6.1f, 0f, 4.9f),
     };
 
     private static readonly Vector3 DeskLookPoint = new Vector3(2.2f, 1.3f, 9.2f);
-    private static readonly Vector3 DoorLookPoint = new Vector3(6.0f, 1.3f, 0.3f);
+    private static readonly Vector3 DoorLookPoint = new Vector3(5.1f, 1.45f, 0.3f);
 
     [MenuItem("Tools/Story/Build Prologue Scene")]
     public static void Build()
@@ -85,6 +85,9 @@ public static class PrologueSceneBuilder
         GameObject player = gameplay.TryGetValue("Player", out GameObject p) ? p : null;
         Camera playerCamera = player != null ? player.GetComponentInChildren<Camera>(true) : null;
 
+        // 조작 시작 후 동선: 간호사·E1·일지·트리거·사망·진행 감독 + NavMesh (PrologueEventBuilder)
+        GameObject director = PrologueEventBuilder.Build(map, playerCamera, gameplay.TryGetValue("Tutorial", out GameObject tutorial) ? tutorial : null);
+
         Transform lookRoot = new GameObject("LookTargets").transform;
         Transform deskLook = CreatePoint("Look_Desk", DeskLookPoint, lookRoot);
         Transform doorLook = CreatePoint("Look_Door", DoorLookPoint, lookRoot);
@@ -117,8 +120,9 @@ public static class PrologueSceneBuilder
         SetFloat(camcorder, "lowerOffsetOnFade", 700f);
 
         CutscenePlayerHandoff handoff = BuildHandoff(player, playerCamera, cam, startPoint, gameplay, black,
-            new List<CutsceneBlendTarget> { door, camcorder, lookAt, shake },
-            new List<float> { 1f, 0f, 0f, 0f });
+            new List<CutsceneBlendTarget> { door, lookAt, shake },
+            new List<float> { 1f, 0f, 0f }, director);
+        AddCamcorderLower(handoff, player, camcorder);
 
         BuildTimeline(path, lookAt, shake, door, black, camcorder, handoff);
 
@@ -192,7 +196,7 @@ public static class PrologueSceneBuilder
             return;
         }
 
-        Vector3 spot = PrologueMapBuilder.FlashlightSpot;
+        Vector3 spot = PrologueLayout.FlashlightSpot;
         GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         go.name = "World_Flashlight (접수대)";
         go.transform.rotation = Quaternion.Euler(0f, 205f, 0f);
@@ -233,7 +237,7 @@ public static class PrologueSceneBuilder
         Vector3 size = doorTransform.InverseTransformVector(bounds.size);
         box.size = new Vector3(Mathf.Max(0.08f, Mathf.Abs(size.x)), Mathf.Abs(size.y), Mathf.Abs(size.z));
 
-        doorGo.AddComponent<SealedDoorInteract>();
+        SetFrontDoorMonologue(doorGo.AddComponent<SealedDoorInteract>());
 
         AudioSource audio = doorGo.AddComponent<AudioSource>();
         audio.playOnAwake = false;
@@ -242,7 +246,7 @@ public static class PrologueSceneBuilder
         CutsceneDoorSwing swing = doorGo.AddComponent<CutsceneDoorSwing>();
         swing.CaptureClosedRotation();
         SerializedObject so = new SerializedObject(swing);
-        so.FindProperty("openAngle").floatValue = 100f; // 로비 안쪽(+z)으로 열려 있음
+        so.FindProperty("openAngle").floatValue = -95f; // 로비 안쪽(+z)으로 열려 있음 (정문 문짝: 경첩 x4.24, 닫히면 +x로 뻗음)
         so.FindProperty("audioSource").objectReferenceValue = audio;
         so.ApplyModifiedPropertiesWithoutUndo();
         swing.Blend = 0f;
@@ -287,7 +291,7 @@ public static class PrologueSceneBuilder
 
     private static CutscenePlayerHandoff BuildHandoff(GameObject player, Camera playerCamera, Camera cutsceneCamera,
         Transform startPoint, Dictionary<string, GameObject> gameplay, CutsceneBlackScreen black,
-        List<CutsceneBlendTarget> finalTargets, List<float> finalValues)
+        List<CutsceneBlendTarget> finalTargets, List<float> finalValues, GameObject director)
     {
         CutscenePlayerHandoff handoff = new GameObject("PlayerHandoff").AddComponent<CutscenePlayerHandoff>();
         SerializedObject so = new SerializedObject(handoff);
@@ -318,6 +322,12 @@ public static class PrologueSceneBuilder
             }
         }
 
+        if (director != null)
+        {
+            activate.arraySize++;
+            activate.GetArrayElementAtIndex(activate.arraySize - 1).objectReferenceValue = director;
+        }
+
         so.ApplyModifiedPropertiesWithoutUndo();
 
         if (player != null)
@@ -331,13 +341,27 @@ public static class PrologueSceneBuilder
         return handoff;
     }
 
+    /// <summary>전환 때 컷씬 캠코더 화면 → 손에 든 실제 캠코더로 바꿔 본편처럼 내림. 씬에 이미 있는 handoff에도 씀(리플렉션 호출).</summary>
+    public static void AddCamcorderLower(CutscenePlayerHandoff handoff, GameObject player, CutsceneBlendTarget camcorderOverlay)
+    {
+        CutsceneCamcorderLower lower = handoff.GetComponent<CutsceneCamcorderLower>();
+        if (lower == null)
+        {
+            lower = handoff.gameObject.AddComponent<CutsceneCamcorderLower>();
+        }
+
+        SetRef(lower, "player", player);
+        SetRef(lower, "camcorderOverlay", camcorderOverlay);
+        SetRef(handoff, "camcorderLower", lower);
+    }
+
     // ───────────────────────────── Timeline ─────────────────────────────
     // 0      검은 화면에서 밝아짐 (캠코더 화면)
     // 0.5~9  열린 정문으로 걸어 들어와 접수대 쪽을 봄
     // 9.3    "…계세요? …당연히 없겠지."
     // 12.6~  뒤에서 문이 끼익 밀리기 시작 → 13.0~14.3 뒤돌아봄 → 14.6 쾅 (흔들림·화면 튐)
     // 15.8   "…바, 바람인가."
-    // 19.6~20.8 캠코더를 내림 → 21 조작 시작
+    // 21     조작 시작 — 손에 든 실제 캠코더를 본편처럼 내림 (CutsceneCamcorderLower)
     private static void BuildTimeline(CutsceneCameraPath path, CutsceneCameraLookAt lookAt, CutsceneCameraShake shake,
         CutsceneDoorSwing door, CutsceneBlackScreen black, CutsceneCamcorderOverlay camcorder, CutscenePlayerHandoff handoff)
     {
@@ -362,7 +386,8 @@ public static class PrologueSceneBuilder
         AddBlendClip(blackTrack, 14.78, 14.83, 0, 0.03, "화면 튐 2");
 
         CutsceneBlendTrack camcorderTrack = CreateBlendTrack(timeline, director, "Camcorder Overlay", camcorder);
-        AddBlendClip(camcorderTrack, 0, 20.8, 0, 1.2, "캠코더 화면 → 내리기");
+        // 끝까지 켜 둠 — 내리기는 전환 때 손에 든 실제 캠코더로 (CutsceneCamcorderLower)
+        AddBlendClip(camcorderTrack, 0, end, 0, 0, "캠코더 화면");
 
         CameraPathTrack pathTrack = timeline.CreateTrack<CameraPathTrack>(null, "Camera Path");
         director.SetGenericBinding(pathTrack, path);
@@ -455,6 +480,29 @@ public static class PrologueSceneBuilder
         point.SetParent(parent);
         point.position = position;
         return point;
+    }
+
+    /// <summary>쾅 닫힌 정문을 처음 열어 볼 때 독백. 씬에 이미 있는 정문에도 씀(메뉴 없이 리플렉션 호출).</summary>
+    public static void SetFrontDoorMonologue(SealedDoorInteract door)
+    {
+        string[] lines =
+        {
+            "뭐야… 왜 안 열리지…? 문이 닫히는 충격으로 잠겨 버렸나?",
+            "다른 길을 찾아봐야겠어…",
+        };
+
+        SerializedObject so = new SerializedObject(door);
+        SerializedProperty list = so.FindProperty("firstTryLines");
+        list.arraySize = lines.Length;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            SerializedProperty line = list.GetArrayElementAtIndex(i);
+            line.FindPropertyRelative("speaker").stringValue = "나";
+            line.FindPropertyRelative("text").stringValue = lines[i];
+            line.FindPropertyRelative("holdSeconds").floatValue = 0f; // 글자 수에 맞춰 자동
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void SetRef(Object target, string property, Object value)

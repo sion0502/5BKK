@@ -24,18 +24,14 @@ public class CutscenePlayerHandoff : MonoBehaviour
     [Header("Activate on handoff (튜토리얼·HUD·일시정지 메뉴 등)")]
     [SerializeField] private List<GameObject> activateOnHandoff = new List<GameObject>();
 
+    [Tooltip("있으면 전환 때 캠코더를 본편처럼 손에 든 채 내림 (캠코더 오버레이는 finalState에 넣지 말 것)")]
+    [SerializeField] private CutsceneCamcorderLower camcorderLower;
+
     [Header("Fade")]
     [SerializeField] private CutsceneBlackScreen blackScreen;
     [SerializeField] private float fadeInDuration = 0.6f;
 
-    // 컷씬 동안 끌 플레이어 컴포넌트 (타입 이름으로 찾아 의존성 최소화)
-    private static readonly string[] InputComponentNames =
-    {
-        "MouseLook", "PlayerController", "PlayerInteractor", "InventoryManager", "SelectedItemUseController",
-        "PlayerHidingController", "SmartPhoneHolderToggle",
-    };
-
-    private readonly List<Behaviour> disabled = new List<Behaviour>();
+    private PlayerControlLock controlLock;
     private readonly List<Renderer> hiddenRenderers = new List<Renderer>();
     private bool handedOff;
 
@@ -48,14 +44,7 @@ public class CutscenePlayerHandoff : MonoBehaviour
 
         PlacePlayer();
 
-        foreach (Behaviour behaviour in player.GetComponentsInChildren<Behaviour>(true))
-        {
-            if (behaviour.enabled && System.Array.IndexOf(InputComponentNames, behaviour.GetType().Name) >= 0)
-            {
-                behaviour.enabled = false;
-                disabled.Add(behaviour);
-            }
-        }
+        controlLock = PlayerControlLock.Lock(player);
 
         // 플레이어는 컷씬 카메라가 걸어오는 끝 지점에 서 있으므로 몸체가 화면에 보이지 않게 숨김
         foreach (Renderer renderer in player.GetComponentsInChildren<Renderer>(true))
@@ -109,13 +98,7 @@ public class CutscenePlayerHandoff : MonoBehaviour
             }
         }
 
-        foreach (Behaviour behaviour in disabled)
-        {
-            if (behaviour != null)
-            {
-                behaviour.enabled = true;
-            }
-        }
+        controlLock?.Release();
 
         foreach (GameObject go in activateOnHandoff)
         {
@@ -127,6 +110,11 @@ public class CutscenePlayerHandoff : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        if (camcorderLower != null)
+        {
+            camcorderLower.Begin();
+        }
 
         if (blackScreen != null && blackScreen.Alpha > 0f)
         {
@@ -155,13 +143,7 @@ public class CutscenePlayerHandoff : MonoBehaviour
         if (playerCamera != null)
         {
             playerCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
-            MonoBehaviour look = playerCamera.GetComponent("MouseLook") as MonoBehaviour;
-            if (look != null)
-            {
-                var field = look.GetType().GetField("xRotation",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                field?.SetValue(look, pitch);
-            }
+            PlayerControlLock.SyncMouseLookPitch(playerCamera, pitch);
         }
 
         if (controller != null)
