@@ -78,8 +78,7 @@ public class ScreenMessageUI : MonoBehaviour
         label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Overflow;
         label.raycastTarget = false;
-        label.outlineWidth = 0.2f;
-        label.outlineColor = new Color32(0, 0, 0, 200);
+        TmpTextShadow.Apply(label); // outline은 Pol 폰트에서 글자를 검게 덮어버림
     }
 
     private void Update()

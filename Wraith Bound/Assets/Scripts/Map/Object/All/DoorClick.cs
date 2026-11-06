@@ -40,6 +40,9 @@ public class DoorClick : MonoBehaviour
 
     private string doorMessage = "";
 
+    /// <summary>예전 OnGUI 문구("Open [E]") 표시 여부. 지금은 크로스헤어 링·행동 문구(InteractionAimIndicator)가 대신 안내하므로 기본 끔.</summary>
+    public static bool ShowLegacyGuiMessage = false;
+
     [Header("Audio Settings")]
     public AudioClip openSound;
     public AudioClip closeSound;
@@ -206,7 +209,7 @@ public class DoorClick : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!string.IsNullOrEmpty(doorMessage))
+        if (ShowLegacyGuiMessage && !string.IsNullOrEmpty(doorMessage))
         {
             GUIStyle style = new GUIStyle(GUI.skin.label)
             {

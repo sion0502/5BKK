@@ -19,6 +19,13 @@ public class PlayerInteractor : MonoBehaviour
 
     private LayerMask interactionRayMask;
     private IInteractable currentTarget;
+    private string currentLabel;
+
+    /// <summary>지금 조준 중인 IInteractable (없으면 null). 크로스헤어 표시는 InteractionAimIndicator가 담당.</summary>
+    public IInteractable CurrentTarget => currentTarget;
+    /// <summary>조준 대상의 안내 문구 ("[E] 손전등 획득" 등, 없으면 null).</summary>
+    public string CurrentLabel => currentLabel;
+    public Camera ViewCamera => playerCamera;
 
     void Awake()
     {
@@ -45,6 +52,12 @@ public class PlayerInteractor : MonoBehaviour
         if (interactionUI == null)
         {
             interactionUI = gameObject.AddComponent<InteractionCrosshairUI>();
+        }
+
+        // 조준 링·행동 문구 (아이템·문·숨는 곳 등 모든 상호작용 대상)
+        if (GetComponent<InteractionAimIndicator>() == null)
+        {
+            gameObject.AddComponent<InteractionAimIndicator>();
         }
     }
 
@@ -101,11 +114,7 @@ public class PlayerInteractor : MonoBehaviour
             }
 
             currentTarget = interactable;
-
-            if (interactionUI != null)
-            {
-                interactionUI.SetItemName(ResolveInteractionLabel(interactable, hit.collider));
-            }
+            currentLabel = ResolveInteractionLabel(interactable, hit.collider);
 
             return;
         }
@@ -204,11 +213,7 @@ public class PlayerInteractor : MonoBehaviour
     private void ClearTarget()
     {
         currentTarget = null;
-
-        if (interactionUI != null)
-        {
-            interactionUI.SetItemName(null);
-        }
+        currentLabel = null;
     }
 
     private static string ResolveInteractionLabel(IInteractable interactable, Collider hitCollider)

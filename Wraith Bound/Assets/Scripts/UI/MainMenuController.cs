@@ -19,6 +19,9 @@ public class MainMenuController : MonoBehaviour
 
     [Header("Scene")]
     [SerializeField] private string hubSceneName = HubSceneName;
+    [Tooltip("비어 있지 않으면 '게임 시작' 시 Hub 대신 이 씬(인트로 컷씬)을 로드합니다. 비우면 기존처럼 Hub에서 바로 시작")]
+    [SerializeField] private string introSceneName = "Intro";
+    [SerializeField] private float introFadeDuration = 1.2f;
 
     [Header("References")]
     [SerializeField] private Camera menuCamera;
@@ -66,7 +69,23 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        StartCoroutine(StartGameRoutine());
+        StartCoroutine(string.IsNullOrEmpty(introSceneName) ? StartGameRoutine() : StartIntroRoutine());
+    }
+
+    private IEnumerator StartIntroRoutine()
+    {
+        isTransitioning = true;
+
+        if (menuCanvasGroup != null)
+        {
+            menuCanvasGroup.interactable = false;
+            menuCanvasGroup.blocksRaycasts = false;
+        }
+
+        CutsceneBlackScreen black = CutsceneBlackScreen.CreateRuntime(canvasSortOrder + 100);
+        yield return black.FadeTo(1f, introFadeDuration);
+
+        SceneManager.LoadScene(introSceneName);
     }
 
     public void QuitGame()
