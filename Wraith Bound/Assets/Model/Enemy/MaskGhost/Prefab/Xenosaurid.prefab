@@ -2452,7 +2452,7 @@ GameObject:
   - component: {fileID: 2442150632055798597}
   - component: {fileID: 4514159070658734613}
   - component: {fileID: 7318320413706631080}
-  - component: {fileID: 4963695066621824021}
+  - component: {fileID: 9039434012925557659}
   m_Layer: 0
   m_Name: Xenosaurid
   m_TagString: Untagged
@@ -2904,7 +2904,7 @@ MonoBehaviour:
   minMultiplier: 0.55
   maxMultiplier: 1.4
   smoothing: 6
---- !u!114 &4963695066621824021
+--- !u!114 &9039434012925557659
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2932,6 +2932,7 @@ MonoBehaviour:
   fallRoll: 18
   fallPitchUp: -28
   lungeFov: 50
+  neckAimShare: 0.4
 --- !u!1 &8991690428155135286
 GameObject:
   m_ObjectHideFlags: 0

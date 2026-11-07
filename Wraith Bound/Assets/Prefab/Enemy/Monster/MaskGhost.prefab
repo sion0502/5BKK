@@ -776,7 +776,7 @@ GameObject:
   - component: {fileID: 2677027534579595425}
   - component: {fileID: 2148528127479533524}
   - component: {fileID: 4962596710335548448}
-  - component: {fileID: 426250445110684710}
+  - component: {fileID: 7993437842971058249}
   m_Layer: 9
   m_Name: MaskGhost
   m_TagString: Monster
@@ -1149,7 +1149,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CreatureDoubleBody
   phaseOffset: 0.18
   speedRatio: 1.07
---- !u!114 &426250445110684710
+--- !u!114 &7993437842971058249
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

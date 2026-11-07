@@ -19,7 +19,7 @@ public class XenosauridJumpscare : CreatureJumpscare
     [Header("② 덮침·쓰러짐")]
     [SerializeField] private float lungeSeconds = 0.13f;
     [Tooltip("덮친 뒤 입까지 거리 (주둥이가 길어 머리 뼈 대신 입 기준)")]
-    [SerializeField] private float lungeDistance = 0.75f;
+    [SerializeField] private float lungeDistance = 0.75f; // 1.0이면 공격 자세의 앞으로 뻗은 팔이 카메라에 겹침
     [SerializeField] private float pinnedSeconds = 0.75f;
     [SerializeField, Range(0f, 1f)] private float attackPose = 0.3f;
     [SerializeField] private float fallDrop = 0.75f;
@@ -57,26 +57,59 @@ public class XenosauridJumpscare : CreatureJumpscare
             s.Look(s.AnchorPoint, Smooth(t * 1.8f), JumpscareStage.Shake(time, 0.06f * open), Mathf.Lerp(fov, fov - 5f, t));
         });
 
-        // ② 덮침
+        // ② 덮침 — 공격 자세는 혀 방향이 달라 얼굴 방향을 다시 재면 몸이 휙 돔 → 일어설 때 맞춘 방향 유지
+        s.PoseYawLocked = true;
         s.Pose("Attack", attackPose);
+        // 모든 포즈가 적용된 뒤 목·머리를 돌려 벌린 아가리(머리→혀)가 카메라를 정면으로 겨눔 —
+        // 안 하면 머리가 수평으로 떠서 넘어진 시점에선 턱 밑만 보임
+        Transform neck = s.Bone(HumanBodyBones.LastBone, "Xenosaurid_ Neck2");
+        float aim = 0f;
+        s.LateHook = () => AimSnout(s, neck, head, tongue1, aim);
         s.PlayScare(scareSound);
         float near = Mathf.Max(s.FaceDistance, lungeDistance);
         float startDistance = Vector3.Distance(s.AnchorPoint, s.Eye);
         yield return Run(lungeSeconds, (t, time) =>
         {
+            aim = EaseOut(t);
             s.PlaceFace(Mathf.Lerp(startDistance, near, EaseOut(t)));
             s.Look(s.CurrentEye + s.Forward, 0f, JumpscareStage.Shake(time, 0.55f), Mathf.Lerp(fov - 5f, lungeFov, t));
         });
 
-        // 쓰러짐: 시점이 뒤로·아래로 넘어가고, 크리처는 위에서 따라 내려옴
+        // 쓰러짐: 시점이 뒤로·아래로 넘어가고, 크리처는 위에서 따라 내려옴.
+        // 입 위치는 흔들림이 섞이지 않은 '넘어진 시선 방향'으로 계산 — 카메라 방향(흔들림 포함)을 따라가면 매 프레임 입이 튐(떨림)
         yield return Run(pinnedSeconds, (t, time) =>
         {
+            aim = 1f;
             float fall = EaseOut(t / 0.45f);
             s.SetCameraOffset(-s.FlatForward * fallBack * fall + Vector3.down * fallDrop * fall);
-            s.PlaceFace(near, 0f, true); // 넘어지며 올려다보는 시선 정면에 입
-            float shake = Mathf.Lerp(0.45f, 0f, Smooth(t / 0.6f)); // 떨림은 넘어지는 충격만 짧게
             Vector3 tilt = new Vector3(fallPitchUp * fall, 0f, fallRoll * fall);
-            s.Look(s.CurrentEye + s.Forward, 0f, tilt + JumpscareStage.Shake(time, shake), lungeFov);
+            Vector3 dir = s.BaseRotation * Quaternion.Euler(tilt) * Vector3.forward;
+            s.PlaceFaceAlong(near, dir);
+            // 바닥에 부딪히는 순간 한 번만 짧게 흔들림
+            float impact = Mathf.Clamp01(1f - Mathf.Abs(t - 0.45f) / 0.12f) * 0.5f;
+            s.Look(s.CurrentEye + dir, 0f, tilt + JumpscareStage.Shake(time, impact), lungeFov);
         });
+    }
+
+    [Tooltip("아가리를 카메라로 겨눌 때 목이 맡는 비율 (나머지는 머리)")]
+    [SerializeField, Range(0f, 1f)] private float neckAimShare = 0.4f;
+
+    /// <summary>주둥이(머리→혀) 방향이 카메라를 향하게 목·머리를 돌림. LateApply 뒤라 누적 없음.</summary>
+    private void AimSnout(JumpscareStage s, Transform neck, Transform head, Transform tongue, float weight)
+    {
+        if (head == null || tongue == null || s.View == null || weight <= 0f)
+        {
+            return;
+        }
+
+        Vector3 cam = s.View.transform.position;
+        if (neck != null)
+        {
+            Quaternion q = Quaternion.FromToRotation(tongue.position - head.position, cam - head.position);
+            neck.rotation = Quaternion.Slerp(Quaternion.identity, q, neckAimShare * weight) * neck.rotation;
+        }
+
+        Quaternion h = Quaternion.FromToRotation(tongue.position - head.position, cam - head.position);
+        head.rotation = Quaternion.Slerp(Quaternion.identity, h, weight) * head.rotation;
     }
 }

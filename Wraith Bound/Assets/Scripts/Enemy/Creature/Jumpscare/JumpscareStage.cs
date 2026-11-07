@@ -111,8 +111,13 @@ public sealed class JumpscareStage
     }
 
     /// <summary>춤·도발처럼 몸이 돌아가는 포즈에서도 얼굴이 카메라를 보도록, 루트 대비 얼굴 방향 각도를 잼.</summary>
+    /// <summary>true면 Pose가 얼굴 방향을 다시 재지 않음 — 자세가 바뀌어도(예: 혀가 늘어진 공격 자세) 몸이 휙 돌지 않게.</summary>
+    public bool PoseYawLocked;
+
     public void MeasurePoseYaw()
     {
+        if (PoseYawLocked)
+            return;
         Vector3 face = Vector3.zero;
         if (FaceForward != null)
             face = FaceForward();
@@ -279,9 +284,18 @@ public sealed class JumpscareStage
     /// <summary>얼굴 기준점이 눈앞 distance에 오도록 몸 전체를 옮김 (마지막 덮침). alongView면 지금 카메라가 보는 방향으로.</summary>
     public void PlaceFace(float distance, float up = 0f, bool alongView = false)
     {
-        TurnToCamera();
-        Vector3 dir = alongView && View != null ? View.transform.forward : Forward;
-        Vector3 want = CurrentEye + dir * distance + Vector3.up * up;
+        PlaceFaceAlong(distance, alongView && View != null ? View.transform.forward : Forward, up);
+    }
+
+    /// <summary>얼굴 기준점을 눈에서 dir 방향 distance에 둠 — 흔들림이 섞인 카메라 방향 대신 계산된 방향을 쓸 때.</summary>
+    public void PlaceFaceAlong(float distance, Vector3 dir, float up = 0f)
+    {
+        // 회전은 얼굴을 놓는 방향 기준으로 고정(루트 위치 기준이면 위치가 바뀔 때마다 방향이 출렁임)
+        Vector3 back = -dir;
+        back.y = 0f;
+        if (back.sqrMagnitude > 0.0001f)
+            Monster.rotation = Quaternion.LookRotation(back.normalized, Vector3.up) * Quaternion.Euler(0f, -poseYaw, 0f);
+        Vector3 want = CurrentEye + dir.normalized * distance + Vector3.up * up;
         Monster.position += want - AnchorPoint;
     }
 
