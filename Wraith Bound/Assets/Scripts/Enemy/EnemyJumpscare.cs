@@ -1,7 +1,8 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>자동 생성되는 사망 연출. 정지된 게임에서도 실제 시간으로 재생합니다.</summary>
+/// <summary>자동 생성되는 사망 연출. 정지된 게임에서도 실제 시간으로 재생합니다.
+/// 적에게 CreatureJumpscare(크리처 전용 연출)가 붙어 있으면 기본 돌진 대신 그것을 재생 — 카메라·적 위치 복구는 공통.</summary>
 public sealed class EnemyJumpscare : MonoBehaviour
 {
     Camera view;
@@ -14,6 +15,27 @@ public sealed class EnemyJumpscare : MonoBehaviour
     float originalNearClip;
     float blackout;
     bool finished;
+    JumpscareStage stage;
+
+    static readonly Color FaceLightColor = new Color(0.78f, 0.84f, 1f);
+    const float FaceSurfaceBrightness = 0.3f;
+
+    /// <summary>
+    /// 얼굴 비추는 조명 — 예전엔 세기 2.5 고정이라 얼굴이 0.6m까지 오면(밝기 ∝ 1/거리²) 하얗게 빛나 보였음.
+    /// 세기를 거리²에 비례시켜 어느 거리에서든 비슷하게 어둑한 밝기로. 위치는 눈 살짝 위.
+    /// </summary>
+    public static void ApplyFaceLight(Light light, Vector3 eye, Vector3 face)
+    {
+        if (light == null)
+            return;
+        float d = Mathf.Max(0.3f, Vector3.Distance(eye, face));
+        light.transform.position = eye + Vector3.up * 0.15f;
+        light.intensity = Mathf.Clamp(FaceSurfaceBrightness * d * d, 0.03f, 2.5f);
+        light.range = d + 2.5f;
+    }
+
+    /// <summary>전용 연출의 암전 컷 (0~1, OnGUI 검은 막).</summary>
+    public void SetBlackout(float alpha) => blackout = Mathf.Clamp01(alpha);
 
     public void Play(EnemyBase enemy, Camera camera)
     {
@@ -73,11 +95,21 @@ public sealed class EnemyJumpscare : MonoBehaviour
 
         Light faceLight = gameObject.AddComponent<Light>();
         faceLight.type = LightType.Point;
-        faceLight.range = 4f;
-        faceLight.intensity = 2.5f;
-        faceLight.color = new Color(1f, 0.65f, 0.55f);
+        faceLight.color = FaceLightColor;
+        ApplyFaceLight(faceLight, cameraPosition, monster.TransformPoint(faceOffset));
         transform.position = cameraPosition;
-        if (enemy.jumpscareSound != null)
+
+        CreatureJumpscare custom = enemy.GetComponent<CreatureJumpscare>();
+        if (custom != null && custom.isActiveAndEnabled)
+        {
+            // 크리처 전용 연출 — 소리·포즈·배치·카메라를 연출이 직접 다룸
+            stage = new JumpscareStage(this, view, enemy, face, cameraPosition, scareRotation,
+                monsterPosition.y, faceDistance, faceLight);
+            yield return custom.Play(stage);
+            stage.Cleanup();
+            stage = null;
+        }
+        else if (enemy.jumpscareSound != null)
         {
             AudioSource sound = gameObject.AddComponent<AudioSource>();
             sound.spatialBlend = 0f;
@@ -86,13 +118,14 @@ public sealed class EnemyJumpscare : MonoBehaviour
         }
 
         float duration = Mathf.Clamp(enemy.jumpscareDuration, 0.3f, 2f);
-        float elapsed = 0f;
+        float elapsed = custom != null && custom.isActiveAndEnabled ? duration : 0f;
         while (elapsed < duration && view != null && monster != null)
         {
             float lunge = Mathf.Clamp01(elapsed / 0.16f);
             float distance = Mathf.Lerp(faceDistance + 1.15f, faceDistance,
                 1f - Mathf.Pow(1f - lunge, 3f));
             monster.position = cameraPosition + forward * distance - rotatedOffset;
+            ApplyFaceLight(faceLight, cameraPosition, cameraPosition + forward * distance);
             float shake = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
             view.transform.SetPositionAndRotation(cameraPosition,
                 scareRotation * Quaternion.Euler(
@@ -270,6 +303,12 @@ public sealed class EnemyJumpscare : MonoBehaviour
         return Mathf.Max(0.55f, -nearestSurface + view.nearClipPlane + 0.22f);
     }
 
+    void LateUpdate()
+    {
+        // Animator가 포즈를 쓴 뒤에 전용 연출의 뼈 보정을 덧씌움
+        stage?.LateApply();
+    }
+
     void RestoreScareView()
     {
         if (view != null)
@@ -301,6 +340,11 @@ public sealed class EnemyJumpscare : MonoBehaviour
 
     void OnDestroy()
     {
+        if (stage != null)
+        {
+            stage.Cleanup();
+            stage = null;
+        }
         if (view != null)
         {
             view.transform.SetPositionAndRotation(cameraPosition, cameraRotation);

@@ -40,11 +40,7 @@ public class PrologueNurse : MonoBehaviour
         animator = GetComponent<Animator>();
         if (animator != null)
         {
-            animator.applyRootMotion = false; // 이동은 NavMeshAgent가
-            if (GetComponent<CreatureFootGrounding>() == null)
-            {
-                gameObject.AddComponent<CreatureFootGrounding>(); // 걷기·달리기 클립이 몸을 띄움 → 발을 바닥에
-            }
+            animator.applyRootMotion = false; // 이동은 NavMeshAgent가 (발 붙이기는 NurseGhost 프리팹의 CreatureFootGrounding)
         }
 
         // 일반 적 AI(팀원 코드)는 이 개체에선 끔 — 연출대로만 움직이게

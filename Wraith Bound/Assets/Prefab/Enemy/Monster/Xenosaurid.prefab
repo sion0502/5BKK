@@ -725,6 +725,8 @@ GameObject:
   - component: {fileID: 6147352791061027061}
   - component: {fileID: 5756531431385380878}
   - component: {fileID: 5312608284086481316}
+  - component: {fileID: 5360501857537590890}
+  - component: {fileID: 2637221874592497399}
   m_Layer: 0
   m_Name: Xenosaurid
   m_TagString: Untagged
@@ -758,7 +760,7 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3663160499361178377}
   m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: 5697a09ebdc80ec42a7b50ea31cc13c3, type: 3}
+  m_Avatar: {fileID: 9000000, guid: 14d81f9a1468d934f9a858e72c54f57b, type: 3}
   m_Controller: {fileID: 9100000, guid: cd63e32770f9c504a8722ee2be728d75, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
@@ -1159,6 +1161,51 @@ MonoBehaviour:
   attackFaceAngle: 6
   approachTimeout: 3
   finalAlignTimeout: 1.5
+--- !u!114 &5360501857537590890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3663160499361178377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 181e1cf6dfae4f0428ca69923625ef84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureLocomotionSync
+  walkStrideSpeed: 3.31
+  runStrideSpeed: 10.3
+  minMultiplier: 0.55
+  maxMultiplier: 1.4
+  smoothing: 6
+--- !u!114 &2637221874592497399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3663160499361178377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46d2e40d47b0c8f4f97d8083708d678b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::XenosauridJumpscare
+  scareSound: {fileID: 0}
+  standDistance: 2.4
+  rearSeconds: 0.85
+  tauntPoseRange: {x: 0.12, y: 0.3}
+  jawOpen: 72
+  tongueStretch: 1.7
+  jawAxis: {x: 0, y: 0, z: 1}
+  lungeSeconds: 0.13
+  lungeDistance: 0.75
+  pinnedSeconds: 0.75
+  attackPose: 0.3
+  fallDrop: 0.75
+  fallBack: 0.35
+  fallRoll: 18
+  fallPitchUp: -28
+  lungeFov: 50
 --- !u!1 &3710617881749421289
 GameObject:
   m_ObjectHideFlags: 0
@@ -2843,7 +2890,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: dab93fafe7083934186a75ffa3bec372, type: 2}
+  - {fileID: 2100000, guid: 3cbc380bf4f218d408fe4b288a94e35e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2870,7 +2917,7 @@ SkinnedMeshRenderer:
   m_Quality: 4
   m_UpdateWhenOffscreen: 0
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 247385907912805115, guid: 5697a09ebdc80ec42a7b50ea31cc13c3, type: 3}
+  m_Mesh: {fileID: 247385907912805115, guid: 14d81f9a1468d934f9a858e72c54f57b, type: 3}
   m_Bones:
   - {fileID: 2422326730955803504}
   - {fileID: 3723567323894538126}

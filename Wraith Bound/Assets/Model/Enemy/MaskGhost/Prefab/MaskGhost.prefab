@@ -236,6 +236,13 @@ GameObject:
   - component: {fileID: 3926309361518206525}
   - component: {fileID: 3886522799887487989}
   - component: {fileID: 7123456789012345679}
+  - component: {fileID: 9067549134541776367}
+  - component: {fileID: 8115249824444324121}
+  - component: {fileID: 8246423564810720085}
+  - component: {fileID: 3157801756011220266}
+  - component: {fileID: 1862584355444554831}
+  - component: {fileID: 7712484785160851034}
+  - component: {fileID: 3942607607814427836}
   m_Layer: 9
   m_Name: MaskGhost
   m_TagString: Monster
@@ -319,6 +326,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterEnemy
   data: {fileID: 11400000, guid: 613d967ead6cb6544afd90c5b2e28dc3, type: 2}
   eyePoint: {fileID: 6745583988855273342}
+  jumpscareFacePoint: {fileID: 0}
+  jumpscareDuration: 0.9
+  jumpscareSound: {fileID: 0}
   drawVisionDebug: 1
   debugStateLog: 1
   debugSenseLog: 1
@@ -338,11 +348,11 @@ MonoBehaviour:
   patrolDoorSearchRadius: 10
   patrolDoorOpenDistance: 0.75
   patrolDoorOpenFaceAngle: 20
+  patrolDoorPassThroughDistance: 1.5
   autoOpenDoorsOnPatrol: 1
+  patrolPointZone: {fileID: 0}
   patrolReachDistance: 0.5
-  globalPatrolSampleRadius: 2
   minWallClearance: 0.8
-  minPatrolPointDistance: 4
   obstacleCheckDistance: 1.2
   obstacleCheckRadius: 0.35
   obstacleStuckTime: 1
@@ -353,24 +363,22 @@ MonoBehaviour:
   investigateReachDistance: 0.6
   investigateStartDistance: 2.2
   minFootstepMoveSpeed: 0.15
+  footstepHearingMemory: 0.85
   hidingSeenMemoryTime: 0.75
   playerCatchDistance: 1.1
   playerContactKillDistance: 0.15
+  hidingBreathDetectRange: 4.5
   senseStartDelay: 0.5
   chaseDestinationUpdateInterval: 0.15
   chaseRepathDistance: 0.35
   logInterval: 0.5
   doorAttackStartDistance: 1
   doorStopDistance: 0.7
-  idleBeforeAttackTime: 0.5
   doorHitDelay: 0.45
-  attackEndDelay: 0.7
   faceRotateSpeed: 360
   postAttackCooldown: 0.2
   attackFaceAngle: 6
   approachTimeout: 3
-  finalAttackDistance: 0.8
-  finalAttackFaceAngle: 2.5
   finalAlignTimeout: 1.5
 --- !u!114 &7123456789012345679
 MonoBehaviour:
@@ -391,18 +399,247 @@ MonoBehaviour:
   walkFootstepVolume: 0.55
   runFootstepVolume: 0.75
   footstepPitchRange: {x: 0.95, y: 1.05}
+  footstepSync: 0
   walkStepInterval: 0.55
   runStepInterval: 0.34
   minMoveSpeed: 0.12
-  footstepSync: 0
   chaseVocals: []
   chaseVocalVolume: 0.9
   chaseVocalPitchRange: {x: 0.98, y: 1.02}
   chaseVocalInterval: 3
   playVocalOnChaseEnter: 1
-  patrolMoans: []
-  patrolMoanVolume: 0.45
-  patrolMoanInterval: 14
+--- !u!114 &9067549134541776367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c17e7208a94444ab4f33780d882e1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureFootGrounding
+  hips: {fileID: 6317426941487633442}
+  solePoints:
+  - bone: {fileID: 866604253793906491}
+    local: {x: 0.016292978, y: 0.072713815, z: 0.034361932}
+  - bone: {fileID: 866604253793906491}
+    local: {x: -0.011538944, y: 0.08636412, z: 0.023134599}
+  - bone: {fileID: 866604253793906491}
+    local: {x: 0.04882593, y: 0.037889183, z: 0.031234002}
+  - bone: {fileID: 866604253793906491}
+    local: {x: 0.0013514272, y: 0.04363949, z: 0.044415716}
+  - bone: {fileID: 866604253793906491}
+    local: {x: 0.027529495, y: 0.08993915, z: 0.011607231}
+  - bone: {fileID: 866604253793906491}
+    local: {x: -0.015981691, y: 0.060501434, z: 0.040830165}
+  - bone: {fileID: 866604253793906491}
+    local: {x: 0.017210802, y: 0.09467434, z: 0.01132545}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: 0.007839403, y: 0.032049477, z: 0.048067193}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: -0.045904547, y: -0.003984527, z: 0.037879534}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: 0.049537573, y: 0.04946988, z: 0.038637504}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: 0.0591472, y: -0.011701769, z: 0.04179424}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: -0.021453336, y: 0.06997938, z: 0.03665455}
+  - bone: {fileID: 4216343737614256450}
+    local: {x: 0.023682902, y: 0.2050679, z: 0.053161763}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: -0.0024556608, y: 0.077621855, z: 0.035790566}
+  - bone: {fileID: 8369969792821487152}
+    local: {x: -0.045731854, y: 0.028478665, z: 0.03790746}
+  soleClearance: 0
+  windowSeconds: 0.25
+  smoothing: 15
+  maxDrop: 0.5
+  maxRaise: 0.9
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &8115249824444324121
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 181e1cf6dfae4f0428ca69923625ef84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureLocomotionSync
+  walkStrideSpeed: 0
+  runStrideSpeed: 3.2
+  minMultiplier: 0.6
+  maxMultiplier: 1.5
+  smoothing: 6
+--- !u!114 &8246423564810720085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40b949941055081468b5edcea4f7995b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureJointSnap
+  bones:
+  - bone: 10
+    maxAngles: {x: 100, y: 70, z: 110}
+  - bone: 9
+    maxAngles: {x: 45, y: 45, z: 60}
+  - bone: 54
+    maxAngles: {x: 25, y: 30, z: 40}
+  - bone: 8
+    maxAngles: {x: 30, y: 35, z: 45}
+  - bone: 7
+    maxAngles: {x: 22, y: 28, z: 35}
+  - bone: 0
+    maxAngles: {x: 14, y: 18, z: 35}
+  - bone: 11
+    maxAngles: {x: 30, y: 30, z: 30}
+  - bone: 12
+    maxAngles: {x: 30, y: 30, z: 30}
+  - bone: 13
+    maxAngles: {x: 85, y: 110, z: 85}
+  - bone: 14
+    maxAngles: {x: 85, y: 110, z: 85}
+  - bone: 15
+    maxAngles: {x: 45, y: 140, z: 60}
+  - bone: 16
+    maxAngles: {x: 45, y: 140, z: 60}
+  - bone: 17
+    maxAngles: {x: 60, y: 90, z: 60}
+  - bone: 18
+    maxAngles: {x: 60, y: 90, z: 60}
+  - bone: 1
+    maxAngles: {x: 32, y: 50, z: 40}
+  - bone: 2
+    maxAngles: {x: 32, y: 50, z: 40}
+  - bone: 3
+    maxAngles: {x: 18, y: 85, z: 30}
+  - bone: 4
+    maxAngles: {x: 18, y: 85, z: 30}
+  - bone: 5
+    maxAngles: {x: 30, y: 45, z: 30}
+  - bone: 6
+    maxAngles: {x: 30, y: 45, z: 30}
+  interval: {x: 0.05, y: 0.16}
+  snapSpeed: 60
+  holdChance: 0.15
+  burstEvery: {x: 1, y: 2.5}
+  burstLength: {x: 0.3, y: 0.6}
+  burstInterval: {x: 0.02, y: 0.05}
+  burstAmplitude: 1.35
+  hipJolt: {x: 0.16, y: 0.08, z: 0.14}
+  fadeSeconds: 0.2
+--- !u!114 &3157801756011220266
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49b3a9054c0e37748ad6fbc8282381e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureChaseStretch
+  bones:
+  - bone: 7
+    factor: 1.6
+  - bone: 8
+    factor: 1.6
+  - bone: 54
+    factor: 1.6
+  - bone: 9
+    factor: 1.4
+  - bone: 10
+    factor: 2.6
+  - bone: 15
+    factor: 1.7
+  - bone: 16
+    factor: 1.7
+  - bone: 17
+    factor: 1.8
+  - bone: 18
+    factor: 1.8
+  - bone: 3
+    factor: 1.2
+  - bone: 4
+    factor: 1.2
+  - bone: 5
+    factor: 1.2
+  - bone: 6
+    factor: 1.2
+  growSeconds: 0.45
+  growSteps: 5
+  shrinkSeconds: 0.6
+--- !u!114 &1862584355444554831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9795e77161e502543b365211b8841d08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureEyeGlow
+  leftEyeLocal: {x: 0.0416, y: 0.1561, z: 0.0864}
+  rightEyeLocal: {x: -0.0238, y: 0.1575, z: 0.0855}
+  dotSize: 0.014
+  glowColor: {r: 6, g: 0.15, b: 0.05, a: 1}
+  lightIntensity: 0.06
+  lightRange: 0.3
+  fadeSpeed: 6
+  flicker: 0.15
+--- !u!114 &7712484785160851034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09fdc37a982be8a4c832df2d76a7be08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureDoubleBody
+  phaseOffset: 0.18
+  speedRatio: 1.07
+--- !u!114 &3942607607814427836
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f972fa469aa8b0488616c0c2f94de25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MaskGhostJumpscare
+  scareSound: {fileID: 0}
+  startDistance: 6
+  dashSeconds: 0.5
+  runCyclesPerSecond: 3.6
+  runState: Chase
+  dashConvulsion: 1.2
+  endDistance: 0.55
+  stopHeadTilt: {x: 58, y: -10}
+  stillSeconds: 0.14
+  twitchSeconds: 0.6
+  twitchAngle: 9
+  impactShake: 1.1
+  impactFov: 46
 --- !u!1 &3281631112770651894
 GameObject:
   m_ObjectHideFlags: 0
