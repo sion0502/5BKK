@@ -20,6 +20,9 @@ public class ScreenMessageUI : MonoBehaviour
     private CanvasGroup group;
     private float remaining;
 
+    /// <summary>문구가 표시될 때마다 (기 '타고난 신체'·해금 진행이 "열쇠가 필요합니다"를 감지).</summary>
+    public static event System.Action<string> Shown;
+
     /// <summary>문구를 표시합니다. 이미 떠 있으면 문구를 바꾸고 시간을 다시 셉니다.</summary>
     public static void Show(string message, float duration = DefaultDuration)
     {
@@ -27,6 +30,8 @@ public class ScreenMessageUI : MonoBehaviour
         {
             return;
         }
+
+        Shown?.Invoke(message);
 
         if (instance == null)
         {

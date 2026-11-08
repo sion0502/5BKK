@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 ///  ② 뒤돌아보면 복도 저편 형광등 밑에 간호사가 가만히 서 있음
 ///  ③ 간호사 쪽 형광등부터 하나씩 '팍' 꺼짐 → 암흑
 ///  ④ 불이 깜빡일 때마다 간호사가 더 가까이, 관절이 더 기괴하게 꺾인 채 서 있음 (첫 깜빡임은 그 자리 그대로)
-///  ⑤ 완전 암전(비상구 표시등까지) → 문 위 붉은 등이 켜지며 간호사를 비춤 — 정적
+///  ⑤ 완전 암전(초록 비상구 표시등까지) → 그 표시등이 빨갛게 켜지며 간호사를 비춤 — 정적
 ///  ⑥ 아주 빠르게 돌진 → 암전 → 허브 (게임오버 화면 없음)
 /// 기괴한 자세 = CreatureJointSnap(탈춤귀신 추격용)을 간호사에 잠깐 붙여, 어둠 속에서 새 각도로 꺾은 뒤 굳힘.
 /// </summary>
@@ -18,6 +18,8 @@ public class PrologueFinaleCutscene : MonoBehaviour
     [SerializeField] private PrologueNurse nurse;
     [Tooltip("간호사 쪽(먼 쪽)부터 순서대로 — 이 순서로 꺼짐")]
     [SerializeField] private PrologueCeilingLight[] corridorLights = { };
+    [Tooltip("비상구 문 위 비상구 표시등(초록) — 완전 암전 때 꺼짐. 붉은 등(redLight)은 같은 표시등을 빨갛게 켬")]
+    [SerializeField] private PrologueCeilingLight exitSign;
     [SerializeField] private PrologueCeilingLight redLight;
     [Tooltip("완전 암전 때 같이 꺼지는 조명 (초록 비상구 표시등 등)")]
     [SerializeField] private Light[] extraLightsOff = { };
@@ -252,6 +254,11 @@ public class PrologueFinaleCutscene : MonoBehaviour
 
         // ⑤ 완전 암전 → 붉은 등
         Play(blackoutClip);
+        if (exitSign != null)
+        {
+            exitSign.Set(false);
+        }
+
         foreach (Light l in extraLightsOff)
         {
             if (l != null)
@@ -299,6 +306,8 @@ public class PrologueFinaleCutscene : MonoBehaviour
 
         CutsceneBlackScreen.CreateRuntime(5100, 1f); // 닿는 순간 암전
         yield return new WaitForSecondsRealtime(blackHoldSeconds);
+        TraitProgress.Add(TraitCatalog.Deaths); // 프롤로그 사망도 누적 사망 수에 (기 해금)
+        HubArrival.FromPrologue = true; // 허브에서 바닥에 쓰러져 있다 깨어나는 연출
         SceneManager.LoadScene(hubSceneName);
     }
 

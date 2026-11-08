@@ -12,7 +12,7 @@ public static class PrologueFinaleSetup
     private const string LampPrefab = "Assets/ExternalAssets/The_Horror_Hospital/Prefabs/Hospital_Environment/HH_Ceiling_Lamp_01.prefab";
     private const string OnMat = "Assets/ExternalAssets/The_Horror_Hospital/Materials/Hospital/HH_Ceiling_Armstrong.mat";
     private const string OffMat = "Assets/Story/Intro/PowerOff/HH_Ceiling_Armstrong_Off.mat";
-    private const string RedMat = "Assets/ExternalAssets/The_Horror_Hospital/Materials/Hospital/HH_Ceiling_Armstrong_Red.mat";
+    private const string SignPrefab = "Assets/ExternalAssets/MeshingunStudio/ApocalypticHospital/Art/Prefabs/SM_ExitPannel_03a.prefab";
 
     // 비상구 문 x (긴 복도 B를 PrologueCorridorExtender로 늘린 뒤 기준)
     private const float DoorX = PrologueCorridorExtender.OldEndX + PrologueCorridorExtender.Extra;
@@ -45,7 +45,6 @@ public static class PrologueFinaleSetup
 
         Material on = AssetDatabase.LoadAssetAtPath<Material>(OnMat);
         Material off = AssetDatabase.LoadAssetAtPath<Material>(OffMat);
-        Material red = AssetDatabase.LoadAssetAtPath<Material>(RedMat);
 
         // 복도 형광등 4개
         Transform lampGroup = Child(root, "CorridorLights");
@@ -66,20 +65,51 @@ public static class PrologueFinaleSetup
                 }, true);
         }
 
-        // 비상구 문 위 붉은 등 (컷씬 전엔 꺼짐) — 천장 작은 등에서 복도 쪽(간호사 마지막 자리)을 비춤
+        // 비상구 문 위 비상구 표시등 (Meshingun SM_ExitPannel_03a + URP 재질 PrologueExitSignAssets) — 평소 초록으로 빛나다가
+        // 마지막 컷씬 완전 암전 때 꺼지고, 붉은 등 단계에 빨갛게 켜지며 간호사(마지막 자리)를 비춤. 예전 납작한 HH_Exit_01은 숨김
         Vector3 finalPos = new Vector3(DoorX - 5f, 0f, CorridorZ);
-        PrologueCeilingLight redLight = Lamp(root, "RedAlarmLight", new Vector3(DoorX - 0.5f, CeilingY, CorridorZ), new Vector3(0.22f, 1f, 0.35f), red, off,
-            l =>
-            {
-                l.type = LightType.Spot;
-                l.color = new Color(1f, 0.08f, 0.04f);
-                l.intensity = 14f;
-                l.range = 14f;
-                l.spotAngle = 75f;
-                l.innerSpotAngle = 35f;
-                l.transform.position = new Vector3(DoorX - 0.7f, 3.6f, CorridorZ);
-                l.transform.LookAt(finalPos + Vector3.up * 1.7f);
-            }, false);
+        PrologueExitSignAssets.Set signMats = PrologueExitSignAssets.Ensure();
+        Transform oldSign = events.transform.Find("EmergencyExit/HH_Exit_01");
+        if (oldSign != null)
+        {
+            oldSign.gameObject.SetActive(false);
+        }
+
+        GameObject signPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SignPrefab);
+        GameObject sign = (GameObject)PrefabUtility.InstantiatePrefab(signPrefab, root);
+        sign.name = "ExitSign";
+        // 메쉬 앞면이 +x, 기준점이 뒷면 → 180° 돌려 복도(−x)를 보게 하고 문 위 벽면(두께 0.22)에 붙임
+        sign.transform.SetPositionAndRotation(new Vector3(DoorX - 0.12f, 2.8f, CorridorZ), Quaternion.Euler(0f, 180f, 0f));
+        Renderer[] signRenderers = sign.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer r in signRenderers)
+        {
+            r.sharedMaterial = signMats.green;
+        }
+
+        Light green = GameObject.Find("ExitSign_Light")?.GetComponent<Light>();
+        if (green != null)
+        {
+            green.transform.position = new Vector3(DoorX - 0.6f, 2.7f, CorridorZ);
+        }
+
+        PrologueCeilingLight exitSign = sign.AddComponent<PrologueCeilingLight>();
+        Configure(exitSign, green, signRenderers, signMats.green, signMats.off, true, sign);
+
+        Light redSpot = new GameObject("RedLight").AddComponent<Light>();
+        redSpot.transform.SetParent(sign.transform, false);
+        redSpot.type = LightType.Spot;
+        redSpot.color = new Color(1f, 0.08f, 0.04f);
+        redSpot.intensity = 14f;
+        redSpot.range = 14f;
+        redSpot.spotAngle = 75f;
+        redSpot.innerSpotAngle = 35f;
+        redSpot.shadows = LightShadows.Hard;
+        redSpot.transform.position = new Vector3(DoorX - 0.4f, 2.75f, CorridorZ);
+        redSpot.transform.LookAt(finalPos + Vector3.up * 1.6f);
+        redSpot.enabled = false;
+        // 꺼짐 재질은 비움 — 시작할 때 초록 표시등 재질을 덮어쓰지 않게 (꺼지는 건 exitSign 쪽이 맡음)
+        PrologueCeilingLight redLight = redSpot.gameObject.AddComponent<PrologueCeilingLight>();
+        Configure(redLight, redSpot, signRenderers, signMats.red, null, false, sign);
 
         // 지점
         Transform points = Child(root, "Points");
@@ -103,12 +133,12 @@ public static class PrologueFinaleSetup
         audio.playOnAwake = false;
         audio.spatialBlend = 0f;
 
-        GameObject exitSign = GameObject.Find("ExitSign_Light");
         var so = new SerializedObject(cutscene);
         so.FindProperty("nurse").objectReferenceValue = nurse;
         SetArray(so.FindProperty("corridorLights"), lights);
         so.FindProperty("redLight").objectReferenceValue = redLight;
-        SetArray(so.FindProperty("extraLightsOff"), exitSign != null ? new Object[] { exitSign.GetComponent<Light>() } : new Object[0]);
+        so.FindProperty("exitSign").objectReferenceValue = exitSign;
+        SetArray(so.FindProperty("extraLightsOff"), new Object[0]);
         var hide = new System.Collections.Generic.List<Object>();
         foreach (string name in new[] { "Canvas", "Tutorial" })
         {
@@ -221,6 +251,28 @@ public static class PrologueFinaleSetup
 
         light.enabled = startOn;
         return ceiling;
+    }
+
+    private static void Configure(PrologueCeilingLight target, Light light, Renderer[] renderers, Material on, Material off, bool startOn, GameObject audioHost)
+    {
+        AudioSource audio = audioHost.GetComponent<AudioSource>();
+        if (audio == null)
+        {
+            audio = audioHost.AddComponent<AudioSource>();
+            audio.playOnAwake = false;
+            audio.spatialBlend = 1f;
+            audio.minDistance = 2f;
+            audio.maxDistance = 30f;
+        }
+
+        var so = new SerializedObject(target);
+        so.FindProperty("lightSource").objectReferenceValue = light;
+        SetArray(so.FindProperty("renderers"), renderers);
+        so.FindProperty("onMaterial").objectReferenceValue = on;
+        so.FindProperty("offMaterial").objectReferenceValue = off;
+        so.FindProperty("startOn").boolValue = startOn;
+        so.FindProperty("audioSource").objectReferenceValue = audio;
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static Transform Child(Transform parent, string name)

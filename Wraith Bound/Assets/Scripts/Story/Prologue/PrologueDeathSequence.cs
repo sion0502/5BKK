@@ -99,6 +99,8 @@ public class PrologueDeathSequence : MonoBehaviour
 
         CutsceneBlackScreen.CreateRuntime(5100, 1f); // 순간 암전
         yield return new WaitForSecondsRealtime(1.4f);
+        TraitProgress.Add(TraitCatalog.Deaths); // 프롤로그 사망도 누적 사망 수에 (기 해금)
+        HubArrival.FromPrologue = true; // 허브에서 바닥에 쓰러져 있다 깨어나는 연출
         SceneManager.LoadScene(hubSceneName);
     }
 

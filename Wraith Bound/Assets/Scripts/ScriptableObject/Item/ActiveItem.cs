@@ -26,6 +26,9 @@ public class ActiveItem : Items
     /// 우클릭 홀드로 사용할 수 있는지. 회복 효과·투척·설치 중 하나라도 있어야 함.
     /// 열쇠(잠긴 문 좌클릭)·건전지(R 충전)처럼 다른 경로로만 소모되는 아이템은 false — 홀드로 쓰면 효과 없이 사라졌음.
     /// </summary>
+    /// <summary>음식 — 기 '런닝맨'·해금 카운터용. 체력 회복형 중 응급약(Drug)은 음식이 아님.</summary>
+    public bool IsFood => effectType == ActiveEffectType.Health && name != "Drug";
+
     public bool IsHoldUsable => effectType != ActiveEffectType.None || isThrowable || deployPrefab != null;
 
     public override void Use(PlayerController player)
@@ -64,7 +67,17 @@ public class ActiveItem : Items
         }
 
         int amount = Mathf.RoundToInt(value);
-        switch (effectType)
+        ActiveEffectType effect = effectType;
+        if (IsFood)
+        {
+            TraitProgress.Add(TraitCatalog.FoodEaten);
+            if (TraitLoadout.IsEquipped(TraitId.RunningMan))
+            {
+                effect = ActiveEffectType.Stamina; // 기 '런닝맨': 음식이 체력 대신 스태미나 회복
+            }
+        }
+
+        switch (effect)
         {
             case ActiveEffectType.Health:
                 conditions.RecoverHealth(amount);
@@ -74,6 +87,6 @@ public class ActiveItem : Items
                 break;
         }
 
-        Debug.Log($"{itemName} 사용함. {effectType} {amount} 회복.");
+        Debug.Log($"{itemName} 사용함. {effect} {amount} 회복.");
     }
 }
