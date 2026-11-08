@@ -5,15 +5,15 @@ using UnityEngine;
 /// 프롤로그 진행 (조작 시작 ~ 고정 사망). CutscenePlayerHandoff가 조작을 넘길 때 이 오브젝트를 켜서 시작.
 ///  ① 정문을 열어 보면 "왜 안 열리지…" (SealedDoorInteract) →② E1 복도 끝 캠코더로만 보이는 환자 → ③ 진료실 일지 + 그 옆 병실 열쇠 줍기
 ///  → ④ E2 소리(철문 쾅)로만 등장을 알림 + "당장 숨어야 해" → 열쇠로 병실 문을 열고 트롤리 밑에 숨음
-///  → ⑤ 숨으면 간호사가 병실에 들어와 트롤리 앞을 지나 뒷문으로 나감(위기 넘김) / 제때 안 숨으면 나타나 추격
-///  → ⑥ 뒷문으로 빠져 긴 복도 중간에서 들킴 → 추격 → ⑦ 비상구 잠김·막다른 길에서 사망 → 허브
+///  → ⑤ 숨으면 간호사가 병실에 들어와 트롤리 앞에서 두리번거리다 들어온 쪽으로 돌아 나감(위기 넘김) / 제때 안 숨으면 나타나 추격
+///  → ⑥ 뒷문으로 빠져 형광등이 켜진 긴 복도 끝 비상구 문에 E → ⑦ 마지막 컷씬(PrologueFinaleCutscene) → 허브
+///  (제때 안 숨거나 들키면 추격 → 비상구 앞 막다른 길/잡힘 사망은 PrologueDeathSequence)
 /// 부스 시연용: 각 단계에 시간 제한이 있어 머뭇거려도 다음 단계가 진행됨.
 /// </summary>
 public class PrologueDirector : MonoBehaviour
 {
     [Header("Zones")]
     [SerializeField] private StoryZone corridorAZone;
-    [SerializeField] private StoryZone corridorBMidZone;
     [SerializeField] private StoryZone exitDoorZone;
 
     [Header("Actors")]
@@ -24,18 +24,19 @@ public class PrologueDirector : MonoBehaviour
     [Tooltip("병실 입구 잠긴 문 — 플레이어가 닫아 두었으면 간호사가 지나갈 때 열림")]
     [SerializeField] private DoorClick wardDoor;
     [SerializeField] private PrologueDeathSequence death;
+    [SerializeField] private PrologueFinaleCutscene finale;
+    [SerializeField] private PrologueFinaleDoor finaleDoor;
 
     [Header("Points")]
     [SerializeField] private Transform nurseSpawn;
     [SerializeField] private Transform corridorAMid;
     [SerializeField] private Transform wardEntrance;
-    [Tooltip("숨는 곳 앞을 지나가는 경로 (왼쪽 → 앞 → 병실 뒷문 → 사라지는 곳)")]
+    [Tooltip("숨는 곳 앞까지 오는 경로 (병실 입구 → 왼쪽 → 앞). 앞에서 잠깐 두리번거린 뒤 returnRoute로 돌아 나감")]
     [SerializeField] private Transform hidePassStart;
     [SerializeField] private Transform hidePassFront;
     [SerializeField] private Transform hideSpotLookAt;
-    [SerializeField] private Transform wardBackDoor;
-    [SerializeField] private Transform nurseExit;
-    [SerializeField] private Transform corridorBStart;
+    [Tooltip("숨는 곳 앞에서 돌아 나가는 길 — 플레이어가 나갈 병실 뒷문·긴 복도 쪽이 아니라 들어온 쪽으로 (마지막 지점에서 사라짐)")]
+    [SerializeField] private Transform[] returnRoute = { };
     [SerializeField] private Transform exitDoorFace;
 
     [Header("Timeouts (초)")]
@@ -48,8 +49,9 @@ public class PrologueDirector : MonoBehaviour
     [Tooltip("숨은 뒤 간호사가 나타나기까지")]
     [SerializeField] private float hiddenToAppearDelay = 1.5f;
     [Tooltip("숨는 곳 앞에서 잠깐 멈추는 시간 (0이면 그냥 지나감)")]
-    [SerializeField] private float hidePauseSeconds = 0f;
-    [SerializeField] private float sneakTimeout = 30f;
+    [SerializeField] private float hidePauseSeconds = 1.5f;
+    [Tooltip("위기를 넘긴 뒤 이 시간 안에 비상구 문을 열어 보지 않으면 간호사가 되돌아와 추격")]
+    [SerializeField] private float finaleTimeout = 75f;
     [SerializeField] private float chaseCatchUpAfter = 25f;
 
     [Header("Chase")]
@@ -75,6 +77,12 @@ public class PrologueDirector : MonoBehaviour
         hiding = player.GetComponent<PlayerHidingController>();
         chaseEffect = player.GetComponent<PlayerChaseEffectController>();
         inventory = player.GetComponent<InventoryManager>();
+        // 프롤로그는 배터리 관리 없이 — 캠코더 배터리가 닳지 않음
+        CamcorderEnergyController energy = player.GetComponentInChildren<CamcorderEnergyController>();
+        if (energy != null)
+        {
+            energy.InfiniteEnergy = true;
+        }
         PlayerController controller = player.GetComponent<PlayerController>();
         if (controller != null && controller.runSpeed > 0f)
         {
@@ -126,23 +134,20 @@ public class PrologueDirector : MonoBehaviour
             yield break; // 추격 중 — 잡히면 OnNurseCaught
         }
 
-        // ⑥ 몰래 빠져나가기 → 긴 복도 중간에서 들킴 (또는 시간 초과면 간호사가 되돌아옴)
+        // ⑥ 몰래 빠져나가기 — 긴 복도는 조용함. 켜진 형광등을 따라 끝 비상구 문에 E → 마지막 컷씬(PrologueFinaleCutscene)
+        //    부스용: 너무 오래 안 가면 간호사가 되돌아와 추격(비상구 앞 막다른 길 사망은 ChaseWatch)
         SubtitleUI.ShowForDuration("나", "…지나갔어. …지금이야, 나가자.", 3f);
-        bool reachedMid = false;
-        yield return WaitUntilOrTimeout(() => (reachedMid = corridorBMidZone.HasFired), sneakTimeout);
-
-        Log(reachedMid ? "긴 복도 중간에서 들킴" : "몰래 빠져나가기 시간 초과 → 간호사 복귀");
-        if (reachedMid)
+        finaleDoor.Arm(true);
+        yield return WaitUntilOrTimeout(() => finale.IsRunning, finaleTimeout);
+        if (finale.IsRunning)
         {
-            nurse.Appear(corridorBStart.position, corridorBStart.rotation);
-            SubtitleUI.ShowForDuration("나", "…!", 1.2f);
-        }
-        else
-        {
-            nurse.Appear(wardEntrance.position, wardEntrance.rotation);
+            yield break;
         }
 
-        StartChase(); // ⑦ 비상구 앞 막다른 길 사망은 ChaseWatch가 처리
+        finaleDoor.Arm(false);
+        Log("비상구까지 시간 초과 → 간호사 복귀");
+        nurse.Appear(wardEntrance.position, wardEntrance.rotation);
+        StartChase();
     }
 
     private IEnumerator RunApparition()
@@ -221,7 +226,7 @@ public class PrologueDirector : MonoBehaviour
         SubtitleUI.ShowForDuration("나", "이게 무슨 소리지…?! 당장 숨어야 해.", 3.2f);
     }
 
-    // ⑤ 숨을 때까지 기다림 → 숨으면 간호사가 병실로 들어와 사물함 앞을 지나 뒷문으로 나감(true)
+    // ⑤ 숨을 때까지 기다림 → 숨으면 간호사가 병실로 들어와 트롤리 앞에서 두리번거린 뒤 들어온 쪽으로 돌아 나감(true)
     //    제때 안 숨거나, 지나가는 동안 숨는 곳에서 나와 들키면 추격(false)
     private IEnumerator RunHidePass(System.Action<bool> done)
     {
@@ -239,7 +244,8 @@ public class PrologueDirector : MonoBehaviour
         ForceOpen(wardDoor);
         nurse.Appear(nurseSpawn.position, nurseSpawn.rotation);
 
-        Transform[] route = { corridorAMid, wardEntrance, hidePassStart, hidePassFront, wardBackDoor, nurseExit };
+        var route = new System.Collections.Generic.List<Transform> { corridorAMid, wardEntrance, hidePassStart, hidePassFront };
+        route.AddRange(returnRoute);
         foreach (Transform point in route)
         {
             bool arrived = false;
@@ -258,9 +264,25 @@ public class PrologueDirector : MonoBehaviour
 
             if (point == hidePassFront && hidePauseSeconds > 0f)
             {
+                // 트롤리 쪽으로 천천히 돌아보고 멈칫 → 돌아갈 쪽으로 천천히 돌아선 뒤 걸음 (확 돌면 발이 미끄러져 보였음)
                 nurse.Stop();
-                nurse.FaceTowards(hideSpotLookAt.position);
+                nurse.TurnTowards(hideSpotLookAt.position);
                 yield return new WaitForSeconds(hidePauseSeconds);
+                if (returnRoute.Length > 0 && returnRoute[0] != null)
+                {
+                    nurse.TurnTowards(returnRoute[0].position);
+                    while (nurse.IsTurning)
+                    {
+                        if (SpotsPlayerUp(tooCloseDistance))
+                        {
+                            StartChase();
+                            done(false);
+                            yield break;
+                        }
+
+                        yield return null;
+                    }
+                }
             }
         }
 

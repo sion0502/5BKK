@@ -38,7 +38,15 @@ public class StoryDocumentReader : MonoBehaviour
 
         reader.overlay = overlay;
         reader.closed = onClosed;
-        reader.controlLock = PlayerControlLock.Lock(GameObject.FindWithTag("Player"));
+        GameObject player = GameObject.FindWithTag("Player");
+        // 캠코더 화면을 보던 중이면 내림 — 켜 둔 채 읽으면 그동안 배터리가 닳았음
+        CamcorderController camcorder = player != null ? player.GetComponentInChildren<CamcorderController>() : null;
+        if (camcorder != null && camcorder.IsViewfinderActive)
+        {
+            camcorder.SetActive(false);
+        }
+
+        reader.controlLock = PlayerControlLock.Lock(player);
         IsOpen = true;
         reader.StartCoroutine(reader.Run());
     }

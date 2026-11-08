@@ -74,7 +74,6 @@ public static class PrologueEventBuilder
         PrologueDirector director = directorGo.AddComponent<PrologueDirector>();
         SerializedObject so = new SerializedObject(director);
         so.FindProperty("corridorAZone").objectReferenceValue = corridorA;
-        so.FindProperty("corridorBMidZone").objectReferenceValue = corridorBMid;
         so.FindProperty("exitDoorZone").objectReferenceValue = exitZone;
         so.FindProperty("apparition").objectReferenceValue = apparition;
         so.FindProperty("journal").objectReferenceValue = journal;
@@ -87,11 +86,14 @@ public static class PrologueEventBuilder
         so.FindProperty("hidePassStart").objectReferenceValue = hidePassStart;
         so.FindProperty("hidePassFront").objectReferenceValue = hidePassFront;
         so.FindProperty("wardDoor").objectReferenceValue = PrologueWingBuilder.WardDoor;
-        so.FindProperty("wardBackDoor").objectReferenceValue = wardBackDoor;
         so.FindProperty("e2AudioSource").objectReferenceValue = e2Audio;
         so.FindProperty("hideSpotLookAt").objectReferenceValue = hideSpotLookAt;
-        so.FindProperty("nurseExit").objectReferenceValue = nurseExit;
-        so.FindProperty("corridorBStart").objectReferenceValue = corridorBStart;
+        // 숨는 곳 앞에서 들어온 쪽으로 돌아 나감 (플레이어가 나갈 뒷문 쪽으로 가지 않게)
+        SerializedProperty back = so.FindProperty("returnRoute");
+        back.arraySize = 3;
+        back.GetArrayElementAtIndex(0).objectReferenceValue = wardEntrance;
+        back.GetArrayElementAtIndex(1).objectReferenceValue = corridorAMid;
+        back.GetArrayElementAtIndex(2).objectReferenceValue = nurseSpawn;
         so.FindProperty("exitDoorFace").objectReferenceValue = exitFace;
         so.ApplyModifiedPropertiesWithoutUndo();
 

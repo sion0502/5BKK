@@ -26,6 +26,14 @@ public class TutorialInputBlocker
         AddTarget(player.GetComponent<InventoryManager>());
         AddTarget(player.GetComponent<PlayerHidingController>());
         AddTarget(player.GetComponentInChildren<MouseLook>(true));
+        // 뒤돌아보기(Space 누르는 동안) — 팁을 Space로 닫으면 같이 켜지던 것 방지 (RearviewSuppressor)
+        foreach (Behaviour b in player.GetComponentsInChildren<Behaviour>(true))
+        {
+            if (RearviewSuppressor.IsRearview(b))
+            {
+                AddTarget(b);
+            }
+        }
     }
 
     private void AddTarget(Behaviour behaviour)
@@ -67,7 +75,11 @@ public class TutorialInputBlocker
 
         foreach (Behaviour behaviour in disabledByMe)
         {
-            if (behaviour != null)
+            if (RearviewSuppressor.IsRearview(behaviour))
+            {
+                RearviewSuppressor.Enable(behaviour); // 닫은 Space를 뗄 때까지 꺼 둠
+            }
+            else if (behaviour != null)
             {
                 behaviour.enabled = true;
             }

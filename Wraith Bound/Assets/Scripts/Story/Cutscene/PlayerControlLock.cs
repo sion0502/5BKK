@@ -11,7 +11,7 @@ public sealed class PlayerControlLock
     private static readonly string[] InputComponentNames =
     {
         "MouseLook", "PlayerController", "PlayerInteractor", "InventoryManager", "SelectedItemUseController",
-        "PlayerHidingController", "SmartPhoneHolderToggle",
+        "PlayerHidingController", "SmartPhoneHolderToggle", RearviewSuppressor.RearviewTypeName,
     };
 
     private readonly List<Behaviour> disabled = new List<Behaviour>();
@@ -40,7 +40,11 @@ public sealed class PlayerControlLock
     {
         foreach (Behaviour behaviour in disabled)
         {
-            if (behaviour != null)
+            if (RearviewSuppressor.IsRearview(behaviour))
+            {
+                RearviewSuppressor.Enable(behaviour); // 일지 등을 Space로 닫았으면 뗄 때까지 뒤돌아보기 꺼 둠
+            }
+            else if (behaviour != null)
             {
                 behaviour.enabled = true;
             }

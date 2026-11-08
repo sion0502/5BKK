@@ -33,6 +33,10 @@ public class PrologueNurse : MonoBehaviour
     private Transform chaseTarget;
     private Action arrived;
     private bool caughtFired;
+    private bool turning;
+    private Quaternion turnTarget;
+    [Tooltip("TurnTowards로 제자리에서 도는 빠르기(도/초) — 빠르면 디딘 발이 미끄러져 보임")]
+    [SerializeField] private float turnSpeed = 110f;
 
     private void Awake()
     {
@@ -70,6 +74,25 @@ public class PrologueNurse : MonoBehaviour
         Stop();
     }
 
+    public Animator Animator => animator;
+
+    /// <summary>컷씬용: NavMesh에서 떼고 지정한 자리에 세움(이후 위치는 연출이 직접 옮김). 대기 자세.</summary>
+    public void Pin(Vector3 position, Vector3 lookAt)
+    {
+        gameObject.SetActive(true);
+        chaseTarget = null;
+        arrived = null;
+        agent.enabled = false;
+        transform.position = position;
+        FaceTowards(lookAt);
+        SetState(0);
+    }
+
+    public void SetAnimatorState(int state)
+    {
+        SetState(state);
+    }
+
     public void Vanish()
     {
         chaseTarget = null;
@@ -80,6 +103,7 @@ public class PrologueNurse : MonoBehaviour
     public void WalkTo(Vector3 destination, Action onArrived = null)
     {
         chaseTarget = null;
+        turning = false;
         arrived = onArrived;
         agent.isStopped = false;
         agent.speed = walkSpeed;
@@ -120,6 +144,20 @@ public class PrologueNurse : MonoBehaviour
         SetState(0);
     }
 
+    /// <summary>제자리에서 천천히 돌아섬 (멈춘 상태에서만, 초당 turnSpeed도). 순간적으로 확 도는 FaceTowards 대신 숨는 곳 앞 연출용.</summary>
+    public void TurnTowards(Vector3 point)
+    {
+        Vector3 dir = point - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude > 0.0001f)
+        {
+            turnTarget = Quaternion.LookRotation(dir);
+            turning = true;
+        }
+    }
+
+    public bool IsTurning => turning;
+
     public void FaceTowards(Vector3 point)
     {
         Vector3 dir = point - transform.position;
@@ -156,6 +194,12 @@ public class PrologueNurse : MonoBehaviour
 
     private void Update()
     {
+        if (turning)
+        {
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, turnTarget, turnSpeed * Time.deltaTime);
+            turning = Quaternion.Angle(transform.rotation, turnTarget) > 0.5f;
+        }
+
         if (chaseTarget != null)
         {
             agent.SetDestination(chaseTarget.position);
