@@ -772,11 +772,12 @@ GameObject:
   - component: {fileID: 4666907775493500045}
   - component: {fileID: 1891288708447377794}
   - component: {fileID: 1564863606494002772}
-  - component: {fileID: 8746565007080309784}
-  - component: {fileID: 2677027534579595425}
-  - component: {fileID: 2148528127479533524}
-  - component: {fileID: 4962596710335548448}
   - component: {fileID: 7993437842971058249}
+  - component: {fileID: 6874373246726265926}
+  - component: {fileID: 2667620108884328727}
+  - component: {fileID: 1423628817279792015}
+  - component: {fileID: 6206071819393704794}
+  - component: {fileID: 1404461218052457961}
   m_Layer: 9
   m_Name: MaskGhost
   m_TagString: Monster
@@ -989,7 +990,7 @@ MonoBehaviour:
   soleClearance: 0
   windowSeconds: 0.25
   smoothing: 15
-  maxDrop: 0.5
+  maxDrop: 1.2
   maxRaise: 0.9
   groundMask:
     serializedVersion: 2
@@ -1011,7 +1012,32 @@ MonoBehaviour:
   minMultiplier: 0.6
   maxMultiplier: 1.5
   smoothing: 6
---- !u!114 &8746565007080309784
+--- !u!114 &7993437842971058249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5771782962113642521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f972fa469aa8b0488616c0c2f94de25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MaskGhostJumpscare
+  scareSound: {fileID: 0}
+  startDistance: 6
+  dashSeconds: 0.5
+  runCyclesPerSecond: 3.6
+  runState: Chase
+  dashConvulsion: 1.2
+  endDistance: 0.55
+  stopHeadTilt: {x: 58, y: -10}
+  stillSeconds: 0.14
+  twitchSeconds: 0.6
+  twitchAngle: 9
+  impactShake: 1.1
+  impactFov: 46
+--- !u!114 &6874373246726265926
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1073,7 +1099,7 @@ MonoBehaviour:
   burstAmplitude: 1.35
   hipJolt: {x: 0.16, y: 0.08, z: 0.14}
   fadeSeconds: 0.2
---- !u!114 &2677027534579595425
+--- !u!114 &2667620108884328727
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1115,7 +1141,7 @@ MonoBehaviour:
   growSeconds: 0.45
   growSteps: 5
   shrinkSeconds: 0.6
---- !u!114 &2148528127479533524
+--- !u!114 &1423628817279792015
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1135,7 +1161,7 @@ MonoBehaviour:
   lightRange: 0.3
   fadeSpeed: 6
   flicker: 0.15
---- !u!114 &4962596710335548448
+--- !u!114 &6206071819393704794
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1149,7 +1175,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CreatureDoubleBody
   phaseOffset: 0.18
   speedRatio: 1.07
---- !u!114 &7993437842971058249
+--- !u!114 &1404461218052457961
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1158,22 +1184,59 @@ MonoBehaviour:
   m_GameObject: {fileID: 5771782962113642521}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f972fa469aa8b0488616c0c2f94de25, type: 3}
+  m_Script: {fileID: 11500000, guid: 5db8f7d7a2dda2d4ab95e2a77bdaf8c9, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MaskGhostJumpscare
-  scareSound: {fileID: 0}
-  startDistance: 6
-  dashSeconds: 0.5
-  runCyclesPerSecond: 3.6
-  runState: Chase
-  dashConvulsion: 1.2
-  endDistance: 0.55
-  stopHeadTilt: {x: 58, y: -10}
-  stillSeconds: 0.14
-  twitchSeconds: 0.6
-  twitchAngle: 9
-  impactShake: 1.1
-  impactFov: 46
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureDoorSquash
+  foldBones:
+  - human: 7
+    boneName: 
+    pitch: 22
+  - human: 8
+    boneName: 
+    pitch: 25
+  - human: 54
+    boneName: 
+    pitch: 25
+  - human: 9
+    boneName: 
+    pitch: -25
+  - human: 10
+    boneName: 
+    pitch: -30
+  - human: 1
+    boneName: 
+    pitch: -45
+  - human: 2
+    boneName: 
+    pitch: -45
+  - human: 3
+    boneName: 
+    pitch: 85
+  - human: 4
+    boneName: 
+    pitch: 85
+  - human: 5
+    boneName: 
+    pitch: -40
+  - human: 6
+    boneName: 
+    pitch: -40
+  topBoneNames: []
+  footBoneNames: []
+  headExtra: 0.25
+  margin: 0.12
+  scanRange: {x: -0.8, y: 1.8}
+  scanStep: 0.1
+  ceilingMemory: 0.6
+  scanInterval: 0.08
+  ceilingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  minCeilingHeight: 1.6
+  foldSpeed: 6
+  unfoldSpeed: 3
+  unfoldDelay: 0.45
+  minScale: 0.75
 --- !u!1 &6370957817781840815
 GameObject:
   m_ObjectHideFlags: 0

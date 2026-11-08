@@ -135,6 +135,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2510323376036696963}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1354367719565816388}
   m_SourcePrefab: {fileID: 100100000, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
 --- !u!4 &635109328491608820 stripped
 Transform:
@@ -338,7 +341,7 @@ MonoBehaviour:
   soleClearance: 0
   windowSeconds: 0.25
   smoothing: 15
-  maxDrop: 0.5
+  maxDrop: 1.2
   maxRaise: 0.35
   groundMask:
     serializedVersion: 2
@@ -384,6 +387,68 @@ MonoBehaviour:
   impactFov: 48
   impactState: Attack
   impactPose: 0.1
+--- !u!114 &1354367719565816388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4364140383822590013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5db8f7d7a2dda2d4ab95e2a77bdaf8c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureDoorSquash
+  foldBones:
+  - human: 7
+    boneName: 
+    pitch: 22
+  - human: 8
+    boneName: 
+    pitch: 25
+  - human: 54
+    boneName: 
+    pitch: 25
+  - human: 9
+    boneName: 
+    pitch: -25
+  - human: 10
+    boneName: 
+    pitch: -30
+  - human: 1
+    boneName: 
+    pitch: -45
+  - human: 2
+    boneName: 
+    pitch: -45
+  - human: 3
+    boneName: 
+    pitch: 85
+  - human: 4
+    boneName: 
+    pitch: 85
+  - human: 5
+    boneName: 
+    pitch: -40
+  - human: 6
+    boneName: 
+    pitch: -40
+  topBoneNames: []
+  footBoneNames: []
+  headExtra: 0.25
+  margin: 0.12
+  scanRange: {x: -0.8, y: 1.8}
+  scanStep: 0.1
+  ceilingMemory: 0.6
+  scanInterval: 0.08
+  ceilingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  minCeilingHeight: 1.6
+  foldSpeed: 6
+  unfoldSpeed: 3
+  unfoldDelay: 0.45
+  minScale: 0.75
 --- !u!4 &5959470956747212745 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7126286831541242533, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}

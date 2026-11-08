@@ -62,7 +62,7 @@ public class CreatureDoubleBody : MonoBehaviour
         {
             MonoBehaviour mb = behaviours[i];
             bool keep = mb is CreatureFootGrounding || mb is CreatureJointSnap
-                || mb is CreatureChaseStretch || mb is CreatureEyeGlow;
+                || mb is CreatureChaseStretch || mb is CreatureEyeGlow || mb is CreatureDoorSquash;
             if (mb != null && !keep)
             {
                 DestroyImmediate(mb);

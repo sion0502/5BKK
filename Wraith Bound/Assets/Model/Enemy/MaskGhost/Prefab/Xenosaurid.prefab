@@ -2453,6 +2453,7 @@ GameObject:
   - component: {fileID: 4514159070658734613}
   - component: {fileID: 7318320413706631080}
   - component: {fileID: 9039434012925557659}
+  - component: {fileID: 2264919386129238640}
   m_Layer: 0
   m_Name: Xenosaurid
   m_TagString: Untagged
@@ -2933,6 +2934,82 @@ MonoBehaviour:
   fallPitchUp: -28
   lungeFov: 50
   neckAimShare: 0.4
+--- !u!114 &2264919386129238640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8960522888249939485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5db8f7d7a2dda2d4ab95e2a77bdaf8c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureDoorSquash
+  foldBones:
+  - human: 55
+    boneName: Xenosaurid_ Pelvis
+    pitch: 12
+  - human: 55
+    boneName: Xenosaurid_ Spine
+    pitch: 25
+  - human: 55
+    boneName: Xenosaurid_ Spine1
+    pitch: 25
+  - human: 55
+    boneName: Xenosaurid_ Neck
+    pitch: 30
+  - human: 55
+    boneName: Xenosaurid_ Neck1
+    pitch: 30
+  - human: 55
+    boneName: Xenosaurid_ Neck2
+    pitch: 25
+  - human: 55
+    boneName: Xenosaurid_ Head
+    pitch: -40
+  - human: 55
+    boneName: Xenosaurid_ L Thigh
+    pitch: -35
+  - human: 55
+    boneName: Xenosaurid_ R Thigh
+    pitch: -35
+  - human: 55
+    boneName: Xenosaurid_ L Calf
+    pitch: 60
+  - human: 55
+    boneName: Xenosaurid_ R Calf
+    pitch: 60
+  - human: 55
+    boneName: Xenosaurid_ L HorseLink
+    pitch: -40
+  - human: 55
+    boneName: Xenosaurid_ R HorseLink
+    pitch: -40
+  topBoneNames:
+  - Xenosaurid_ Head
+  - Xenosaurid_ Neck2
+  - Xenosaurid_ Neck1
+  - Xenosaurid_ Spine1
+  footBoneNames:
+  - Xenosaurid_ L Foot
+  - Xenosaurid_ R Foot
+  - Xenosaurid_ L Toe1
+  - Xenosaurid_ R Toe1
+  headExtra: 0.35
+  margin: 0.12
+  scanRange: {x: -0.8, y: 1.8}
+  scanStep: 0.1
+  ceilingMemory: 0.6
+  scanInterval: 0.08
+  ceilingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  minCeilingHeight: 1.6
+  foldSpeed: 6
+  unfoldSpeed: 3
+  unfoldDelay: 0.45
+  minScale: 0.75
 --- !u!1 &8991690428155135286
 GameObject:
   m_ObjectHideFlags: 0

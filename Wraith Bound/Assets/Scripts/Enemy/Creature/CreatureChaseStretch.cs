@@ -51,7 +51,10 @@ public class CreatureChaseStretch : MonoBehaviour
     private bool wasChasing;
 
     /// <summary>0=원래, 1=다 늘어남.</summary>
-    public float Amount => Stepped(progress);
+    public float Amount => Stepped(progress) * (1f - Suppression);
+
+    /// <summary>문을 지나며 몸을 접는 동안 늘어남을 거두는 정도(0~1) — CreatureDoorSquash가 넣음.</summary>
+    public float Suppression { get; set; }
 
     private void Awake()
     {
@@ -87,7 +90,7 @@ public class CreatureChaseStretch : MonoBehaviour
 
         float speed = on ? 1f / Mathf.Max(0.01f, growSeconds) : -1f / Mathf.Max(0.01f, shrinkSeconds);
         progress = Mathf.Clamp01(progress + speed * Time.deltaTime);
-        Apply(Stepped(progress));
+        Apply(Amount);
     }
 
     private float Stepped(float t)

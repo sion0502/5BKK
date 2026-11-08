@@ -31,7 +31,7 @@ public static class MaskGhostChaseSetup
                 Replace<CreatureDoubleBody>(root);
                 CreatureFootGrounding grounding = root.GetComponent<CreatureFootGrounding>();
                 if (grounding != null)
-                    grounding.SetLimits(0.5f, 0.9f);
+                    grounding.SetLimits(1.2f, 0.9f); // 내림 1.2: 문 지날 때 무릎 굽힘(CreatureDoorSquash)
                 PrefabUtility.SaveAsPrefabAsset(root, path);
                 sb.AppendLine(path);
             }

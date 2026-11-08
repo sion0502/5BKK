@@ -78,6 +78,8 @@ public sealed class JumpscareStage
             Pause(g);
         foreach (CreatureLocomotionSync s in Monster.GetComponentsInChildren<CreatureLocomotionSync>())
             Pause(s);
+        foreach (CreatureDoorSquash d in Monster.GetComponentsInChildren<CreatureDoorSquash>())
+            Pause(d); // 문 접기는 연출 중 끔(꺼질 때 골반 크기·늘어남 거둠을 원래대로)
     }
 
     private void Pause(Behaviour b)
