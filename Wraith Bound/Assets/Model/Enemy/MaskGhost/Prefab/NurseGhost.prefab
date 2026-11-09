@@ -122,6 +122,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8659719157060691446}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5718204936150283947}
   m_SourcePrefab: {fileID: 100100000, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
 --- !u!4 &4024909794415405703 stripped
 Transform:
@@ -273,3 +276,16 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 80
   m_CollisionDetection: 0
+--- !u!114 &5718204936150283947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4364140383822590013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b344deb007a4907a182fbde88dcc1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostSound
+  patrolLoop: {fileID: 8300000, guid: 4e021729a5ac4b76844d54fbb781fb58, type: 3}

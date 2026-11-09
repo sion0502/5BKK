@@ -18,6 +18,7 @@ public class MaskGhostSound : MonoBehaviour
     [Header("Audio Source (비워두면 자동 생성)")]
     [SerializeField] AudioSource footstepSource;
     [SerializeField] AudioSource vocalSource;
+    [SerializeField] AudioSource patrolSource;
 
     [Header("발소리 클립")]
     [SerializeField] AudioClip[] walkFootsteps;
@@ -46,11 +47,25 @@ public class MaskGhostSound : MonoBehaviour
     [SerializeField] float chaseVocalInterval = 3f;
     [SerializeField] bool playVocalOnChaseEnter = true;
 
+    [Header("순찰(Patrol)·수색(Investigate) 노래 — 추격(Chase) 때는 멈춤")]
+    [SerializeField] AudioClip patrolLoop;
+    [Range(0f, 1f)] [SerializeField] float patrolLoopVolume = 0.8f;
+    [Tooltip("Patrol/수색 시작 시 소리가 커지는 시간(초)")]
+    [SerializeField] float patrolFadeIn = 0.5f;
+    [Tooltip("Patrol/수색을 벗어날 때 소리가 줄어드는 시간(초)")]
+    [SerializeField] float patrolFadeOut = 0.8f;
+    [Tooltip("이 거리 안에서는 최대 볼륨")]
+    [SerializeField] float patrolMinDistance = 3f;
+    [Tooltip("이 거리 밖에서는 안 들림")]
+    [SerializeField] float patrolMaxDistance = 25f;
+
     EnemyBase _enemy;
     NavMeshAgent _agent;
     EnemyBase.State _lastState = (EnemyBase.State)(-1);
     float _nextChaseVocalTime;
     float _footstepTimer;
+    float _patrolLevel;
+    bool _patrolPaused;
 
     public float PlaySpeed => _agent != null ? _agent.velocity.magnitude : 0f;
     public float NextFootstepIn => Mathf.Max(0f, _footstepTimer);
@@ -86,6 +101,8 @@ public class MaskGhostSound : MonoBehaviour
         if (state == EnemyBase.State.Chase)
             TickChaseVocal();
 
+        TickPatrolLoop(state);
+
         if (footstepSync == FootstepSyncMode.Interval)
             TickIntervalFootsteps(state);
     }
@@ -106,6 +123,40 @@ public class MaskGhostSound : MonoBehaviour
 
         PlayChaseVocal();
         _nextChaseVocalTime = Time.time + chaseVocalInterval;
+    }
+
+    void TickPatrolLoop(EnemyBase.State state)
+    {
+        if (patrolSource == null || patrolLoop == null)
+            return;
+
+        bool wantPlay = state == EnemyBase.State.Patrol || state == EnemyBase.State.Investigate;
+        float target = wantPlay ? 1f : 0f;
+        float fadeTime = wantPlay ? patrolFadeIn : patrolFadeOut;
+        _patrolLevel = fadeTime <= 0.01f
+            ? target
+            : Mathf.MoveTowards(_patrolLevel, target, Time.deltaTime / fadeTime);
+
+        if (_patrolLevel > 0f)
+        {
+            if (!patrolSource.isPlaying)
+            {
+                // 멈췄던 위치에서 이어서 재생 (처음부터 다시 시작하지 않음)
+                if (_patrolPaused)
+                    patrolSource.UnPause();
+                else
+                    patrolSource.Play();
+
+                _patrolPaused = false;
+            }
+
+            patrolSource.volume = patrolLoopVolume * _patrolLevel;
+        }
+        else if (patrolSource.isPlaying)
+        {
+            patrolSource.Pause();
+            _patrolPaused = true;
+        }
     }
 
     void TickIntervalFootsteps(EnemyBase.State state)
@@ -193,7 +244,7 @@ public class MaskGhostSound : MonoBehaviour
         {
             foreach (AudioSource source in GetComponents<AudioSource>())
             {
-                if (source != footstepSource)
+                if (source != footstepSource && source != patrolSource)
                 {
                     vocalSource = source;
                     break;
@@ -207,6 +258,18 @@ public class MaskGhostSound : MonoBehaviour
             vocalSource.playOnAwake = false;
             vocalSource.spatialBlend = 1f;
         }
+
+        if (patrolSource == null)
+            patrolSource = gameObject.AddComponent<AudioSource>();
+
+        patrolSource.playOnAwake = false;
+        patrolSource.loop = true;
+        patrolSource.spatialBlend = 1f;
+        patrolSource.rolloffMode = AudioRolloffMode.Linear;
+        patrolSource.minDistance = patrolMinDistance;
+        patrolSource.maxDistance = patrolMaxDistance;
+        patrolSource.clip = patrolLoop;
+        patrolSource.volume = 0f;
     }
 
 #if UNITY_EDITOR

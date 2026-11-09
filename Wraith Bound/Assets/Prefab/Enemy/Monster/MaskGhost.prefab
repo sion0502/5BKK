@@ -935,6 +935,7 @@ MonoBehaviour:
   chaseVocalPitchRange: {x: 0.98, y: 1.02}
   chaseVocalInterval: 3
   playVocalOnChaseEnter: 1
+  patrolLoop: {fileID: 8300000, guid: e0728ff4e9de4c16b82e2804cd4c08e1, type: 3}
 --- !u!1 &6370957817781840815
 GameObject:
   m_ObjectHideFlags: 0
