@@ -40,7 +40,7 @@ public static class DemoSetPieceBuilder
         }
 
         // 남쪽 출입구 복도 끝 문(z≈−33) 안쪽 — 문 앞이면 불이 켜져도 닫힌 문에 가려 안 보였음
-        StoryZone roomZone = Zone(root, "Zone_RoomEnter", new Bounds(new Vector3(HallX, 1f, -28f), new Vector3(10f, 2f, 4f)));
+        StoryZone roomZone = Zone(root, "Zone_RoomEnter", new Bounds(new Vector3(HallX, 1f, -28f), new Vector3(10f, 3f, 4f)));
 
         DemoStartSequence seq = root.gameObject.AddComponent<DemoStartSequence>();
         var so = new SerializedObject(seq);
@@ -68,7 +68,7 @@ public static class DemoSetPieceBuilder
 
         Physics.SyncTransforms();
         Transform root = Group(scene, "SetPiece2_Ward");
-        StoryZone zone = Zone(root, "Zone_WardHall", new Bounds(new Vector3(128f, 1f, 2f), new Vector3(4f, 2f, 10f)));
+        StoryZone zone = Zone(root, "Zone_WardHall", new Bounds(new Vector3(128f, 1f, 2f), new Vector3(4f, 3f, 10f)));
         Transform target = Point(root, "PointTarget", new Vector3(99.89f, 2.3f, 27f));
 
         // 그림자 사람: 동쪽 입구에서 봤을 때 불 켜진 북쪽 복도 입구를 등지고(검은 실루엣이 드러남) 복도 쪽을 오른팔로 가리킴, 고개만 돌려 플레이어를 봄
@@ -90,7 +90,7 @@ public static class DemoSetPieceBuilder
         GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(FigureModel), holder.transform);
         model.transform.localPosition = Vector3.zero;
         model.transform.localRotation = Quaternion.identity;
-        model.transform.localScale = Vector3.one * 1.1f;
+        model.transform.localScale = Vector3.one * 1.45f; // 시연 맵 플레이어가 1.3배라 사람 비율도 맞춤
         Material mat = ShadowMaterial();
         foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
         {
@@ -161,6 +161,178 @@ public static class DemoSetPieceBuilder
     private static float Floor(Vector3 p)
     {
         return Physics.Raycast(new Vector3(p.x, 2f, p.z), Vector3.down, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore) ? hit.point.y : 0f;
+    }
+
+    // 수술실(3자 타일, 칸 (0,1), 중심 (99.89, 101.19), 회전 270): 남서쪽 방 x 66.5~96.6·z 76~99.5 가운데 수술대 `Bed (1)`(윗면 y 1.5, 중심 83.15·85.1),
+    // 방 입구는 남서 모서리 틈(x 66.5~73, z 76) + 북쪽 벽 문(78.5, 99.3 — 너머 방에서 탈춤귀신이 나옴)
+    private const string KeyModel = "Assets/Prefab/Item/World_Item/Active/World_Key.prefab";
+    private const string SurgicalLampModel = "Assets/ExternalAssets/The_Horror_Hospital/Prefabs/Hospital_Environment/HH_Surgical_Lamp.prefab";
+    private const string SealKeyMat = "Assets/Story/Demo/M_SealKey.mat";
+
+    [MenuItem("Tools/Story/Demo Set Pieces/3 Operating Room")]
+    public static void OperatingRoom()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ScenePath)
+        {
+            Debug.LogError("[DemoSetPiece] " + ScenePath + " 를 열고 실행");
+            return;
+        }
+
+        Physics.SyncTransforms();
+        Transform root = Group(scene, "SetPiece3_OperatingRoom");
+        Vector3 bedTop = new Vector3(83.15f, 1.5f, 85.1f);
+        Transform bed = FindNamed("Bed (1)", bedTop, 3f);
+        if (bed != null)
+        {
+            Bounds bb = bed.GetComponentInChildren<Collider>().bounds;
+            bedTop = new Vector3(bb.center.x, bb.max.y, bb.center.z);
+        }
+
+        DemoSealKey key = SealKey(root, 0, bedTop + Vector3.up * 0.18f);
+
+        // 무영등: 천장에 매단 모델 + 수술대만 비추는 좁은 스포트
+        float ceiling = Physics.Raycast(bedTop + Vector3.up * 0.5f, Vector3.up, out RaycastHit ch, 20f, ~0, QueryTriggerInteraction.Ignore) ? ch.point.y : 6f;
+        GameObject lamp = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SurgicalLampModel), root);
+        lamp.name = "SurgicalLamp";
+        lamp.transform.position = new Vector3(bedTop.x - 0.6f, ceiling, bedTop.z);
+        lamp.transform.localScale = Vector3.one * 1.3f;
+        Light spot = new GameObject("SurgicalLight").AddComponent<Light>();
+        spot.transform.SetParent(root, false);
+        spot.transform.position = new Vector3(bedTop.x, ceiling - 1.6f, bedTop.z);
+        spot.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        spot.type = LightType.Spot;
+        spot.spotAngle = 95f;
+        spot.innerSpotAngle = 50f;
+        spot.range = 8f;
+        spot.intensity = 26f;
+        spot.color = new Color(0.92f, 0.97f, 1f);
+        spot.shadows = LightShadows.Hard;
+
+        // 붉은 경보등 3개 (처음엔 꺼짐)
+        Vector3[] redPos = { new Vector3(72f, 5f, 82f), new Vector3(83f, 5f, 94f), new Vector3(92f, 5f, 81f) };
+        var reds = new Light[redPos.Length];
+        for (int i = 0; i < redPos.Length; i++)
+        {
+            Light l = new GameObject("RedLight_" + (i + 1)).AddComponent<Light>();
+            l.transform.SetParent(root, false);
+            l.transform.position = redPos[i];
+            l.type = LightType.Point;
+            l.color = new Color(1f, 0.07f, 0.04f);
+            l.range = 15f;
+            l.intensity = 0f;
+            l.shadows = i == 0 ? LightShadows.Hard : LightShadows.None;
+            l.enabled = false;
+            reds[i] = l;
+        }
+
+        // 탈춤귀신이 나오는 곳: 북쪽 벽 문 너머 방
+        Vector3 spawn = new Vector3(78.5f, 0f, 105f);
+        if (UnityEngine.AI.NavMesh.SamplePosition(spawn, out UnityEngine.AI.NavMeshHit nh, 3f, UnityEngine.AI.NavMesh.AllAreas))
+        {
+            spawn = nh.position;
+        }
+        else
+        {
+            Debug.LogWarning("[DemoSetPiece] ③ 귀신 등장 자리 NavMesh 없음");
+        }
+
+        Transform ghostSpawn = Point(root, "GhostSpawn", spawn);
+        ghostSpawn.rotation = Quaternion.LookRotation(Vector3.back);
+        EnemyBase ghost = null;
+        foreach (EnemyBase e in Object.FindObjectsByType<EnemyBase>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (e.name.StartsWith("MaskGhost"))
+            {
+                ghost = e;
+            }
+        }
+
+        DemoOperatingRoomSequence seq = root.gameObject.AddComponent<DemoOperatingRoomSequence>();
+        AudioSource audio = root.gameObject.AddComponent<AudioSource>();
+        audio.playOnAwake = false;
+        audio.loop = true;
+        audio.spatialBlend = 0.6f;
+        var so = new SerializedObject(seq);
+        so.FindProperty("key").objectReferenceValue = key;
+        so.FindProperty("surgicalLight").objectReferenceValue = spot;
+        SetArray(so.FindProperty("redLights"), reds);
+        so.FindProperty("ghost").objectReferenceValue = ghost;
+        so.FindProperty("ghostSpawn").objectReferenceValue = ghostSpawn;
+        so.FindProperty("audioSource").objectReferenceValue = audio;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        Debug.Log("[DemoSetPiece] ③ 수술실 — 열쇠 " + key.transform.position.ToString("F2") + ", 귀신 " + (ghost != null ? ghost.name : "없음") + ", 등장 " + spawn.ToString("F1"));
+    }
+
+    // 봉인 열쇠: World_Key 메쉬를 3배로 키우고 금빛 발광 재질 + 작은 금빛 점광, E로 줍는 트리거
+    private static DemoSealKey SealKey(Transform parent, int index, Vector3 position)
+    {
+        GameObject go = new GameObject("SealKey_" + (index + 1));
+        go.transform.SetParent(parent, false);
+        go.transform.position = position;
+        BoxCollider box = go.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        box.size = new Vector3(0.5f, 0.35f, 0.5f);
+
+        GameObject src = AssetDatabase.LoadAssetAtPath<GameObject>(KeyModel);
+        GameObject visual = new GameObject("Visual");
+        visual.transform.SetParent(go.transform, false);
+        visual.AddComponent<MeshFilter>().sharedMesh = src.GetComponent<MeshFilter>().sharedMesh;
+        MeshRenderer mr = visual.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = SealKeyMaterial();
+        visual.transform.localScale = Vector3.one * 3f;
+        visual.transform.localRotation = Quaternion.Euler(0f, 0f, 75f); // 세워서 돌게 (납작한 열쇠가 옆에서도 보이게)
+
+        Light glow = new GameObject("Glow").AddComponent<Light>();
+        glow.transform.SetParent(go.transform, false);
+        glow.transform.localPosition = Vector3.up * 0.15f;
+        glow.type = LightType.Point;
+        glow.color = new Color(1f, 0.78f, 0.35f);
+        glow.intensity = 1.4f;
+        glow.range = 2.2f;
+        glow.shadows = LightShadows.None;
+
+        DemoSealKey key = go.AddComponent<DemoSealKey>();
+        var so = new SerializedObject(key);
+        so.FindProperty("index").intValue = index;
+        so.FindProperty("visual").objectReferenceValue = visual.transform;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return key;
+    }
+
+    private static Material SealKeyMaterial()
+    {
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(SealKeyMat);
+        if (mat == null)
+        {
+            System.IO.Directory.CreateDirectory("Assets/Story/Demo");
+            mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(mat, SealKeyMat);
+        }
+
+        mat.SetColor("_BaseColor", new Color(0.85f, 0.62f, 0.22f));
+        mat.SetFloat("_Metallic", 0.9f);
+        mat.SetFloat("_Smoothness", 0.65f);
+        mat.EnableKeyword("_EMISSION");
+        mat.SetColor("_EmissionColor", new Color(1f, 0.7f, 0.25f) * 0.6f);
+        mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+    private static Transform FindNamed(string name, Vector3 near, float radius)
+    {
+        foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+        {
+            if (t.name == name && Vector3.Distance(t.position, near) < radius)
+            {
+                return t;
+            }
+        }
+
+        return null;
     }
 
     // ── 공용 ─────────────────────────────────────────
