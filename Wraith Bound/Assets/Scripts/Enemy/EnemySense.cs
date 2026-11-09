@@ -69,8 +69,22 @@ public sealed class EnemySense
 
         s.LastDetectTime = Time.time;
 
+        if (heardPlayer && !sawPlayer && s.CurrentState != EnemyBase.State.Chase && !s.IsBusy)
+            SnapFaceTowards(s.LastKnownPosition);
+
         if (s.CurrentState != EnemyBase.State.Chase)
             _owner.Combat.ChangeState(EnemyBase.State.Chase);
+    }
+
+    // 소리를 듣는 즉시 그 방향으로 바로 몸을 돌림
+    void SnapFaceTowards(Vector3 target)
+    {
+        Vector3 dir = target - _owner.transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.01f)
+            return;
+
+        _owner.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
     }
 
     public void TickHiding()

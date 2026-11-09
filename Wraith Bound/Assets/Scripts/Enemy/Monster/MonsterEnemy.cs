@@ -29,6 +29,7 @@ public class MonsterEnemy : EnemyBase
     protected internal override void HandleChaseSpecial()
     {
         if (currentState != State.Chase) return;
+        PreventNurseChaseOrbit();
         if (data != null && data.monsterType == MonsterType.Ghost) return;
         if (attacking) return;
         if (Time.time < nextPossibleAttackTime) return;
@@ -173,6 +174,20 @@ public class MonsterEnemy : EnemyBase
             nextPossibleAttackTime = Time.time + Mathf.Max(0.2f, postAttackCooldown);
             EndDoorAttack();
         }
+    }
+
+    // NurseGhost는 문을 부수고도 속도를 안 줄여서, 목표가 가까우면 선회 반경 안에 갇혀 빙글빙글 돈다.
+    // 회전을 빠르게 하고, 목표에 가까워지면 감속하게 해서 제자리 회전을 막는다.
+    void PreventNurseChaseOrbit()
+    {
+        if (!IsNurseGhost() || agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        if (agent.angularSpeed < 540f) agent.angularSpeed = 540f;
+        if (agent.acceleration < 24f) agent.acceleration = 24f;
+
+        if (agent.hasPath && !agent.pathPending && agent.remainingDistance < 3f)
+            agent.autoBraking = true;
     }
 
     bool IsNurseGhost()
@@ -498,6 +513,10 @@ public class MonsterEnemy : EnemyBase
         {
             agent.Warp(hit.position);
         }
+
+        // 문을 통과하는 방향(추격 방향)을 바로 바라보게 해서, 엉뚱한 곳을 보다가 돌거나 부딪히지 않게 한다.
+        agent.updateRotation = true;
+        transform.rotation = Quaternion.LookRotation(through, Vector3.up);
 
         if (NavMotor != null)
         {

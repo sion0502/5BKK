@@ -239,6 +239,7 @@ public class MaskGhostSound : MonoBehaviour
 
         footstepSource.playOnAwake = false;
         footstepSource.spatialBlend = 1f;
+        ApplyDistanceFalloff(footstepSource);
 
         if (vocalSource == null)
         {
@@ -259,6 +260,8 @@ public class MaskGhostSound : MonoBehaviour
             vocalSource.spatialBlend = 1f;
         }
 
+        ApplyDistanceFalloff(vocalSource);
+
         if (patrolSource == null)
             patrolSource = gameObject.AddComponent<AudioSource>();
 
@@ -270,6 +273,15 @@ public class MaskGhostSound : MonoBehaviour
         patrolSource.maxDistance = patrolMaxDistance;
         patrolSource.clip = patrolLoop;
         patrolSource.volume = 0f;
+    }
+
+    // 거리에 따라 점점 작아지다가 최대 거리에서 사라짐
+    static void ApplyDistanceFalloff(AudioSource source)
+    {
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = 2f;
+        source.maxDistance = 30f;
     }
 
 #if UNITY_EDITOR

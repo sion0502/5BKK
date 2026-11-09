@@ -64,7 +64,8 @@ public sealed class EnemyJumpscare : MonoBehaviour
         Vector3 forward = scareRotation * Vector3.forward;
         FaceCamera(monster, forward);
         Vector3 faceWorld = monster.TransformPoint(faceOffset);
-        FaceCameraIfShowingBack(monster, faceWorld, cameraPosition, forward);
+        if (!FaceFrontToCamera(enemy, monster))
+            FaceCameraIfShowingBack(monster, faceWorld, cameraPosition, forward);
         Vector3 rotatedOffset = monster.TransformVector(faceOffset);
 
         view.nearClipPlane = 0.03f;
@@ -126,6 +127,29 @@ public sealed class EnemyJumpscare : MonoBehaviour
             want = -monster.forward;
         want.Normalize();
         monster.rotation = Quaternion.LookRotation(want, Vector3.up);
+    }
+
+    // 시야 기준점(EyePoint)의 정면 방향이 카메라를 향하도록 보정 (등이 보이는 것 방지)
+    static bool FaceFrontToCamera(EnemyBase enemy, Transform monster)
+    {
+        Transform eye = enemy.EyePoint;
+        if (eye == null || eye == monster)
+            return false;
+
+        Vector3 eyeForward = eye.forward;
+        eyeForward.y = 0f;
+        Vector3 bodyForward = monster.forward;
+        bodyForward.y = 0f;
+        if (eyeForward.sqrMagnitude < 0.01f || bodyForward.sqrMagnitude < 0.01f)
+            return false;
+
+        float dot = Vector3.Dot(eyeForward.normalized, bodyForward.normalized);
+        if (Mathf.Abs(dot) < 0.3f)
+            return false;
+
+        if (dot < 0f)
+            monster.Rotate(0f, 180f, 0f, Space.World);
+        return true;
     }
 
     static void FaceCameraIfShowingBack(
