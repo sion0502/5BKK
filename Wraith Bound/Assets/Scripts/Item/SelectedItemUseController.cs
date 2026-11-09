@@ -77,7 +77,8 @@ public class SelectedItemUseController : MonoBehaviour
 
     private void HandleFlashlightBatteryRecharge()
     {
-        if (!Input.GetKeyDown(KeyCode.R) || flashlightEnergy == null)
+        if (gameObject.scene.name == Chapter1TileTestNavigation.TestSceneName ||
+            !Input.GetKeyDown(KeyCode.R) || flashlightEnergy == null)
         {
             return;
         }
