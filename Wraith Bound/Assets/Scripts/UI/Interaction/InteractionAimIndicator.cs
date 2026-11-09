@@ -39,6 +39,17 @@ public class InteractionAimIndicator : MonoBehaviour
             return InteractionPrompt.None;
         }
 
+        // 문·옷장 문은 팀원 작업(2026-11-09)으로 IInteractable이 됐지만 프롬프트가 "Open [E]"뿐이라
+        // 잠김·열기/닫기를 아는 기존 판정기로 문구를 만듦
+        if (interactor.CurrentTarget is DoorClick || interactor.CurrentTarget is WardrobeDoorInteract)
+        {
+            InteractionPrompt door = InteractionAimResolver.Resolve(interactor.ViewCamera, gameObject);
+            if (door.IsValid)
+            {
+                return door;
+            }
+        }
+
         if (interactor.CurrentTarget != null)
         {
             string label = interactor.CurrentLabel;
@@ -47,7 +58,7 @@ public class InteractionAimIndicator : MonoBehaviour
                 return InteractionPrompt.None; // 이미 쓴 스위치 등 — 할 수 있는 행동 없음
             }
 
-            return label.StartsWith("[")
+            return label.Contains("[")
                 ? InteractionPrompt.FromLegacyPrompt(label)
                 : InteractionPrompt.E(label + " 줍기"); // 프롬프트 없이 아이템 이름만 온 경우
         }

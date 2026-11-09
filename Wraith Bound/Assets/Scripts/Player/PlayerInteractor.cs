@@ -1,242 +1,166 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerInteractor : MonoBehaviour
 {
-    private const float BlockDistanceEpsilon = 0.01f;
-
-    private static readonly RaycastHit[] HitBuffer = new RaycastHit[32];
-    private static readonly HitDistanceComparer DistanceComparer = new HitDistanceComparer();
-
     [Header("Interaction Settings")]
     [SerializeField] private Camera playerCamera;
     [SerializeField] public float interactRange = 3f;
     [SerializeField] private InteractionCrosshairUI interactionUI;
+    [SerializeField] private bool logInteractionFailures = true;
 
-    [Tooltip("상호작용 레이에서 무시할 레이어. 비어 있으면 기본값(PickupItem, Player, UI 등)을 사용합니다.")]
-    [SerializeField] private LayerMask raycastIgnoreLayers;
+    public Collider CurrentHitCollider { get; private set; }
+    public float CurrentHitDistance { get; private set; }
+    public Camera InteractionCamera => playerCamera;
 
-    private LayerMask interactionRayMask;
-    private IInteractable currentTarget;
-    private string currentLabel;
-
-    /// <summary>지금 조준 중인 IInteractable (없으면 null). 크로스헤어 표시는 InteractionAimIndicator가 담당.</summary>
-    public IInteractable CurrentTarget => currentTarget;
+    /// <summary>지금 조준 중인 IInteractable (없으면 null). 크로스헤어 링·행동 문구는 InteractionAimIndicator가 이걸 읽어 표시.</summary>
+    public IInteractable CurrentTarget { get; private set; }
     /// <summary>조준 대상의 안내 문구 ("[E] 손전등 획득" 등, 없으면 null).</summary>
-    public string CurrentLabel => currentLabel;
+    public string CurrentLabel { get; private set; }
     public Camera ViewCamera => playerCamera;
+
+    public static float GetTargetRange(IInteractable target)
+    {
+        if (target is DoorClick door) return Mathf.Max(0f, door.interactDistance);
+        if (target is WardrobeDoorInteract wardrobe) return Mathf.Max(0f, wardrobe.interactDistance);
+        return float.PositiveInfinity;
+    }
+
+    public static bool CanInteractWith(GameObject player, IInteractable target, float range)
+    {
+        if (player == null || range <= 0f) return false;
+        PlayerInteractor interactor = player.GetComponent<PlayerInteractor>();
+        Camera camera = interactor != null ? interactor.InteractionCamera : player.GetComponentInChildren<Camera>();
+        return camera != null && TryGetInteractionHit(new Ray(camera.transform.position, camera.transform.forward),
+            range, player.transform, out RaycastHit hit) && ReferenceEquals(ResolveTarget(hit.collider), target);
+    }
 
     void Awake()
     {
-        if (raycastIgnoreLayers.value == 0)
-        {
-            raycastIgnoreLayers = LayerMask.GetMask(
-                "PickupItem",
-                "Player",
-                "UI",
-                "Ignore Raycast",
-                "TransparentFX",
-                "RaderIcon",
-                "NightVision",
-                "Floor");
-        }
-
-        interactionRayMask = ~raycastIgnoreLayers;
-
-        if (interactionUI == null)
-        {
-            interactionUI = GetComponent<InteractionCrosshairUI>();
-        }
-
-        if (interactionUI == null)
-        {
-            interactionUI = gameObject.AddComponent<InteractionCrosshairUI>();
-        }
-
+        if (playerCamera == null) playerCamera = Camera.main;
+        if (interactionUI == null) interactionUI = GetComponent<InteractionCrosshairUI>();
+        if (interactionUI == null) interactionUI = gameObject.AddComponent<InteractionCrosshairUI>();
         // 조준 링·행동 문구 (아이템·문·숨는 곳 등 모든 상호작용 대상)
-        if (GetComponent<InteractionAimIndicator>() == null)
-        {
-            gameObject.AddComponent<InteractionAimIndicator>();
-        }
+        if (GetComponent<InteractionAimIndicator>() == null) gameObject.AddComponent<InteractionAimIndicator>();
     }
 
-    void Update()
+    // First gather interaction candidates, then test visibility to their actual hit surface.
+    // Movement collision, target detection and occlusion are separate responsibilities.
+    public static bool TryGetInteractionHit(Ray ray, float range, Transform playerRoot, out RaycastHit closest)
     {
-        HandleRaycast();
-        HandleInput();
-    }
+        RaycastHit[] hits = CastInteractionRay(ray, range, QueryTriggerInteraction.Collide);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        closest = default;
+        RaycastHit surface = default;
 
-    private void HandleRaycast()
-    {
-        if (playerCamera == null)
+        foreach (RaycastHit hit in hits)
         {
-            ClearTarget();
-            return;
-        }
+            if (playerRoot != null && hit.transform.IsChildOf(playerRoot)) continue;
+            if (!hit.collider.isTrigger && surface.collider == null) surface = hit;
 
-        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        int hitCount = Physics.RaycastNonAlloc(
-            ray,
-            HitBuffer,
-            interactRange,
-            interactionRayMask,
-            QueryTriggerInteraction.Ignore);
-
-        if (hitCount <= 0)
-        {
-            ClearTarget();
-            return;
-        }
-
-        if (hitCount > 1)
-        {
-            Array.Sort(HitBuffer, 0, hitCount, DistanceComparer);
-        }
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            RaycastHit hit = HitBuffer[i];
-            if (hit.collider == null)
+            IInteractable candidate = ResolveTarget(hit.collider);
+            if (candidate == null || hit.distance > GetTargetRange(candidate)) continue;
+            Component owner = candidate as Component;
+            if (owner != null && HasClearPath(ray.origin, hit.point, owner.transform, playerRoot))
             {
-                continue;
-            }
-
-            IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-            if (interactable == null)
-            {
-                continue;
-            }
-
-            if (IsInteractionBlocked(HitBuffer, hitCount, hit))
-            {
-                continue;
-            }
-
-            currentTarget = interactable;
-            currentLabel = ResolveInteractionLabel(interactable, hit.collider);
-
-            return;
-        }
-
-        ClearTarget();
-    }
-
-    /// <summary>
-    /// 아이템보다 가까운 히트 중, 닫힌 문·외부 벽 등만 차단합니다.
-    /// 같은 캐비넷/서랍 내부 선반·측면 collider는 무시합니다.
-    /// </summary>
-    private static bool IsInteractionBlocked(RaycastHit[] hits, int hitCount, RaycastHit interactableHit)
-    {
-        Transform furnitureRoot = GetFurnitureRoot(interactableHit.collider.transform);
-        float targetDistance = interactableHit.distance;
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            if (hits[i].distance >= targetDistance - BlockDistanceEpsilon)
-            {
-                break;
-            }
-
-            Collider blocker = hits[i].collider;
-            if (blocker == null)
-            {
-                continue;
-            }
-
-            if (IsHardInteractionBlocker(blocker, furnitureRoot))
-            {
+                closest = hit;
                 return true;
             }
         }
 
-        return false;
+        // Keep a solid-surface fallback for hiding-spot detection and useful diagnostics.
+        closest = surface;
+        return closest.collider != null;
     }
 
-    private static bool IsHardInteractionBlocker(Collider blocker, Transform furnitureRoot)
+    private static RaycastHit[] CastInteractionRay(Ray ray, float range, QueryTriggerInteraction triggers)
     {
-        DoorClick door = blocker.GetComponentInParent<DoorClick>();
-        if (door != null)
+        bool backfaces = Physics.queriesHitBackfaces;
+        try
         {
-            return !door.IsOpen();
+            Physics.queriesHitBackfaces = true;
+            return Physics.RaycastAll(ray, Mathf.Max(0f, range), ~0, triggers);
         }
+        finally { Physics.queriesHitBackfaces = backfaces; }
+    }
 
-        if (furnitureRoot != null && IsTransformUnderRoot(blocker.transform, furnitureRoot))
+    public static bool HasClearPath(Vector3 origin, Vector3 destination, Transform target, Transform playerRoot)
+    {
+        Vector3 delta = destination - origin;
+        if (delta.sqrMagnitude < 0.000001f) return true;
+        // Stop just before the visible surface, not at a switch pivot buried in a wall.
+        RaycastHit[] hits = CastInteractionRay(new Ray(origin, delta.normalized),
+            Mathf.Max(0f, delta.magnitude - 0.001f), QueryTriggerInteraction.Ignore);
+        foreach (RaycastHit hit in hits)
         {
+            if (hit.transform.IsChildOf(target)) continue;
+            if (playerRoot != null && hit.transform.IsChildOf(playerRoot)) continue;
             return false;
         }
-
         return true;
     }
 
-    private static Transform GetFurnitureRoot(Transform from)
+    public static IInteractable ResolveTarget(Collider collider)
     {
-        Transform current = from;
-        while (current != null)
+        foreach (MonoBehaviour component in collider.GetComponentsInParent<MonoBehaviour>())
         {
-            // 스폰 아이템은 SpawnPoint 아래, RandomItemSpawner는 형제라 GetComponentInParent로는 못 찾음
-            if (current.GetComponentInChildren<RandomItemSpawner>(true) != null)
-            {
-                return current;
-            }
-
-            if (current.CompareTag("Cabinet"))
-            {
-                return current;
-            }
-
-            current = current.parent;
+            if (component is IInteractable target && component.isActiveAndEnabled)
+                return target;
         }
-
         return null;
     }
 
-    private static bool IsTransformUnderRoot(Transform t, Transform root)
+    private void OnDisable()
     {
-        if (t == null || root == null)
-        {
-            return false;
-        }
-
-        return t == root || t.IsChildOf(root);
+        CurrentTarget = null;
+        CurrentLabel = null;
     }
 
-    private void HandleInput()
+    void Update()
     {
-        if (currentTarget != null && Input.GetButtonDown("Interact"))
+        CurrentHitCollider = null;
+        CurrentHitDistance = float.PositiveInfinity;
+        IInteractable target = null;
+        string label = null;
+        PlayerHidingController hiding = GetComponent<PlayerHidingController>();
+        if (playerCamera != null && (hiding == null || (!hiding.isHiding && !hiding.IsTransitioning)) &&
+            TryGetInteractionHit(new Ray(playerCamera.transform.position, playerCamera.transform.forward),
+                interactRange, transform, out RaycastHit hit))
         {
-            currentTarget.Interact(gameObject);
-            Debug.Log("E키 입력 감지 및 상호작용 실행!");
+            CurrentHitCollider = hit.collider;
+            CurrentHitDistance = hit.distance;
+            target = ResolveTarget(hit.collider);
+            if (hit.distance > GetTargetRange(target)) target = null;
+            if (target != null)
+            {
+                label = target.GetInteractPrompt();
+                if (string.IsNullOrEmpty(label) &&
+                    InteractableItemNameUtility.TryGetItemName(hit.collider, out string itemName))
+                    label = itemName;
+            }
+        }
+
+        // 표시는 InteractionAimIndicator가 함 (여기서 SetItemName을 부르면 실행 순서에 따라 링 문구를 지움)
+        CurrentTarget = target;
+        CurrentLabel = label;
+        if (target != null && Input.GetButtonDown("Interact"))
+            target.Interact(gameObject);
+        else if (logInteractionFailures && Input.GetButtonDown("Interact"))
+        {
+            string reason = CurrentHitCollider != null
+                ? $"No usable target selected. Crosshair surface: {GetObjectPath(CurrentHitCollider.transform)} ({CurrentHitCollider.GetType().Name}, distance {CurrentHitDistance:F2}m). Aim, target range, or occlusion prevented interaction."
+                : "No visible collider in interaction range, or player is hiding/transitioning";
+            Debug.Log($"[Interaction] {reason}", CurrentHitCollider);
         }
     }
 
-    private void ClearTarget()
+    private static string GetObjectPath(Transform target)
     {
-        currentTarget = null;
-        currentLabel = null;
-    }
-
-    private static string ResolveInteractionLabel(IInteractable interactable, Collider hitCollider)
-    {
-        string prompt = interactable.GetInteractPrompt();
-        if (!string.IsNullOrEmpty(prompt))
+        string path = target.name;
+        while (target.parent != null)
         {
-            return prompt;
+            target = target.parent;
+            path = target.name + "/" + path;
         }
-
-        if (InteractableItemNameUtility.TryGetItemName(hitCollider, out string itemName))
-        {
-            return itemName;
-        }
-
-        return null;
-    }
-
-    private sealed class HitDistanceComparer : IComparer<RaycastHit>
-    {
-        public int Compare(RaycastHit a, RaycastHit b)
-        {
-            return a.distance.CompareTo(b.distance);
-        }
+        return path;
     }
 }

@@ -1,48 +1,27 @@
 using UnityEngine;
 
-public class WardrobeDoorInteract : MonoBehaviour
+public class WardrobeDoorInteract : MonoBehaviour, IInteractable
 {
     public float openAngle = 90f;
-    public float interactDistance = 5f;
+    public float interactDistance = 1.5f;
+    private bool isOpen;
 
-    private bool isOpen = false;
-
-    private Camera cam;
-
-    void Start()
+    public void Interact(GameObject interactor)
     {
-        cam = Camera.main;
+        if (!PlayerInteractor.CanInteractWith(interactor, this, interactDistance)) return;
+        // DoorClick, if present, owns this door's animation and sound.
+        DoorClick door = GetComponent<DoorClick>();
+        if (door != null)
+        {
+            if (door.isActiveAndEnabled) door.Interact(interactor);
+            return;
+        }
+        isOpen = !isOpen;
+        transform.Rotate(0, isOpen ? openAngle : -openAngle, 0);
     }
 
-    void Update()
+    public string GetInteractPrompt()
     {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            Ray ray = cam.ScreenPointToRay(
-                new Vector3(Screen.width / 2f, Screen.height / 2f)
-            );
-
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, interactDistance))
-            {
-                Debug.Log(hit.transform.name);
-
-                // 문 이름 포함하면 열기
-                if (hit.transform.name.Contains("Door"))
-                {
-                    isOpen = !isOpen;
-
-                    if (isOpen)
-                    {
-                        transform.Rotate(0, openAngle, 0);
-                    }
-                    else
-                    {
-                        transform.Rotate(0, -openAngle, 0);
-                    }
-                }
-            }
-        }
+        return isOpen ? "Close" : "Open";
     }
 }

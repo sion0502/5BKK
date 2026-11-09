@@ -38,6 +38,16 @@ public readonly struct InteractionPrompt
                 text = text.Substring(close + 1).Trim();
             }
         }
+        else if (text.EndsWith("]"))
+        {
+            // "Open [E]"처럼 키가 뒤에 붙은 문 기본 문구
+            int openBracket = text.LastIndexOf('[');
+            if (openBracket > 0)
+            {
+                key = text.Substring(openBracket + 1, text.Length - openBracket - 2).Trim();
+                text = text.Substring(0, openBracket).Trim();
+            }
+        }
 
         // "[Error] ..." 같은 개발용 문구는 표시하지 않음
         if (key != null && key.Length > 1 && key != "LMB" && key != "RMB")

@@ -162,7 +162,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 856212174598875734}
-  - component: {fileID: 6076496331326619822}
   m_Layer: 0
   m_Name: HH_Hospital_PartitionWall_Door_01_Collider
   m_TagString: Untagged
@@ -191,7 +190,7 @@ MeshCollider:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5707638363367519327}
+  m_GameObject: {fileID: 9175632547332384393}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -206,7 +205,7 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: -3766621333337599569, guid: d3ecc6c5353e6dd438d3bdd07fa53050, type: 3}
+  m_Mesh: {fileID: -2351739429390117602, guid: d3ecc6c5353e6dd438d3bdd07fa53050, type: 3}
 --- !u!1 &8202760602285771531
 GameObject:
   m_ObjectHideFlags: 0
@@ -646,6 +645,7 @@ GameObject:
   - component: {fileID: 1840832755764901196}
   - component: {fileID: 3347963663989212767}
   - component: {fileID: 1634491142966495684}
+  - component: {fileID: 6076496331326619822}
   m_Layer: 0
   m_Name: HH_Hospital_PartitionWall_Door_01_LOD0
   m_TagString: Untagged
