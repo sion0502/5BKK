@@ -3355,6 +3355,10 @@ PrefabInstance:
       propertyPath: patrolPointZone
       value: 
       objectReference: {fileID: 880001002}
+    - target: {fileID: 5718204936150283947, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+      propertyPath: patrolLoop
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
