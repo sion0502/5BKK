@@ -61,7 +61,7 @@ public class GameOverScreen : MonoBehaviour
         Cursor.visible = true;
         EnsureEventSystem();
 
-        font = MenuUIUtility.LoadPolFont();
+        font = UIFontConfig.UI;
         circleSprite = CreateCircleSprite();
         Build();
         StartCoroutine(Sequence());

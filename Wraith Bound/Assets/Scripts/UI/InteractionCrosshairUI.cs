@@ -323,20 +323,7 @@ public class InteractionCrosshairUI : MonoBehaviour
 
     private TMP_FontAsset ResolveItemNameFont()
     {
-        if (itemNameFont != null)
-        {
-            return itemNameFont;
-        }
-
-        itemNameFont = UIFontConfig.PolHumanRights;
-
-#if UNITY_EDITOR
-        if (itemNameFont == null)
-        {
-            itemNameFont = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PolFontAssetPath);
-        }
-#endif
-
-        return itemNameFont != null ? itemNameFont : TMP_Settings.defaultFontAsset;
+        // 조작 안내 = Pretendard (2026-11-17 폰트 역할 분리) — 직렬화된 예전 폰트는 무시
+        return UIFontConfig.UI;
     }
 }

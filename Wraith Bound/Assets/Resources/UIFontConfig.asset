@@ -13,3 +13,7 @@ MonoBehaviour:
   m_Name: UIFontConfig
   m_EditorClassIdentifier: Assembly-CSharp::UIFontConfig
   polHumanRights: {fileID: 11400000, guid: 7daedeff6862c404cb034d9b41e176e2, type: 2}
+  ui: {fileID: 11400000, guid: 8c9bd69544bef2c459599271b5d59013, type: 2}
+  uiBold: {fileID: 11400000, guid: 2744e00caebfd52468f050f04e844af4, type: 2}
+  story: {fileID: 11400000, guid: a95ef91f748dd3b49b06284e45073eab, type: 2}
+  storyBold: {fileID: 11400000, guid: b75ea9edc1b6ff145bbfe92e82b5b78b, type: 2}

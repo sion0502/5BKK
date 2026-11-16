@@ -427,7 +427,7 @@ public class PauseMenuController : MonoBehaviour
 
     private void BuildUI()
     {
-        TMP_FontAsset menuFont = MenuUIUtility.LoadPolFont(font);
+        TMP_FontAsset menuFont = UIFontConfig.UI;
 
         pauseCanvas = MenuUIUtility.CreateOverlayCanvas("PauseMenuCanvas", canvasSortOrder, transform);
         pauseCanvasGroup = pauseCanvas.gameObject.AddComponent<CanvasGroup>();

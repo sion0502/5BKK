@@ -322,7 +322,7 @@ public class MainMenuController : MonoBehaviour
 
     private void BuildMenuUI()
     {
-        TMP_FontAsset menuFont = MenuUIUtility.LoadPolFont(font);
+        TMP_FontAsset menuFont = UIFontConfig.UI; // 메뉴 선택지 = Pretendard (제목은 붓글씨 그대로)
         TMP_FontAsset resolvedTitleFont = ResolveTitleFont();
 
         menuCanvas = MenuUIUtility.CreateOverlayCanvas("MainMenuCanvas", canvasSortOrder);

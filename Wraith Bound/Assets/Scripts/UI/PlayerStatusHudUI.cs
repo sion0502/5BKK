@@ -417,15 +417,6 @@ public class PlayerStatusHudUI : MonoBehaviour
 
     private TMP_FontAsset ResolveFont()
     {
-        TMP_FontAsset font = UIFontConfig.PolHumanRights;
-
-#if UNITY_EDITOR
-        if (font == null)
-        {
-            font = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PolFontAssetPath);
-        }
-#endif
-
-        return font != null ? font : TMP_Settings.defaultFontAsset;
+        return UIFontConfig.UI; // HUD = Pretendard (2026-11-17 폰트 역할 분리)
     }
 }

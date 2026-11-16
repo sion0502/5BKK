@@ -358,7 +358,7 @@ public static class PrologueSceneBuilder
     // ───────────────────────────── Timeline ─────────────────────────────
     // 0      검은 화면에서 밝아짐 (캠코더 화면)
     // 0.5~9  열린 정문으로 걸어 들어와 접수대 쪽을 봄
-    // 9.3    "…계세요? …당연히 없겠지."
+    // 9.3    "…계세요? …아무도 없어요?"
     // 12.6~  뒤에서 문이 끼익 밀리기 시작 → 13.0~14.3 뒤돌아봄 → 14.6 쾅 (흔들림·화면 튐)
     // 15.8   "…바, 바람인가."
     // 21     조작 시작 — 손에 든 실제 캠코더를 본편처럼 내림 (CutsceneCamcorderLower)
@@ -377,7 +377,7 @@ public static class PrologueSceneBuilder
         director.playOnAwake = false;
 
         SubtitleTrack subtitles = timeline.CreateTrack<SubtitleTrack>(null, "Subtitles");
-        AddSubtitle(subtitles, 9.3, 12.2, "나", "…계세요? …당연히 없겠지.", true);
+        AddSubtitle(subtitles, 9.3, 12.2, "나", "…계세요? …아무도 없어요?", true);
         AddSubtitle(subtitles, 15.8, 19.2, "나", "…바, 바람인가.", true);
 
         CutsceneBlendTrack blackTrack = CreateBlendTrack(timeline, director, "Black Screen", black);

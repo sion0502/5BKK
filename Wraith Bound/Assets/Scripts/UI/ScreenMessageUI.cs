@@ -71,7 +71,7 @@ public class ScreenMessageUI : MonoBehaviour
         rect.sizeDelta = new Vector2(900f, 50f);
 
         label = labelGo.AddComponent<TextMeshProUGUI>();
-        TMP_FontAsset font = MenuUIUtility.LoadPolFont();
+        TMP_FontAsset font = UIFontConfig.UI;
         if (font != null)
         {
             label.font = font;

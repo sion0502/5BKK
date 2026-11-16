@@ -41,7 +41,7 @@ public class TraitAltarUI : MonoBehaviour
     {
         IsOpen = true;
         openedFrame = Time.frameCount;
-        font = MenuUIUtility.LoadPolFont();
+        font = UIFontConfig.UI;
         controlLock = PlayerControlLock.Lock(GameObject.FindWithTag("Player"));
         PauseMenuSuppressor.Suppress();
         cursorWasVisible = Cursor.visible;

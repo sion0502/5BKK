@@ -73,7 +73,7 @@ public class CutsceneSkipHint : MonoBehaviour
         rect.sizeDelta = new Vector2(400f, 40f);
 
         label = labelGo.AddComponent<TextMeshProUGUI>();
-        TMP_FontAsset font = MenuUIUtility.LoadPolFont();
+        TMP_FontAsset font = UIFontConfig.UI;
         if (font != null)
         {
             label.font = font;

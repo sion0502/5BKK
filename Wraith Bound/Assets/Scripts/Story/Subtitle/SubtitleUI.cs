@@ -24,6 +24,9 @@ public class SubtitleUI : MonoBehaviour
     private const float ClickGuardSeconds = 0.15f;
 
     private static readonly Color SpeakerColor = new Color(0.95f, 0.55f, 0.5f, 1f);
+    // 주인공('나') 이름 = 밝은 미색 (2026-11-17 사용자 선택, #F0E2C0) — 선장 등 다른 화자는 살구색 그대로
+    private const string ProtagonistName = "나";
+    private static readonly Color ProtagonistColor = new Color(0.94f, 0.886f, 0.753f, 1f);
     private static readonly Color TextColor = new Color(0.95f, 0.93f, 0.9f, 1f);
 
     private static SubtitleUI instance;
@@ -188,6 +191,7 @@ public class SubtitleUI : MonoBehaviour
         bool hasSpeaker = !string.IsNullOrEmpty(current.speaker);
         speakerLabel.gameObject.SetActive(hasSpeaker);
         speakerLabel.text = hasSpeaker ? current.speaker : string.Empty;
+        speakerLabel.color = hasSpeaker && current.speaker.Trim() == ProtagonistName ? ProtagonistColor : SpeakerColor;
 
         textLabel.text = current.text;
         textLabel.ForceMeshUpdate();
@@ -282,7 +286,7 @@ public class SubtitleUI : MonoBehaviour
         group.interactable = false;
         group.blocksRaycasts = false;
 
-        TMP_FontAsset font = MenuUIUtility.LoadPolFont();
+        TMP_FontAsset font = UIFontConfig.Story; // 대사 = 명조(마루부리)
 
         // 하단 반투명 띠 — 밝은 배경에서도 글자가 읽히도록
         GameObject backdropGo = new GameObject("Backdrop");

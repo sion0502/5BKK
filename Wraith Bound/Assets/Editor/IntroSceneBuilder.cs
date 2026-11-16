@@ -388,7 +388,9 @@ public static class IntroSceneBuilder
         AddSubtitle(subtitles, 16.2, 19.8, "나", "자, 녹화 들어갑니다. 여러분, 드디어 왔습니다.", true);
         AddSubtitle(subtitles, 32.0, 39.0, "나", "'출입 금지된 섬의 폐병원에서 3일 버티기.' 제보 메일 하나 믿고 여기까지 왔어요.", true);
         AddSubtitle(subtitles, 43.5, 49.5, "나", "…생각보다 조용하네요. 새 소리도 안 들려요.", false);
-        AddSubtitle(subtitles, 54.0, 59.0, "나", "…문이 열려 있네. 제보대로야.", false);
+        // 입구 유리 너머 로비에 희미한 불 (씬의 Intro_LobbyGlow — 빌더 재실행 시 다시 배치해야 함)
+        AddSubtitle(subtitles, 52.5, 55.8, "나", "…어? 뭐지? 왜 불이 켜져 있지?", false);
+        AddSubtitle(subtitles, 56.2, 59.6, "나", "…안에… 누가 있나…?", false);
 
         CutsceneBlendTrack blackTrack = CreateBlendTrack(timeline, director, "Black Screen", black);
         AddBlendClip(blackTrack, 0, 21.5, 0, 1.5, "검은 화면");
