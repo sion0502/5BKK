@@ -23,7 +23,10 @@ public class TraitAltarUI : MonoBehaviour
     private int openedFrame;
     private TMP_FontAsset font;
     private TextMeshProUGUI slotsLabel;
-    private readonly List<(TraitDef def, Image bg, TextMeshProUGUI status)> cards = new List<(TraitDef, Image, TextMeshProUGUI)>();
+    private const string IconResourceDir = "Roguelite/TraitIcons/"; // Resources/Roguelite/TraitIcons/<TraitId>.png
+    private const float IconSize = 56f;
+
+    private readonly List<(TraitDef def, Image bg, TextMeshProUGUI status, RawImage icon)> cards = new List<(TraitDef, Image, TextMeshProUGUI, RawImage)>();
     private bool cursorWasVisible;
     private CursorLockMode cursorWasLock;
 
@@ -113,7 +116,10 @@ public class TraitAltarUI : MonoBehaviour
             Refresh();
         });
 
-        Label(go.transform, "Name", def.Name, 30, new Vector2(0f, -22f), new Vector2(size.x - 28f, 40f), TextAlignmentOptions.TopLeft, TextColor);
+        RawImage icon = BuildIcon(go.transform, def.Id);
+        // 이름은 오른쪽 위 아이콘 자리만큼 비워 둠 (왼쪽 정렬 유지)
+        Label(go.transform, "Name", def.Name, 30, new Vector2(-(IconSize + 8f) * 0.5f, -22f),
+            new Vector2(size.x - 28f - IconSize - 8f, 40f), TextAlignmentOptions.TopLeft, TextColor);
         TextMeshProUGUI effect = Label(go.transform, "Effect", def.Effect, 18, new Vector2(0f, -66f), new Vector2(size.x - 28f, 100f), TextAlignmentOptions.TopLeft, DimText);
         effect.textWrappingMode = TextWrappingModes.Normal;
         effect.enableAutoSizing = true;
@@ -121,7 +127,28 @@ public class TraitAltarUI : MonoBehaviour
         effect.fontSizeMax = 18f;
         TextMeshProUGUI status = Label(go.transform, "Status", string.Empty, 17, new Vector2(0f, 14f), new Vector2(size.x - 28f, 44f), TextAlignmentOptions.BottomLeft, AccentRed, bottom: true);
         status.textWrappingMode = TextWrappingModes.Normal;
-        cards.Add((def, bg, status));
+        cards.Add((def, bg, status, icon));
+    }
+
+    /// <summary>카드 오른쪽 위 아이콘. 그림이 없으면 만들지 않음.</summary>
+    private static RawImage BuildIcon(Transform card, TraitId id)
+    {
+        Texture2D texture = Resources.Load<Texture2D>(IconResourceDir + id);
+        if (texture == null)
+        {
+            return null;
+        }
+
+        GameObject go = new GameObject("Icon", typeof(RectTransform));
+        go.transform.SetParent(card, false);
+        RectTransform rect = (RectTransform)go.transform;
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-12f, -12f);
+        rect.sizeDelta = new Vector2(IconSize, IconSize);
+        RawImage image = go.AddComponent<RawImage>();
+        image.texture = texture;
+        image.raycastTarget = false;
+        return image;
     }
 
     private void Refresh()
@@ -140,11 +167,16 @@ public class TraitAltarUI : MonoBehaviour
 
         slotsLabel.text = "착용 (" + TraitLoadout.Equipped.Count + "/" + max + ")    " + string.Join("     ", names);
 
-        foreach (var (def, bg, status) in cards)
+        foreach (var (def, bg, status, icon) in cards)
         {
             bool unlocked = def.Implemented && TraitProgress.IsUnlocked(def.Id);
             bool equipped = TraitLoadout.IsEquipped(def.Id);
             bg.color = equipped ? EquippedColor : unlocked ? CardColor : LockedColor;
+            if (icon != null)
+            {
+                // 잠긴 기는 아이콘을 어둡게
+                icon.color = unlocked ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.55f);
+            }
             if (!def.Implemented)
             {
                 status.text = "추후 공개";
