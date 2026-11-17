@@ -66,6 +66,11 @@ public class PlayerChaseEffectController : MonoBehaviour
     [SerializeField] private float flickerSpeed = 12f;
     [SerializeField] private float flickerSharpness = 2.2f;
 
+    [Header("Detection Sound (발각 시 효과음)")]
+    [SerializeField] private AudioClip detectionSound;
+    [Range(0f, 1f)]
+    [SerializeField] private float detectionSoundVolume = 1f;
+
     [Header("Scene Lights")]
     [SerializeField] private ChaseSceneLightFlicker sceneLightFlicker;
 
@@ -107,6 +112,8 @@ public class PlayerChaseEffectController : MonoBehaviour
     private float flickerBlendSeed;
     private float flickerBlackoutTimer;
 
+    private AudioSource detectionAudioSource;
+
     private Coroutine burstRoutine;
     private Coroutine impactRoutine;
 
@@ -129,7 +136,23 @@ public class PlayerChaseEffectController : MonoBehaviour
         ResolveCameraReferences();
         EnsureMainCameraPostProcessing();
         BuildChaseVolume();
+
+        detectionAudioSource = gameObject.AddComponent<AudioSource>();
+        detectionAudioSource.playOnAwake = false;
+        detectionAudioSource.loop = false;
+        detectionAudioSource.spatialBlend = 0f;
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        // 비어 있으면 Sound/Horror Impact.mp3 자동 할당 (인스펙터에서 직접 바꿔도 됨)
+        if (detectionSound == null)
+        {
+            detectionSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sound/Horror Impact.mp3");
+        }
+    }
+#endif
 
     void Update()
     {
@@ -172,6 +195,11 @@ public class PlayerChaseEffectController : MonoBehaviour
         if (impactRoutine != null)
         {
             StopCoroutine(impactRoutine);
+        }
+
+        if (detectionSound != null && detectionAudioSource != null && !ShouldSuppressEffects())
+        {
+            detectionAudioSource.PlayOneShot(detectionSound, detectionSoundVolume);
         }
 
         shakeTimeRemaining = impactShakeDuration;
