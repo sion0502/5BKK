@@ -59,6 +59,7 @@ public class XenosauridController : MonoBehaviour
     [SerializeField] float[] stepMarks = { 0.08f, 0.58f };
 
     EnemyBase _enemy;
+    CreatureJumpscare _customJumpscare;
     NavMeshAgent _agent;
     Animator _anim;
     Transform _head;
@@ -98,6 +99,7 @@ public class XenosauridController : MonoBehaviour
         _runHash = Animator.StringToHash(runState);
         _attackHash = Animator.StringToHash("Base Layer.Attack");
         CacheBones();
+        _customJumpscare = GetComponent<CreatureJumpscare>();
         if (_enemy != null && _head != null)
             _enemy.jumpscareFacePoint = _head;
 
@@ -151,7 +153,9 @@ public class XenosauridController : MonoBehaviour
 
         if (PlayerDeathDebug.IsDying && _enemy.RuntimeState.PlayerDeadLogged)
         {
-            PresentDeathFace();
+            // 전용 점프스케어(XenosauridJumpscare)가 있으면 그쪽이 배치·턱을 다룸
+            if (_customJumpscare == null || !_customJumpscare.isActiveAndEnabled)
+                PresentDeathFace();
             TickChaseScream(false, true);
             return;
         }

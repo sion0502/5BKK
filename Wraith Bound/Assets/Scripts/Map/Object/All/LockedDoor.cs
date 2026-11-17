@@ -17,6 +17,10 @@ public class LockedDoor : MonoBehaviour
     }
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
+    private const string KeyRequiredMessage = "열쇠가 필요합니다";
+    private const float MaxKeyUseDistance = 10f; // 정적 조준 검사용 상한 (실제 판정은 문별 keyUseDistance)
+
+    private static int lastHandledClickFrame = -1;
 
     [Header("Lock")]
     [SerializeField] private UnlockType unlockType = UnlockType.Key;
@@ -62,16 +66,68 @@ public class LockedDoor : MonoBehaviour
 
         FindViewCamera();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // 열쇠 없이 여는 테스트 키 — 정식 빌드에서는 동작하지 않음
         if (Input.GetKeyDown(temporaryUnlockKey) && IsAimedAtThisDoor())
         {
             UnlockWithTemporaryInput();
             return;
         }
+#endif
 
         if (Input.GetKeyDown(KeyCode.Mouse0) && IsAimedAtThisDoor())
         {
+            lastHandledClickFrame = Time.frameCount;
             TryUnlockWithKey();
         }
+    }
+
+    /// <summary>
+    /// 이번 프레임 좌클릭을 열쇠 잠긴 문이 가져가는지. 장비(캠코더·손전등·스마트폰) 좌클릭이 같이 실행되지 않게
+    /// SelectedItemUseController가 확인합니다. Update 실행 순서와 무관하도록
+    /// (1) 이미 이번 프레임에 문이 클릭을 처리했거나 (2) 아직 처리 전이지만 잠긴 열쇠 문을 조준 중이면 true.
+    /// </summary>
+    public static bool ClaimsLeftClickThisFrame(Transform viewOrigin)
+    {
+        if (lastHandledClickFrame == Time.frameCount)
+        {
+            return true;
+        }
+
+        if (viewOrigin == null)
+        {
+            return false;
+        }
+
+        int hitCount = Physics.RaycastNonAlloc(
+            new Ray(viewOrigin.position, viewOrigin.forward),
+            HitBuffer,
+            MaxKeyUseDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float nearestDistance = float.MaxValue;
+        Collider nearestCollider = null;
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (HitBuffer[i].collider != null && HitBuffer[i].distance < nearestDistance)
+            {
+                nearestDistance = HitBuffer[i].distance;
+                nearestCollider = HitBuffer[i].collider;
+            }
+        }
+
+        if (nearestCollider == null)
+        {
+            return false;
+        }
+
+        LockedDoor door = nearestCollider.GetComponentInParent<LockedDoor>();
+        return door != null
+            && door.isActiveAndEnabled
+            && door.isLocked
+            && door.unlockType == UnlockType.Key
+            && nearestDistance <= door.keyUseDistance;
     }
 
     /// <summary>레버나 잠금 해제 스위치에서 호출하는 외부 잠금 해제 함수입니다.</summary>
@@ -123,10 +179,18 @@ public class LockedDoor : MonoBehaviour
         if (!(result is bool hasKey) || !hasKey)
         {
             Debug.Log($"[{name}] 현재 들고 있는 열쇠가 없습니다.");
+            ScreenMessageUI.Show(KeyRequiredMessage);
             return;
         }
 
-        useKey.Invoke(inventory, null);
+        // 소모에 실패하면 열지 않음 (예전엔 반환값을 무시하고 열었음)
+        object used = useKey.Invoke(inventory, null);
+        if (used is bool consumed && !consumed)
+        {
+            ScreenMessageUI.Show(KeyRequiredMessage);
+            return;
+        }
+
         SetLocked(false);
         Debug.Log($"[{name}] 열쇠로 잠금을 해제했습니다.");
     }
@@ -136,6 +200,7 @@ public class LockedDoor : MonoBehaviour
         if (!temporaryHasKey)
         {
             Debug.Log($"[{name}] 열쇠가 필요합니다.");
+            ScreenMessageUI.Show(KeyRequiredMessage);
             return;
         }
 
