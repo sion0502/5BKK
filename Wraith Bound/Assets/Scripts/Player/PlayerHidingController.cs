@@ -370,11 +370,11 @@ public class PlayerHidingController : MonoBehaviour
     {
         float mouseX =
             Input.GetAxisRaw("Mouse X") *
-            mouseSensitivity;
+            mouseSensitivity * GameSettings.MouseSensitivity;
 
         float mouseY =
             Input.GetAxisRaw("Mouse Y") *
-            mouseSensitivity;
+            mouseSensitivity * GameSettings.MouseSensitivity;
 
         currentYaw += mouseX;
         currentPitch -= mouseY;

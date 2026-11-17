@@ -6,4 +6,17 @@
 public static class HubArrival
 {
     public static bool FromPrologue { get; set; }
+
+    /// <summary>
+    /// 메인 메뉴가 허브를 배경으로 Additive 로드한 상태 — 깨어남 연출은 건너뛰고,
+    /// 허브 독백·재촉(HubStoryDirector)은 '이어서 하기'로 플레이가 시작될 때까지 대기.
+    /// </summary>
+    public static bool MenuBackdrop { get; set; }
+
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        FromPrologue = false;
+        MenuBackdrop = false;
+    }
 }

@@ -17,6 +17,17 @@ public static class PauseMenuSuppressor
     {
         count = 0;
         releasedFrame = -1;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    // 씬을 통째로 바꾸면 막던 쪽(연출·팝업)도 사라지므로 초기화 — 씬을 떠나며 Release 안 하는 연출 대비
+    private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        if (mode == UnityEngine.SceneManagement.LoadSceneMode.Single)
+        {
+            count = 0;
+        }
     }
 
     public static void Suppress()

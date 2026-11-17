@@ -33,6 +33,18 @@ public class CutsceneDirector : MonoBehaviour
 
     public bool IsPlaying => playing;
 
+    /// <summary>
+    /// true면 playOnStart를 무시합니다. 메인 메뉴가 Intro 씬을 배경으로 Additive 로드할 때
+    /// 컷씬이 저절로 시작되지 않게 막고, '새로운 게임'을 누르면 메뉴가 직접 Play()를 호출합니다.
+    /// </summary>
+    public static bool HoldAutoPlay { get; set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        HoldAutoPlay = false;
+    }
+
     private void Reset()
     {
         director = GetComponent<PlayableDirector>();
@@ -40,7 +52,7 @@ public class CutsceneDirector : MonoBehaviour
 
     private void Start()
     {
-        if (playOnStart)
+        if (playOnStart && !HoldAutoPlay)
         {
             Play();
         }
@@ -55,6 +67,7 @@ public class CutsceneDirector : MonoBehaviour
 
         playing = true;
         finishing = false;
+        SuppressPause(true); // ESC는 건너뛰기 전용 — 일시정지 메뉴가 같이 열리지 않게
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -112,6 +125,7 @@ public class CutsceneDirector : MonoBehaviour
     {
         playing = false;
         director.stopped -= OnDirectorStopped;
+        SuppressPause(false);
         CutsceneSkipHint.Hide();
         SubtitleUI.Clear();
 
@@ -139,8 +153,29 @@ public class CutsceneDirector : MonoBehaviour
         return blackScreen;
     }
 
+    private bool suppressingPause;
+
+    private void SuppressPause(bool suppress)
+    {
+        if (suppress == suppressingPause)
+        {
+            return;
+        }
+
+        suppressingPause = suppress;
+        if (suppress)
+        {
+            PauseMenuSuppressor.Suppress();
+        }
+        else
+        {
+            PauseMenuSuppressor.Release();
+        }
+    }
+
     private void OnDestroy()
     {
+        SuppressPause(false);
         if (director != null)
         {
             director.stopped -= OnDirectorStopped;

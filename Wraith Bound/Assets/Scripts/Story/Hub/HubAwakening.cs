@@ -66,6 +66,9 @@ public class HubAwakening : MonoBehaviour
     public bool IsRunning { get; private set; }
     public bool HasFinished { get; private set; }
 
+    /// <summary>이번 입장에서 깨어남 연출을 실제로 재생했는지 (= 처음 허브에 온 것). 허브 독백은 이때만.</summary>
+    public bool Played { get; private set; }
+
     private GameObject player;
     private Camera cam;
     private Vector3 camRestLocal;
@@ -78,14 +81,17 @@ public class HubAwakening : MonoBehaviour
     {
         bool fromPrologue = HubArrival.FromPrologue;
         HubArrival.FromPrologue = false;
-        bool startedDirectly = Application.isEditor && playWhenStartedDirectly && scenesLoaded <= 1; // 에디터에서 허브를 바로 실행
-        if (!fromPrologue && !startedDirectly)
+        // 에디터에서 허브를 바로 실행 — 허브가 유일하게 열린 씬일 때만 (메인 메뉴 배경으로 Additive 로드된 경우 제외)
+        bool startedDirectly = Application.isEditor && playWhenStartedDirectly && scenesLoaded <= 1
+            && UnityEngine.SceneManagement.SceneManager.sceneCount == 1;
+        if (HubArrival.MenuBackdrop || (!fromPrologue && !startedDirectly))
         {
             HasFinished = true;
             Finished?.Invoke();
             return;
         }
 
+        Played = true;
         StartCoroutine(Run());
     }
 

@@ -15,6 +15,7 @@ public sealed class PlayerControlLock
     };
 
     private readonly List<Behaviour> disabled = new List<Behaviour>();
+    private bool suppressingPause;
 
     public static PlayerControlLock Lock(GameObject player)
     {
@@ -23,6 +24,11 @@ public sealed class PlayerControlLock
         {
             return handle;
         }
+
+        // 연출 중 ESC로 일시정지 메뉴가 열리면 메뉴가 플레이어 컴포넌트를 전부 껐다 켜면서
+        // 연출이 숨겨 둔 손·아이템 표시가 되살아남 → 잠근 동안은 일시정지 메뉴를 막음
+        PauseMenuSuppressor.Suppress();
+        handle.suppressingPause = true;
 
         foreach (Behaviour behaviour in player.GetComponentsInChildren<Behaviour>(true))
         {
@@ -51,6 +57,12 @@ public sealed class PlayerControlLock
         }
 
         disabled.Clear();
+
+        if (suppressingPause)
+        {
+            suppressingPause = false;
+            PauseMenuSuppressor.Release();
+        }
     }
 
     /// <summary>MouseLook의 상하 각도(xRotation, private)를 맞춤 — 카메라를 코드로 돌린 뒤 조작을 돌려줄 때 튀지 않게.</summary>
