@@ -121,6 +121,15 @@ public static class InteractionAimResolver
         public int Compare(RaycastHit a, RaycastHit b) => a.distance.CompareTo(b.distance);
     }
 
+    /// <summary>
+    /// 이미 고른 문의 문구 ("열기"/"닫기"/잠김 안내). PlayerInteractor가 문에 바짝 붙어 트리거 안에서 문을 잡았을 때처럼
+    /// 이쪽 레이 판정(ResolveDoor)이 문을 못 찾는 경우에 씀.
+    /// </summary>
+    public static InteractionPrompt ForDoor(DoorClick door, float distance, GameObject player)
+    {
+        return door != null ? ResolveDoor(door, distance, player) : InteractionPrompt.None;
+    }
+
     private static InteractionPrompt ResolveDoor(DoorClick door, float distance, GameObject player)
     {
         if (door.IsBroken())

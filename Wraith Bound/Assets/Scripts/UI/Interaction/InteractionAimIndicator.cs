@@ -48,6 +48,16 @@ public class InteractionAimIndicator : MonoBehaviour
             {
                 return door;
             }
+
+            // 문에 바짝 붙어 판정기 레이가 문을 못 찾은 경우 — PlayerInteractor가 잡은 문으로 문구를 만듦
+            if (interactor.CurrentTarget is DoorClick targetDoor)
+            {
+                door = InteractionAimResolver.ForDoor(targetDoor, interactor.CurrentHitDistance, gameObject);
+                if (door.IsValid)
+                {
+                    return door;
+                }
+            }
         }
 
         if (interactor.CurrentTarget != null)
