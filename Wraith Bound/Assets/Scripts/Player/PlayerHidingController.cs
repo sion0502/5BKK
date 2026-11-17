@@ -164,13 +164,19 @@ public class PlayerHidingController : MonoBehaviour
                 playerCamera.position,
                 playerCamera.forward);
 
-        if (Physics.Raycast(
+        if (PlayerInteractor.TryGetInteractionHit(
             ray,
-            out RaycastHit hit,
             interactionDistance,
-            interactableLayer,
-            QueryTriggerInteraction.Ignore))
+            transform,
+            out RaycastHit hit))
         {
+            // Let the central interactor handle a visible door, switch or item.
+            if (PlayerInteractor.ResolveTarget(hit.collider) != null)
+            {
+                currentSpot = null;
+                return;
+            }
+
             HidingSpot spot =
                 hit.collider.GetComponent<HidingSpot>();
 
@@ -225,12 +231,17 @@ public class PlayerHidingController : MonoBehaviour
         Quaternion startCamRot =
             playerCamera.rotation;
 
-        Vector3 targetPos =
-            currentSpot.hideCameraPosition.position -
-            (playerCamera.position - transform.position);
-
         Quaternion targetRot =
             currentSpot.hideCameraPosition.rotation;
+
+        // 카메라 오프셋(몸 기준)을 숨은 뒤 방향으로 돌려서 뺌 — 들어오는 방향과 상관없이 카메라가 hideCameraPosition에 놓이게
+        Vector3 cameraLocalOffset =
+            Quaternion.Inverse(transform.rotation) *
+            (playerCamera.position - transform.position);
+
+        Vector3 targetPos =
+            currentSpot.hideCameraPosition.position -
+            targetRot * cameraLocalOffset;
 
         float elapsedTime = 0f;
 
@@ -359,11 +370,11 @@ public class PlayerHidingController : MonoBehaviour
     {
         float mouseX =
             Input.GetAxisRaw("Mouse X") *
-            mouseSensitivity;
+            mouseSensitivity * GameSettings.MouseSensitivity;
 
         float mouseY =
             Input.GetAxisRaw("Mouse Y") *
-            mouseSensitivity;
+            mouseSensitivity * GameSettings.MouseSensitivity;
 
         currentYaw += mouseX;
         currentPitch -= mouseY;

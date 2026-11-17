@@ -21,7 +21,7 @@ MonoBehaviour:
   destroyOnUse: 1
   breakageChance: 0
   itemPrefab: {fileID: 0}
-  worldDropPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 200000001, guid: 11b982ac79f623c41aa4a8dd05ea0244, type: 3}
   showInHand: 0
   spawnedInstance: {fileID: 0}
   effectType: 0

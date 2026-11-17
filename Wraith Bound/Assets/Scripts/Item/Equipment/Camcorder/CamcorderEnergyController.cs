@@ -21,6 +21,9 @@ public class CamcorderEnergyController : MonoBehaviour
     public bool IsViewfinderActive =>
         activeCamcorderController != null && activeCamcorderController.IsViewfinderActive;
 
+    /// <summary>켜면 배터리가 닳지 않고 항상 가득 (프롤로그처럼 배터리 관리가 필요 없는 구간용 — PrologueDirector가 켬).</summary>
+    public bool InfiniteEnergy { get; set; }
+
     public float CurrentEnergy
     {
         get
@@ -75,6 +78,22 @@ public class CamcorderEnergyController : MonoBehaviour
         }
 
         EnsureInitialized();
+
+        if (InfiniteEnergy)
+        {
+            if (currentEnergy < camcorderEquipment.maxEnergy)
+            {
+                currentEnergy = camcorderEquipment.maxEnergy;
+                NotifyBatteryHud();
+            }
+
+            if (!IsViewfinderActive)
+            {
+                activeCamcorderController = null;
+            }
+
+            return;
+        }
 
         if (IsViewfinderActive)
         {

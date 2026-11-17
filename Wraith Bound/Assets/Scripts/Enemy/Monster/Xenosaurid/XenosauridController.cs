@@ -59,6 +59,7 @@ public class XenosauridController : MonoBehaviour
     [SerializeField] float[] stepMarks = { 0.08f, 0.58f };
 
     EnemyBase _enemy;
+    CreatureJumpscare _customJumpscare;
     NavMeshAgent _agent;
     Animator _anim;
     Transform _head;
@@ -66,6 +67,7 @@ public class XenosauridController : MonoBehaviour
     Transform _tongue;
 
     bool _taunting;
+    bool _roaredThisChase;
     float _tauntTimer;
     EnemyBase.State _lastState = EnemyBase.State.Patrol;
     int _tauntHash;
@@ -80,6 +82,14 @@ public class XenosauridController : MonoBehaviour
     float _jawOpen;
     int _attackHash;
 
+    /// <summary>
+    /// 시야가 없어 소리로만 쫓으므로, 발소리를 감지한 순간이 아니라 Taunt를 마치고 실제로 달려들 때를 추격으로 본다.
+    /// PlayerChaseStateLink가 추격 연출을 켤 때 사용.
+    /// </summary>
+    public bool IsChasingAfterRoar =>
+        _roaredThisChase && !_taunting && _enemy != null &&
+        _enemy.RuntimeState.CurrentState == EnemyBase.State.Chase;
+
     void Awake()
     {
         _enemy = GetComponent<EnemyBase>();
@@ -89,6 +99,7 @@ public class XenosauridController : MonoBehaviour
         _runHash = Animator.StringToHash(runState);
         _attackHash = Animator.StringToHash("Base Layer.Attack");
         CacheBones();
+        _customJumpscare = GetComponent<CreatureJumpscare>();
         if (_enemy != null && _head != null)
             _enemy.jumpscareFacePoint = _head;
 
@@ -142,7 +153,9 @@ public class XenosauridController : MonoBehaviour
 
         if (PlayerDeathDebug.IsDying && _enemy.RuntimeState.PlayerDeadLogged)
         {
-            PresentDeathFace();
+            // 전용 점프스케어(XenosauridJumpscare)가 있으면 그쪽이 배치·턱을 다룸
+            if (_customJumpscare == null || !_customJumpscare.isActiveAndEnabled)
+                PresentDeathFace();
             TickChaseScream(false, true);
             return;
         }
@@ -158,8 +171,15 @@ public class XenosauridController : MonoBehaviour
         }
 
         EnemyBase.State state = _enemy.RuntimeState.CurrentState;
-        if (state == EnemyBase.State.Chase && _lastState != EnemyBase.State.Chase && HeardOnly())
-            BeginTaunt();
+        if (state != EnemyBase.State.Chase)
+            _roaredThisChase = false;
+        if (state == EnemyBase.State.Chase && _lastState != EnemyBase.State.Chase)
+        {
+            if (HeardOnly())
+                BeginTaunt();
+            else
+                _roaredThisChase = true; // Taunt 없이 바로 쫓기 시작
+        }
 
         _lastState = _enemy.RuntimeState.CurrentState;
         bool doorAttack = InDoorAttack();
@@ -367,7 +387,11 @@ public class XenosauridController : MonoBehaviour
     void BeginTaunt()
     {
         if (_anim == null || !_anim.HasState(0, _tauntHash))
+        {
+            // Taunt 동작이 없으면 바로 달려드는 것으로 봄
+            _roaredThisChase = true;
             return;
+        }
 
         _taunting = true;
         _tauntTimer = 0f;
@@ -453,6 +477,7 @@ public class XenosauridController : MonoBehaviour
         }
 
         _taunting = false;
+        _roaredThisChase = true;
         _lastState = EnemyBase.State.Chase;
     }
 

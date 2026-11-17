@@ -239,7 +239,7 @@ public static class ChapterTitleTransition
         titleLabel.textWrappingMode = TextWrappingModes.NoWrap;
         titleLabel.overflowMode = TextOverflowModes.Overflow;
 
-        TMP_FontAsset font = UIFontConfig.PolHumanRights;
+        TMP_FontAsset font = UIFontConfig.StoryBold; // 챕터 타이틀 = 명조 (2026-11-17 폰트 역할 분리)
         if (font != null)
         {
             titleLabel.font = font;

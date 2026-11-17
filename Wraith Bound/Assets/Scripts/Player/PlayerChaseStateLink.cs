@@ -5,6 +5,7 @@ using UnityEngine;
 /// 적(EnemyBase) 중 하나라도 플레이어를 '직접 보고' 쫓는 중이면 PlayerChaseEffectController의 추격 연출을 켭니다.
 /// 발소리만 듣고 Chase로 들어온 경우는 제외 — 그 Chase 동안 한 번이라도 시야로 플레이어를 확인해야 연출이 켜지고,
 /// 이후 시야를 잠깐 놓쳐도 해당 적이 Chase를 벗어날 때까지 유지됩니다.
+/// 시야가 없는 Xenosaurid는 Taunt를 마치고 실제로 달려들 때 연출을 켭니다 (발소리 감지 순간엔 켜지지 않음).
 /// EnemyBase는 수정하지 않고 RuntimeState를 읽기만 합니다.
 /// 스포너가 런타임에 만드는 적도 잡히도록 주기적으로 적 목록을 갱신합니다.
 /// </summary>
@@ -19,6 +20,7 @@ public class PlayerChaseStateLink : MonoBehaviour
     private readonly List<EnemyBase> enemies = new List<EnemyBase>();
     // 현재 Chase 구간에서 플레이어를 시야로 확인한 적
     private readonly HashSet<EnemyBase> sightedChasers = new HashSet<EnemyBase>();
+    private readonly Dictionary<EnemyBase, XenosauridController> xenosaurids = new Dictionary<EnemyBase, XenosauridController>();
     private PlayerChaseEffectController chaseEffects;
     private float nextRefreshTime;
     private float lastChaseTime = float.NegativeInfinity;
@@ -57,6 +59,13 @@ public class PlayerChaseStateLink : MonoBehaviour
         enemies.Clear();
         enemies.AddRange(FindObjectsByType<EnemyBase>(FindObjectsSortMode.None));
         sightedChasers.RemoveWhere(e => e == null);
+
+        xenosaurids.Clear();
+        foreach (EnemyBase enemy in enemies)
+        {
+            if (enemy != null && enemy.TryGetComponent(out XenosauridController xenosaurid))
+                xenosaurids[enemy] = xenosaurid;
+        }
     }
 
     private bool IsAnyEnemyChasing()
@@ -78,7 +87,8 @@ public class PlayerChaseStateLink : MonoBehaviour
                 continue;
             }
 
-            if (enemy.RuntimeState.LastSawPlayer)
+            if (enemy.RuntimeState.LastSawPlayer ||
+                (xenosaurids.TryGetValue(enemy, out XenosauridController xenosaurid) && xenosaurid.IsChasingAfterRoar))
             {
                 sightedChasers.Add(enemy);
             }

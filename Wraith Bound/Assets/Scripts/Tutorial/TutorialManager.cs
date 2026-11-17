@@ -22,6 +22,9 @@ public class TutorialManager : MonoBehaviour
     [Header("Steps")]
     [SerializeField] private List<TutorialStep> steps = new List<TutorialStep>();
     [SerializeField] private List<TutorialTip> tips = new List<TutorialTip>();
+    [Tooltip("비어 있지 않으면 이 단계만 이 순서로 진행 (프롤로그처럼 짧게 — 나머지 단계는 건너뜀). 상황형 팁은 그대로")]
+    [SerializeField] private List<TutorialCondition> onlySteps = new List<TutorialCondition>();
+    [SerializeField] private string compactFinishMessage = "";
 
     [Header("Timing")]
     [SerializeField] private float stepCompleteDelay = 0.8f;
@@ -72,6 +75,7 @@ public class TutorialManager : MonoBehaviour
         // 비어 있으면 전부, 아니면 나중에 추가된 기본 단계·팁만 채움 (기존 문구는 유지)
         TutorialDefaultsMerger.MergeMissingSteps(steps);
         TutorialDefaultsMerger.MergeMissingTips(tips);
+        ApplyOnlySteps();
 
         GameObject player = GameObject.FindWithTag("Player");
         if (player == null)
@@ -99,6 +103,28 @@ public class TutorialManager : MonoBehaviour
         {
             StartCoroutine(StartAfterDelay(startDelayWithoutStarter));
         }
+    }
+
+    // onlySteps 순서대로 골라냄 (같은 조건이 여러 개면 첫 번째만)
+    private void ApplyOnlySteps()
+    {
+        if (onlySteps == null || onlySteps.Count == 0)
+        {
+            return;
+        }
+
+        var picked = new List<TutorialStep>();
+        foreach (TutorialCondition condition in onlySteps)
+        {
+            TutorialStep step = steps.Find(s => s.condition == condition);
+            if (step != null && !picked.Contains(step))
+            {
+                picked.Add(step);
+            }
+        }
+
+        steps = picked;
+        finishMessage = compactFinishMessage;
     }
 
     void OnDestroy()
@@ -257,12 +283,13 @@ public class TutorialManager : MonoBehaviour
         stepsRunning = false;
         MarkCompleted();
 
-        if (promptUI != null)
+        bool hasFinishMessage = !string.IsNullOrEmpty(finishMessage); // 짧은 모드(onlySteps)는 완료 문구 없이 바로 닫음
+        if (promptUI != null && hasFinishMessage)
         {
             promptUI.ShowFinished(finishMessage);
         }
 
-        yield return new WaitForSecondsRealtime(finishMessageDuration);
+        yield return new WaitForSecondsRealtime(hasFinishMessage ? finishMessageDuration : stepCompleteDelay);
 
         if (promptUI != null)
         {
