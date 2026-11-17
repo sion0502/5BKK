@@ -296,7 +296,7 @@ public class MonsterEnemy : EnemyBase
             _doorHit.spatialBlend = 0.7f;
             _doorHit.minDistance = 8f;
             _doorHit.maxDistance = 36f;
-            _doorHit.rolloffMode = AudioRolloffMode.Logarithmic;
+            _doorHit.rolloffMode = AudioRolloffMode.Linear;
             _doorHit.dopplerLevel = 0f;
             _doorHit.playOnAwake = false;
         }

@@ -66,6 +66,7 @@ public class MaskGhostSound : MonoBehaviour
     float _footstepTimer;
     float _patrolLevel;
     bool _patrolPaused;
+    EnemyBase.State _songPrevState = (EnemyBase.State)(-1);
 
     public float PlaySpeed => _agent != null ? _agent.velocity.magnitude : 0f;
     public float NextFootstepIn => Mathf.Max(0f, _footstepTimer);
@@ -131,6 +132,16 @@ public class MaskGhostSound : MonoBehaviour
             return;
 
         bool wantPlay = state == EnemyBase.State.Patrol || state == EnemyBase.State.Investigate;
+
+        // 순찰·수색으로 들어올 때마다(추격에서 복귀 포함) 노래를 0초부터 다시 시작
+        bool enteredPatrolOrInvestigate = wantPlay && state != _songPrevState;
+        _songPrevState = state;
+        if (enteredPatrolOrInvestigate)
+        {
+            patrolSource.Stop();
+            _patrolPaused = false;
+        }
+
         float target = wantPlay ? 1f : 0f;
         float fadeTime = wantPlay ? patrolFadeIn : patrolFadeOut;
         _patrolLevel = fadeTime <= 0.01f
