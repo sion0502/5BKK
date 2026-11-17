@@ -917,6 +917,9 @@ public class MainMenuController : MonoBehaviour
             160f,
             new Color(0.85f, 0.12f, 0.12f, 1f));
 
+        // 제목 아래 장식 구분선
+        MenuUIUtility.CreateDivider(canvasRect, new Vector2(0f, -292f), 560f, new Vector2(0.5f, 1f));
+
         BuildMainButtons(canvasRect, menuFont);
         BuildSettingsPanel(canvasRect, menuFont);
         BuildDialog(canvasRect, menuFont);
@@ -943,10 +946,10 @@ public class MainMenuController : MonoBehaviour
         if (mode == MenuMode.FirstPlay)
         {
             // 기록이 없으면 흐리게 (누르면 카메라는 움직이고 '기록 없음' 안내)
-            TextMeshProUGUI label = continueButton.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (label != null)
+            MenuButtonStyle style = continueButton.GetComponent<MenuButtonStyle>();
+            if (style != null)
             {
-                label.color = new Color(1f, 1f, 1f, 0.35f);
+                style.dim = 0.4f;
             }
         }
     }
@@ -958,9 +961,8 @@ public class MainMenuController : MonoBehaviour
         RectTransform panel = MenuUIUtility.CreateCenteredPanel(root, "Background", new Vector2(0f, -60f), panelSize,
             new Color(0.05f, 0.05f, 0.06f, 0.88f));
 
-        Color text = new Color(0.92f, 0.9f, 0.87f, 1f);
-        MenuUIUtility.CreateLabel(panel, "설정", menuFont, new Vector2(0f, 180f), new Vector2(600f, 60f), 40f,
-            TextAlignmentOptions.Center, text);
+        Color text = MenuSkin.Text;
+        MenuUIUtility.CreateHeader(panel, "설정", menuFont, new Vector2(0f, 175f), 560f);
 
         float labelX = -220f;
         float sliderX = 60f;
@@ -1038,7 +1040,8 @@ public class MainMenuController : MonoBehaviour
             new Vector2(640f, 300f), new Color(0.05f, 0.05f, 0.06f, 0.88f));
 
         dialogMessage = MenuUIUtility.CreateLabel(panel, "", menuFont, new Vector2(0f, 45f), new Vector2(580f, 150f), 30f,
-            TextAlignmentOptions.Center, new Color(0.92f, 0.9f, 0.87f, 1f));
+            TextAlignmentOptions.Center, MenuSkin.Text);
+        MenuUIUtility.CreateDivider(panel, new Vector2(0f, -38f), 480f);
 
         Vector2 size = new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f);
         dialogYesButton = MenuUIUtility.CreateMenuButton(panel, "확인", menuFont, new Vector2(-120f, -80f), size, null);

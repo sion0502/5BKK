@@ -239,6 +239,13 @@ public class GameOverScreen : MonoBehaviour
         menuGroup.interactable = false;
         menuGroup.blocksRaycasts = false;
 
+        // 선택지 위아래 장식 구분선 + 조작 안내 (메뉴 공통 디자인)
+        MenuUIUtility.CreateDivider(menu, new Vector2(0f, -150f), 1000f);
+        MenuUIUtility.CreateDivider(menu, new Vector2(0f, -310f), 1000f);
+        var hint = MenuUIUtility.CreateLabel(menu, "←  →   선택          Enter   확인", font, new Vector2(0f, -345f),
+            new Vector2(700f, 36f), 20f, TextAlignmentOptions.Center, MenuSkin.TextDim);
+        hint.characterSpacing = 4f;
+
         restartButton = CreateButton(menu, "처음으로", new Vector2(-260f, -230f), () => Leave(GameOverNavigation.RestartChapter));
         hubButton = CreateButton(menu, "허브로 돌아가기", new Vector2(260f, -230f), () => Leave(GameOverNavigation.GoToHub));
 
@@ -253,29 +260,19 @@ public class GameOverScreen : MonoBehaviour
         hubButton.Button.navigation = right;
     }
 
+    /// <summary>메뉴 공통 디자인 버튼 (핀 장식·붓질 띠·붉은 실선). 키보드 선택도 같은 강조로 보임.</summary>
     private GameOverButton CreateButton(RectTransform parent, string text, Vector2 position, Action onClick)
     {
-        var go = new GameObject(text + "Button", typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        Place((RectTransform)go.transform, new Vector2(0.5f, 0.5f), position, new Vector2(440f, 90f));
-        var hit = go.GetComponent<Image>();
-        hit.color = new Color(0f, 0f, 0f, 0f); // 클릭 영역용 투명 이미지
-        var button = go.GetComponent<Button>();
-        button.transition = Selectable.Transition.None;
-        button.onClick.AddListener(() => onClick());
+        Button button = MenuUIUtility.CreateMenuButton(parent, text, font, position, new Vector2(440f, 84f), () => onClick());
+        var label = button.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.fontSize = 40f;
 
-        var label = CreateText("Label", (RectTransform)go.transform, text, 46f, DimGray, TextAlignmentOptions.Center);
-        Place(label.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(440f, 70f));
+        var style = button.GetComponent<MenuButtonStyle>();
+        if (style != null)
+            style.followSelection = true;
 
-        float halfWidth = label.GetPreferredValues(text).x * 0.5f;
-        var marker = CreateImage("Marker", (RectTransform)go.transform, null, HudWhite);
-        Place(marker.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-halfWidth - 30f, 0f), new Vector2(14f, 14f));
-        var underline = CreateImage("Underline", (RectTransform)go.transform, null, HudWhite);
-        Place(underline.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -34f), new Vector2(halfWidth * 2f + 20f, 3f));
-
-        var gameOverButton = go.AddComponent<GameOverButton>();
-        gameOverButton.Init(label, marker, underline);
-        return gameOverButton;
+        return button.gameObject.AddComponent<GameOverButton>();
     }
 
     // ───────────────────────────── 연출 순서 ─────────────────────────────

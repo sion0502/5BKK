@@ -61,6 +61,9 @@ public static class MenuUIUtility
         return image;
     }
 
+    /// <summary>
+    /// 메뉴 버튼: 박스 없이 글자 + 양옆 핀 장식. 마우스를 올리면 붓질 띠·붉은 실선이 번지고 글자가 붉어짐 (MenuButtonStyle).
+    /// </summary>
     public static Button CreateMenuButton(
         Transform parent,
         string label,
@@ -79,14 +82,45 @@ public static class MenuUIUtility
         rect.sizeDelta = size;
         rect.anchoredPosition = anchoredPosition;
 
-        Image background = buttonObject.AddComponent<Image>();
-        background.color = new Color(0.12f, 0.12f, 0.12f, 0.92f);
+        // 클릭 영역만 (보이지 않음)
+        Image hitArea = buttonObject.AddComponent<Image>();
+        hitArea.color = new Color(0f, 0f, 0f, 0f);
 
         Button button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = background;
+        button.targetGraphic = hitArea;
+        button.transition = Selectable.Transition.None;
+        Navigation navigation = button.navigation;
+        navigation.mode = Navigation.Mode.None; // 클릭 후 선택 상태로 남아 강조가 붙어 있지 않게
+        button.navigation = navigation;
         if (onClick != null)
         {
             button.onClick.AddListener(onClick);
+        }
+
+        MenuButtonStyle style = buttonObject.AddComponent<MenuButtonStyle>();
+
+        // 붓질 띠 (버튼보다 넓게)
+        Sprite bandSprite = MenuSkin.BrushBand;
+        style.band = MenuSkin.AddImage(buttonObject.transform, "Band", bandSprite,
+            bandSprite != null ? new Color(1f, 1f, 1f, 0f) : new Color(0f, 0f, 0f, 0f));
+        MenuSkin.Stretch(style.band, -size.x * 0.2f, -size.y * 0.15f, -size.x * 0.2f, -size.y * 0.15f);
+
+        // 위아래 붉은 실선
+        style.bandTop = MenuSkin.AddImage(buttonObject.transform, "BandTop", MenuSkin.LineFade, Color.clear);
+        MenuSkin.Place(style.bandTop, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), new Vector2(size.x * 0.95f, 3f));
+        style.bandBottom = MenuSkin.AddImage(buttonObject.transform, "BandBottom", MenuSkin.LineFade, Color.clear);
+        MenuSkin.Place(style.bandBottom, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f), new Vector2(0f, -1f), new Vector2(size.x * 0.95f, 3f));
+
+        // 양옆 핀 장식 (오른쪽은 좌우 반전)
+        Sprite pin = MenuSkin.LinePin;
+        if (pin != null)
+        {
+            Vector2 pinSize = new Vector2(Mathf.Min(size.x * 0.22f, 110f), 14f);
+            style.leftPin = MenuSkin.AddImage(buttonObject.transform, "PinLeft", pin, MenuSkin.Ornament);
+            MenuSkin.Place(style.leftPin, new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(pinSize.x * 0.5f, 0f), pinSize);
+            style.rightPin = MenuSkin.AddImage(buttonObject.transform, "PinRight", pin, MenuSkin.Ornament);
+            MenuSkin.Place(style.rightPin, new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-pinSize.x * 0.5f, 0f), pinSize);
+            style.rightPin.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
         }
 
         GameObject labelObject = new GameObject("Label", typeof(RectTransform));
@@ -98,11 +132,52 @@ public static class MenuUIUtility
         TextMeshProUGUI labelText = labelObject.AddComponent<TextMeshProUGUI>();
         labelText.font = font;
         labelText.text = label;
-        labelText.fontSize = 32f;
+        labelText.fontSize = Mathf.Min(32f, size.y * 0.5f);
+        labelText.characterSpacing = 6f;
         labelText.alignment = TextAlignmentOptions.Center;
-        labelText.color = Color.white;
+        labelText.color = MenuSkin.Text;
+        labelText.raycastTarget = false;
+        style.label = labelText;
 
         return button;
+    }
+
+    /// <summary>
+    /// 패널 제목: 붓질 띠 위에 자간 넓은 글자 + 아래 장식 구분선 (참고: 일시정지 'PAUSED' 머리).
+    /// anchor 기준 위치 (기본 = 부모 가운데).
+    /// </summary>
+    public static TextMeshProUGUI CreateHeader(Transform parent, string text, TMP_FontAsset font, Vector2 anchoredPosition,
+        float width, Vector2? anchor = null)
+    {
+        Vector2 a = anchor ?? new Vector2(0.5f, 0.5f);
+        GameObject root = new GameObject("Header_" + text, typeof(RectTransform));
+        root.transform.SetParent(parent, false);
+        MenuSkin.Place(root.GetComponent<RectTransform>(), a, new Vector2(0.5f, 0.5f), anchoredPosition, new Vector2(width, 80f));
+
+        Sprite bandSprite = MenuSkin.BrushBand;
+        if (bandSprite != null)
+        {
+            Image band = MenuSkin.AddImage(root.transform, "Band", bandSprite, new Color(1f, 1f, 1f, 0.85f));
+            MenuSkin.Place(band, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(width * 0.8f, 84f));
+        }
+
+        TextMeshProUGUI label = CreateLabel(root.transform, text, font, new Vector2(0f, 4f), new Vector2(width, 60f), 34f,
+            TextAlignmentOptions.Center, MenuSkin.Text);
+        label.characterSpacing = 16f;
+
+        CreateDivider(root.transform, new Vector2(0f, -32f), width);
+        return label;
+    }
+
+    /// <summary>가운데 마름모·덩굴 장식이 있는 얇은 구분선.</summary>
+    public static Image CreateDivider(Transform parent, Vector2 anchoredPosition, float width, Vector2? anchor = null)
+    {
+        Sprite sprite = MenuSkin.Divider;
+        Image divider = MenuSkin.AddImage(parent, "Divider", sprite,
+            sprite != null ? MenuSkin.Ornament : new Color(1f, 1f, 1f, 0.25f));
+        Vector2 a = anchor ?? new Vector2(0.5f, 0.5f);
+        MenuSkin.Place(divider, a, new Vector2(0.5f, 0.5f), anchoredPosition, new Vector2(width, sprite != null ? width * 40f / 1024f : 2f));
+        return divider;
     }
 
     public static TextMeshProUGUI CreateTitle(
@@ -132,7 +207,10 @@ public static class MenuUIUtility
         return title;
     }
 
-    /// <summary>화면 가운데 기준으로 놓이는 반투명 패널 (설정·확인 창 바탕).</summary>
+    /// <summary>
+    /// 화면 가운데 기준 패널: 가장자리가 연기처럼 흐려지는 어두운 바탕 + 손으로 그은 듯한 얇은 테두리.
+    /// color의 알파 = 바탕 진하기.
+    /// </summary>
     public static RectTransform CreateCenteredPanel(Transform parent, string name, Vector2 anchoredPosition, Vector2 size, Color color)
     {
         GameObject panelObject = new GameObject(name, typeof(RectTransform));
@@ -145,9 +223,28 @@ public static class MenuUIUtility
         rect.sizeDelta = size;
         rect.anchoredPosition = anchoredPosition;
 
-        Image image = panelObject.AddComponent<Image>();
-        image.color = color;
-        image.raycastTarget = true;
+        // 뒤쪽 클릭 막기 (보이지 않음)
+        Image blocker = panelObject.AddComponent<Image>();
+        blocker.color = new Color(0f, 0f, 0f, 0f);
+        blocker.raycastTarget = true;
+
+        Sprite smoke = MenuSkin.PanelBg;
+        if (smoke != null)
+        {
+            Image bg = MenuSkin.AddImage(panelObject.transform, "Smoke", smoke, new Color(1f, 1f, 1f, color.a), sliced: true);
+            MenuSkin.Stretch(bg, -70f, -70f, -70f, -70f); // 패널보다 넓게 깔아 가장자리가 번지게
+        }
+        else
+        {
+            MenuSkin.Stretch(MenuSkin.AddImage(panelObject.transform, "Background", null, color));
+        }
+
+        Sprite frame = MenuSkin.Frame;
+        if (frame != null)
+        {
+            MenuSkin.Stretch(MenuSkin.AddImage(panelObject.transform, "Frame", frame, MenuSkin.Ornament, sliced: true));
+        }
+
         return rect;
     }
 
@@ -205,24 +302,24 @@ public static class MenuUIUtility
         rootRect.anchoredPosition = anchoredPosition;
 
         RectTransform track = CreateChild("Background", root.transform);
-        track.anchorMin = new Vector2(0f, 0.35f);
-        track.anchorMax = new Vector2(1f, 0.65f);
-        track.offsetMin = Vector2.zero;
-        track.offsetMax = Vector2.zero;
-        track.gameObject.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+        track.anchorMin = new Vector2(0f, 0.5f);
+        track.anchorMax = new Vector2(1f, 0.5f);
+        track.offsetMin = new Vector2(0f, -1f);
+        track.offsetMax = new Vector2(0f, 1f);
+        track.gameObject.AddComponent<Image>().color = new Color(MenuSkin.Ornament.r, MenuSkin.Ornament.g, MenuSkin.Ornament.b, 0.35f);
 
         RectTransform fillArea = CreateChild("Fill Area", root.transform);
-        fillArea.anchorMin = new Vector2(0f, 0.35f);
-        fillArea.anchorMax = new Vector2(1f, 0.65f);
+        fillArea.anchorMin = new Vector2(0f, 0.5f);
+        fillArea.anchorMax = new Vector2(1f, 0.5f);
         fillArea.offsetMin = Vector2.zero;
         fillArea.offsetMax = Vector2.zero;
 
         RectTransform fill = CreateChild("Fill", fillArea);
         fill.anchorMin = Vector2.zero;
         fill.anchorMax = new Vector2(0f, 1f);
-        fill.offsetMin = Vector2.zero;
-        fill.offsetMax = Vector2.zero;
-        fill.gameObject.AddComponent<Image>().color = new Color(0.62f, 0.1f, 0.1f, 1f);
+        fill.offsetMin = new Vector2(0f, -2f);
+        fill.offsetMax = new Vector2(0f, 2f);
+        fill.gameObject.AddComponent<Image>().color = MenuSkin.Accent;
 
         RectTransform handleArea = CreateChild("Handle Slide Area", root.transform);
         handleArea.anchorMin = Vector2.zero;
@@ -231,11 +328,12 @@ public static class MenuUIUtility
         handleArea.offsetMax = new Vector2(-8f, 0f);
 
         RectTransform handle = CreateChild("Handle", handleArea);
-        handle.anchorMin = new Vector2(0f, 0f);
-        handle.anchorMax = new Vector2(0f, 1f);
-        handle.sizeDelta = new Vector2(16f, 0f);
+        handle.anchorMin = new Vector2(0f, 0.5f);
+        handle.anchorMax = new Vector2(0f, 0.5f);
+        handle.sizeDelta = new Vector2(26f, 26f);
         Image handleImage = handle.gameObject.AddComponent<Image>();
-        handleImage.color = new Color(0.9f, 0.88f, 0.85f, 1f);
+        handleImage.sprite = MenuSkin.Diamond; // 마름모 손잡이 (없으면 사각형)
+        handleImage.color = MenuSkin.Text;
 
         Slider slider = root.AddComponent<Slider>();
         slider.fillRect = fill;
