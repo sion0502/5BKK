@@ -11,6 +11,12 @@ public static class PlayerDeathDebug
     public static bool IsDying { get; private set; }
     public static bool EnemiesReleased { get; private set; }
 
+    /// <summary>죽기 직전에 물어봄 — true를 돌려주면 죽지 않음(기 '구사일생' 부활, TraitRuntime이 등록).</summary>
+    public static System.Func<bool> ReviveHandler;
+
+    /// <summary>실제로 죽었을 때 (기 해금 카운터).</summary>
+    public static event System.Action Died;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetState()
     {
@@ -52,6 +58,9 @@ public static class PlayerDeathDebug
     {
         if (IsDead)
             return;
+        if (ReviveHandler != null && ReviveHandler())
+            return;
+        Died?.Invoke();
 
         IsDead = true;
         IsDying = false;
@@ -64,6 +73,9 @@ public static class PlayerDeathDebug
 
     public static void KeepViewAfterJumpscare()
     {
+        if (ReviveHandler != null && ReviveHandler())
+            return;
+        Died?.Invoke();
         IsDead = true;
         IsDying = false;
         EnemiesReleased = false;
@@ -72,6 +84,54 @@ public static class PlayerDeathDebug
         FreezePlayer();
         EnableMouseLook();
         SnapEnemiesToPatrol(true);
+    }
+
+    /// <summary>
+    /// 점프스케어 끝에서 죽지 않고 되살아남 (기 '구사일생'). 플레이어 조작을 돌려주고, 멈춰 있던 적은 순찰로 되돌림.
+    /// 점프스케어 오브젝트는 지워 카메라·괴물 위치를 연출 전으로 복구.
+    /// </summary>
+    public static void ReviveFromJumpscare()
+    {
+        IsDead = false;
+        IsDying = false;
+        Time.timeScale = 1f;
+        EnemyJumpscare scare = Object.FindFirstObjectByType<EnemyJumpscare>();
+        if (scare != null)
+            Object.Destroy(scare.gameObject);
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            foreach (Behaviour b in player.GetComponentsInChildren<Behaviour>(true))
+            {
+                if (b is PlayerController || b is MouseLook || b is PlayerAudioMixerController || b is PlayerHidingController)
+                    b.enabled = true;
+            }
+
+            CharacterController controller = player.GetComponent<CharacterController>();
+            if (controller != null)
+                controller.enabled = true;
+        }
+
+        EnemyBase[] enemies = Object.FindObjectsByType<EnemyBase>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            EnemyBase enemy = enemies[i];
+            if (enemy == null)
+                continue;
+
+            enemy.enabled = true;
+            if (enemy.Anim != null)
+                enemy.Anim.enabled = true;
+            if (enemy.Agent != null)
+            {
+                enemy.Agent.enabled = true;
+                if (enemy.Agent.isOnNavMesh)
+                    enemy.Agent.isStopped = false;
+            }
+
+            enemy.ReturnToPatrolAfterDeath();
+        }
     }
 
     public static void ReleaseEnemiesToPatrol()

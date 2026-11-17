@@ -170,7 +170,8 @@ public class TutorialPromptUI : MonoBehaviour
 
     private void ApplyFallbackFont()
     {
-        TMP_FontAsset font = UIFontConfig.PolHumanRights;
+        // 튜토리얼 = Pretendard (2026-11-17 폰트 역할 분리) — 프리팹에 구워진 예전 Pol도 덮어씀
+        TMP_FontAsset font = UIFontConfig.UI;
         if (font == null)
         {
             return;
@@ -178,10 +179,7 @@ public class TutorialPromptUI : MonoBehaviour
 
         foreach (TMP_Text text in GetComponentsInChildren<TMP_Text>(true))
         {
-            if (text.font == null)
-            {
-                text.font = font;
-            }
+            text.font = font;
         }
     }
 }

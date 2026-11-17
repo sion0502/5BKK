@@ -16,8 +16,9 @@ public class MouseLook : MonoBehaviour
 
     private void Update()
     {
-        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
+        float sensitivity = mouseSensitivity * GameSettings.MouseSensitivity; // 설정 메뉴의 감도 배율
+        float mouseX = Input.GetAxisRaw("Mouse X") * sensitivity;
+        float mouseY = Input.GetAxisRaw("Mouse Y") * sensitivity;
 
         // 수직 회전 (상하 시점)
         xRotation -= mouseY;

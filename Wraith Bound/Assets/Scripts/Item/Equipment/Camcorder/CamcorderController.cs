@@ -314,6 +314,22 @@ public class CamcorderController : MonoBehaviour
         SetActive(!active);
     }
 
+    /// <summary>
+    /// 눈앞에 든 자세에서 바로 내리기 시작 (컷씬 → 플레이 전환용). 들어올리는 애니 없이 들어 올린 자세로 놓고
+    /// 같은 프레임에 평소 좌클릭으로 내릴 때와 같은 내리기(DeactivateSequence)를 시작 — 피드는 켜지지 않음.
+    /// </summary>
+    public void LowerFromEye()
+    {
+        if (!isHeldView) return;
+
+        StopSequence();
+        ApplyImmediate(true);
+        active = true;
+        SetActive(false);
+    }
+
+    public bool IsReady => isHeldView && raisePivot != null;
+
     public void SetActive(bool value)
     {
         if (value && !CanOpenViewfinder())

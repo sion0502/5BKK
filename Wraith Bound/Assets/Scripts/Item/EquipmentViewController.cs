@@ -21,6 +21,12 @@ public class EquipmentViewController : MonoBehaviour
     {
         inventory = GetComponent<InventoryManager>();
         flashlightEnergy = GetComponent<FlashlightEnergyController>();
+        // 플레이어 크기(1.3배 등)와 무관하게 손 아이템·캠코더 화면을 원래 크기로
+        if (itemViewCamera != null && itemViewCamera.GetComponent<ItemViewScaleCompensator>() == null)
+        {
+            itemViewCamera.gameObject.AddComponent<ItemViewScaleCompensator>();
+        }
+
         SetCameraActive(false);
     }
 

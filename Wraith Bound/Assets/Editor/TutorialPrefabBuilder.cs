@@ -196,7 +196,7 @@ public static class TutorialPrefabBuilder
         TMP_Text message = CreateText("Message", box, "", 26f, Color.white, TextAlignmentOptions.Center);
         message.lineSpacing = 12f;
 
-        TMP_Text continueText = CreateText("Continue", box, "Space · Enter · 클릭으로 계속", 18f, SubTextColor, TextAlignmentOptions.Center);
+        TMP_Text continueText = CreateText("Continue", box, "Space · ESC · 클릭으로 계속", 18f, SubTextColor, TextAlignmentOptions.Center);
 
         TutorialTipPopupUI tip = root.gameObject.AddComponent<TutorialTipPopupUI>();
         SerializedObject so = new SerializedObject(tip);

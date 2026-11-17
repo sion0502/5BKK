@@ -51,7 +51,8 @@ public class PauseMenuController : MonoBehaviour
 
     void Update()
     {
-        if (isTransitioning || PlayerDeathDebug.IsDying)
+        // 튜토리얼 팝업 등이 떠 있으면 ESC는 그쪽(팝업 닫기)이 씀
+        if (isTransitioning || PlayerDeathDebug.IsDying || PauseMenuSuppressor.IsSuppressed)
         {
             return;
         }
@@ -426,7 +427,7 @@ public class PauseMenuController : MonoBehaviour
 
     private void BuildUI()
     {
-        TMP_FontAsset menuFont = MenuUIUtility.LoadPolFont(font);
+        TMP_FontAsset menuFont = UIFontConfig.UI;
 
         pauseCanvas = MenuUIUtility.CreateOverlayCanvas("PauseMenuCanvas", canvasSortOrder, transform);
         pauseCanvasGroup = pauseCanvas.gameObject.AddComponent<CanvasGroup>();
@@ -443,6 +444,22 @@ public class PauseMenuController : MonoBehaviour
         }
 
         float startY = buttonSpacing * 1.5f;
+        float lastY = startY - (buttonHeight + buttonSpacing) * 3f;
+
+        // 참고 디자인: 은은한 연기 바탕 위에 붓질 머리 '일시정지' + 아래 구분선·조작 안내 (테두리 없음)
+        Sprite smoke = MenuSkin.PanelBg;
+        if (smoke != null)
+        {
+            Image bg = MenuSkin.AddImage(canvasRect, "Smoke", smoke, new Color(1f, 1f, 1f, 0.6f), sliced: true);
+            MenuSkin.Place(bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, (startY + 130f + lastY - 110f) * 0.5f), new Vector2(buttonWidth + 420f, startY - lastY + 400f));
+        }
+
+        MenuUIUtility.CreateHeader(canvasRect, "일시정지", menuFont, new Vector2(0f, startY + 110f), buttonWidth + 220f);
+        MenuUIUtility.CreateDivider(canvasRect, new Vector2(0f, lastY - 70f), buttonWidth + 220f);
+        TextMeshProUGUI hint = MenuUIUtility.CreateLabel(canvasRect, "ESC   계속하기", menuFont, new Vector2(0f, lastY - 105f),
+            new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center, MenuSkin.TextDim);
+        hint.characterSpacing = 4f;
         MenuUIUtility.CreateMenuButton(
             canvasRect,
             "계속하기",

@@ -116,10 +116,28 @@ public class GlowStickController : MonoBehaviour, IInteractable
             return;
         }
 
-        if (inventory.AddItem(itemData, pickupAmount))
+        // 인벤이 가득 차서 선택 슬롯과 교체되면, 빠진 아이템을 이 야광봉 자리에 놓음
+        // (예전엔 out 없는 AddItem을 써서 교체된 아이템이 그대로 사라졌음)
+        if (inventory.TryAcquireItem(itemData, Mathf.Max(1, pickupAmount), out Items dropped, out int droppedAmount))
         {
+            if (dropped != null && droppedAmount > 0)
+            {
+                WorldItemSpawnHelper.SpawnDroppedItem(
+                    dropped,
+                    droppedAmount,
+                    interactor.transform.position,
+                    interactor.transform.forward,
+                    gameObject);
+            }
+
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>인벤 교체로 바닥에 놓일 때 빠진 슬롯 수량으로 지급 개수를 맞춥니다 (WorldItemSpawnHelper).</summary>
+    public void SetPickupAmount(int amount)
+    {
+        pickupAmount = Mathf.Max(1, amount);
     }
 
     public string GetInteractPrompt()

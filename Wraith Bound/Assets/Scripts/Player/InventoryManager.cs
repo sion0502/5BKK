@@ -183,6 +183,13 @@ public class InventoryManager : MonoBehaviour
             return AddPassiveItem(newPassive);
         }
 
+        // 기존 패시브를 바닥에 놓을 월드 모델이 없으면 교체 시 사라지므로 거부
+        if (oldPassive.GetWorldDropPrefab() == null)
+        {
+            Debug.LogWarning($"[Inventory] 패시브 교체 불가: {oldPassive.itemName}에 바닥에 놓을 월드 모델이 없습니다.");
+            return false;
+        }
+
         if (!RevertPassiveEffects(oldPassive))
         {
             Debug.LogWarning("[Inventory] 패시브 교체 불가: 기존 패시브의 인벤 확장을 되돌릴 수 없습니다(슬롯이 너무 많이 찼습니다).");
@@ -437,6 +444,13 @@ public class InventoryManager : MonoBehaviour
         InventorySlot slot = slots[selectedSlotIndex];
         if (slot == null || slot.item == null || slot.amount < 1)
         {
+            return false;
+        }
+
+        // 월드 모델(worldDropPrefab/itemPrefab)이 없는 아이템은 바닥에 놓을 수 없어 교체하면 사라지므로 교체 거부
+        if (slot.item.GetWorldDropPrefab() == null)
+        {
+            Debug.LogWarning($"[Inventory] 선택한 {slot.item.itemName}은(는) 바닥에 놓을 월드 모델이 없어 교체할 수 없습니다. 다른 슬롯을 선택하세요.");
             return false;
         }
 

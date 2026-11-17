@@ -77,7 +77,8 @@ public class SelectedItemUseController : MonoBehaviour
 
     private void HandleFlashlightBatteryRecharge()
     {
-        if (!Input.GetKeyDown(KeyCode.R) || flashlightEnergy == null)
+        if (gameObject.scene.name == Chapter1TileTestNavigation.TestSceneName ||
+            !Input.GetKeyDown(KeyCode.R) || flashlightEnergy == null)
         {
             return;
         }
@@ -88,6 +89,12 @@ public class SelectedItemUseController : MonoBehaviour
     private void HandleEquipmentUse()
     {
         if (!Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            return;
+        }
+
+        // 열쇠 잠긴 문을 조준한 좌클릭은 문(LockedDoor)만 처리 — 캠코더 뷰파인더·손전등 토글이 같이 실행되던 문제
+        if (player != null && LockedDoor.ClaimsLeftClickThisFrame(player.cameraTransform))
         {
             return;
         }
@@ -192,6 +199,12 @@ public class SelectedItemUseController : MonoBehaviour
         {
             Items selectedItem = inventory != null ? inventory.GetSelectedItem() : null;
             holdingActiveItem = selectedItem as ActiveItem;
+            // 열쇠·건전지 등 홀드 사용 효과가 없는 아이템은 게이지도 띄우지 않고 소모하지 않음
+            if (holdingActiveItem != null && !holdingActiveItem.IsHoldUsable)
+            {
+                holdingActiveItem = null;
+            }
+
             holdTimer = 0f;
         }
 
