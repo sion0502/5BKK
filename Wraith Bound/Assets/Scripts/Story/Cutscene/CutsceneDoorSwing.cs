@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.Timeline;
 
 /// <summary>
@@ -21,11 +22,30 @@ public class CutsceneDoorSwing : CutsceneBlendTarget
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip creakClip;
     [SerializeField] private AudioClip slamClip;
+    [Tooltip("쾅 소리 볼륨 배율 (살짝 키움)")]
+    [SerializeField] private float slamVolume = 1.2f;
+    [Tooltip("문이 이만큼 닫혔을 때(0 열림 ~ 1 닫힘) 쾅 소리 시작 — 작을수록 소리가 빨라짐. 문이 닫히려는 순간에 맞춤")]
+    [SerializeField, Range(0.05f, 0.95f)] private float slamTriggerClosed = 0.6f;
+
+    [Header("Wind (문이 닫히기 전까지 바깥 바람 — 비워 두면 없음)")]
+    [Tooltip("건물에 막 들어온 상태라 처음엔 아주 작게 들리다가, 문이 닫히기 직전까지 서서히 세지고, 문이 쾅 닫히는 순간 끊깁니다")]
+    [SerializeField] private AudioClip windClip;
+    [SerializeField, Range(0f, 1f)] private float windQuietVolume = 0.04f;
+    [SerializeField, Range(0f, 1f)] private float windPeakVolume = 0.3f;
+    [Tooltip("컷씬(Timeline) 시간 기준: 이 시각부터 바람이 세지기 시작")]
+    [SerializeField] private float windRampStartTime = 5f;
+    [Tooltip("이 시각에 가장 세짐 (문이 닫히려는 시각 근처)")]
+    [SerializeField] private float windRampEndTime = 14.4f;
+    [SerializeField] private float windStopFadeSeconds = 0.25f;
 
     [SerializeField, HideInInspector] private Quaternion closedLocalRotation = Quaternion.identity;
     [SerializeField, HideInInspector] private bool closedCaptured;
 
     private float lastClosed = -1f;
+    private AudioSource windSource;
+    private PlayableDirector windDirector;
+    private bool windStopping;
+    private float windFadeFrom;
 
     public override float Blend
     {
@@ -52,6 +72,58 @@ public class CutsceneDoorSwing : CutsceneBlendTarget
         }
 
         Apply();
+        StartWind();
+    }
+
+    private void Update()
+    {
+        UpdateWind();
+    }
+
+    private void StartWind()
+    {
+        if (!Application.isPlaying || windClip == null)
+        {
+            return;
+        }
+
+        windSource = gameObject.AddComponent<AudioSource>();
+        windSource.clip = windClip;
+        windSource.loop = true;
+        windSource.playOnAwake = false;
+        windSource.spatialBlend = 0f;
+        windSource.volume = windQuietVolume;
+        windSource.Play();
+    }
+
+    private void UpdateWind()
+    {
+        if (windSource == null)
+        {
+            return;
+        }
+
+        if (windStopping)
+        {
+            windSource.volume = Mathf.MoveTowards(windSource.volume, 0f, windFadeFrom * Time.unscaledDeltaTime / Mathf.Max(0.01f, windStopFadeSeconds));
+            if (windSource.volume <= 0f)
+            {
+                windSource.Stop();
+                Destroy(windSource);
+                windSource = null;
+            }
+
+            return;
+        }
+
+        if (windDirector == null)
+        {
+            windDirector = FindFirstObjectByType<PlayableDirector>();
+        }
+
+        float now = windDirector != null ? (float)windDirector.time : Time.timeSinceLevelLoad;
+        float t = Mathf.InverseLerp(windRampStartTime, Mathf.Max(windRampStartTime + 0.01f, windRampEndTime), now);
+        windSource.volume = Mathf.Lerp(windQuietVolume, windPeakVolume, Mathf.SmoothStep(0f, 1f, t));
     }
 
     private void Apply()
@@ -66,10 +138,21 @@ public class CutsceneDoorSwing : CutsceneBlendTarget
 
         if (Application.isPlaying)
         {
+            StopWindIfClosing(closed);
             PlaySounds(closed);
         }
 
         lastClosed = closed;
+    }
+
+    // 문이 쾅 닫히려는 순간 바람 끊김
+    private void StopWindIfClosing(float closed)
+    {
+        if (windSource != null && !windStopping && lastClosed < slamTriggerClosed && closed >= slamTriggerClosed)
+        {
+            windStopping = true;
+            windFadeFrom = Mathf.Max(0.01f, windSource.volume);
+        }
     }
 
     private void PlaySounds(float closed)
@@ -84,9 +167,10 @@ public class CutsceneDoorSwing : CutsceneBlendTarget
             audioSource.PlayOneShot(creakClip);
         }
 
-        if (slamClip != null && lastClosed < 0.99f && closed >= 0.99f)
+        // 문이 서서히 밀리다가 쾅 닫히려는 순간에 소리
+        if (slamClip != null && lastClosed < slamTriggerClosed && closed >= slamTriggerClosed)
         {
-            audioSource.PlayOneShot(slamClip);
+            audioSource.PlayOneShot(slamClip, slamVolume);
         }
     }
 
