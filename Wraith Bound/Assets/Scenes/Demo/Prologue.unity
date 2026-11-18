@@ -7617,6 +7617,7 @@ GameObject:
   m_Component:
   - component: {fileID: 461702201}
   - component: {fileID: 461702200}
+  - component: {fileID: 2119243802}
   m_Layer: 0
   m_Name: E2_Sound
   m_TagString: Untagged
@@ -7721,6 +7722,27 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &2119243802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461702199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3a5c7e1b2f46a8c0e4d6b8a1f37c52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpatialSoundFx
+  minDistance: 2
+  maxDistance: 40
+  farCutoff: 1500
+  occludedCutoff: 900
+  occludedVolume: 0.55
+  ignoreNearListener: 1.5
+  reverbDecaySeconds: 1.8
+  reverbNear: 0.25
+  reverbFar: 0.9
 --- !u!4 &461702201
 Transform:
   m_ObjectHideFlags: 0
@@ -8705,7 +8727,7 @@ MonoBehaviour:
   rattleClip: {fileID: 0}
   approachClip: {fileID: 0}
   blackoutClip: {fileID: 0}
-  dashClip: {fileID: 8300000, guid: 8e24b6d09c1f47a3b5d7e0c2a91f3b64, type: 3}
+  dashClip: {fileID: 0}
 --- !u!1001 &525081649
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8772,6 +8794,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 525081653}
+    - targetCorrespondingSourceObject: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2119243801}
+    - targetCorrespondingSourceObject: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2119243804}
   m_SourcePrefab: {fileID: 100100000, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
 --- !u!4 &525081650 stripped
 Transform:
@@ -8904,6 +8932,52 @@ MonoBehaviour:
   audioSource: {fileID: 525081653}
   screamClip: {fileID: 0}
   turnSpeed: 110
+--- !u!114 &2119243801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525081652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b7d4e9a6c1f48d3a5e0b8c7d2f13a96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostHideVoice
+  clips:
+  - {fileID: 8300000, guid: c4a1e7b392d84f56a0b3c8d1e9f27a61, type: 3}
+  - {fileID: 8300000, guid: d7b2f4a8c1e94d3a85f06b7c2e1a9d43, type: 3}
+  - {fileID: 8300000, guid: e9c3a5d7b1f84e2096a4c8d0b2f6e1a7, type: 3}
+  - {fileID: 8300000, guid: f1d4b6c8a2e04a7f93b5d1c7e3a9f0b2, type: 3}
+  volume: 1
+  firstDelay: {x: 0.3, y: 1.5}
+  gapSeconds: {x: 0.4, y: 3.5}
+  minDistance: 1.2
+  maxDistance: 18
+--- !u!114 &2119243804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525081652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1c5e9d3b8f4260b4d6a0c2e8f19b53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostFootsteps
+  clip: {fileID: 8300000, guid: b3e7a9c1d5f24860a2c4e6d8f0b17a39, type: 3}
+  volume: 1
+  leftPitch: 0.93
+  rightPitch: 1.07
+  pitchJitter: 0.035
+  liftHeight: 0.06
+  plantBand: 0.03
+  minMoveSpeed: 0.25
+  minAirSeconds: 0.12
+  sameFootInterval: 0.45
+  anyFootInterval: 0.16
+  heightSmoothing: 25
 --- !u!1 &531460387
 GameObject:
   m_ObjectHideFlags: 0
@@ -32942,6 +33016,7 @@ GameObject:
   - component: {fileID: 2119243738}
   - component: {fileID: 2119243799}
   - component: {fileID: 2119243800}
+  - component: {fileID: 2119243803}
   m_Layer: 0
   m_Name: PrologueDirector
   m_TagString: Untagged
@@ -32998,6 +33073,24 @@ MonoBehaviour:
   failClip: {fileID: 8300000, guid: 0d0547e77a72dfc4fab31c87bb6232de, type: 3}
   failVolume: 1
   failStartTime: 0.08
+--- !u!114 &2119243803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2119243737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f8b2d6a9e1c47b3a5d0c7e2b9f61a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PrologueJumpScareAudio
+  finale: {fileID: 522422840}
+  nurse: {fileID: 525081654}
+  clip: {fileID: 8300000, guid: a68e45d4d7548e745b20c9d2bda1c543, type: 3}
+  volume: 0.65
+  startTime: 0
+  fadeStartTime: 1.6
 --- !u!114 &2119243738
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33042,7 +33135,7 @@ MonoBehaviour:
   chaseSpeedRatio: 0.85
   tooCloseDistance: 3.5
   e2AudioSource: {fileID: 461702200}
-  e2Clip: {fileID: 0}
+  e2Clip: {fileID: 8300000, guid: 6c2e9b41d8a74f35b0d7e1a3c5f98d27, type: 3}
 --- !u!4 &2119243739
 Transform:
   m_ObjectHideFlags: 0

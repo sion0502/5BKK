@@ -138,6 +138,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 877077228094711138}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7179670969302359401}
   m_SourcePrefab: {fileID: 100100000, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
 --- !u!4 &2208608451636163014 stripped
 Transform:
@@ -449,6 +452,30 @@ MonoBehaviour:
   unfoldSpeed: 3
   unfoldDelay: 0.45
   minScale: 0.75
+--- !u!114 &7179670969302359401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3091259007560268559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1c5e9d3b8f4260b4d6a0c2e8f19b53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostFootsteps
+  clip: {fileID: 8300000, guid: b3e7a9c1d5f24860a2c4e6d8f0b17a39, type: 3}
+  volume: 1
+  leftPitch: 0.93
+  rightPitch: 1.07
+  pitchJitter: 0.035
+  liftHeight: 0.06
+  plantBand: 0.03
+  minMoveSpeed: 0.25
+  minAirSeconds: 0.12
+  sameFootInterval: 0.45
+  anyFootInterval: 0.16
+  heightSmoothing: 25
 --- !u!4 &4954692398834339067 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7126286831541242533, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
