@@ -58,8 +58,9 @@ public class NurseGhostSound : MonoBehaviour
     {
         _enemy = GetComponent<EnemyBase>();
 
-        // 프롤로그 연출 간호사(PrologueNurse)는 NurseGhostHideVoice가 따로 소리를 냄 — 겹치지 않게 끔
-        if (GetComponent<PrologueNurse>() != null)
+        // 프롤로그 연출: 간호사(PrologueNurse)는 NurseGhostHideVoice가 따로 소리를 내고,
+        // 캠코더로만 보이는 형체(CamcorderOnlyApparition)는 서 있기만 하므로 순찰 소리가 나면 안 됨
+        if (GetComponent<PrologueNurse>() != null || GetComponentInParent<CamcorderOnlyApparition>() != null)
         {
             enabled = false;
             return;
