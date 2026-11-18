@@ -138,6 +138,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1354367719565816388}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9100000000000000021}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9100000000000000022}
   m_SourcePrefab: {fileID: 100100000, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
 --- !u!4 &635109328491608820 stripped
 Transform:
@@ -464,3 +470,51 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4656401538257403120, guid: 4836fe4aca469f745ac6c846d83dbac4, type: 3}
   m_PrefabInstance: {fileID: 3481813985901383020}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &9100000000000000021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4364140383822590013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b344deb007a4907a182fbde88dcc1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostSound
+  clips:
+  - {fileID: 8300000, guid: c4a1e7b392d84f56a0b3c8d1e9f27a61, type: 3}
+  - {fileID: 8300000, guid: d7b2f4a8c1e94d3a85f06b7c2e1a9d43, type: 3}
+  - {fileID: 8300000, guid: e9c3a5d7b1f84e2096a4c8d0b2f6e1a7, type: 3}
+  - {fileID: 8300000, guid: f1d4b6c8a2e04a7f93b5d1c7e3a9f0b2, type: 3}
+  volume: 1
+  firstDelay: {x: 0.3, y: 1.5}
+  gapSeconds: {x: 0.4, y: 3.5}
+  fadeOutSeconds: 0.5
+  minDistance: 1.2
+  maxDistance: 18
+  mouthHeight: 1.5
+--- !u!114 &9100000000000000022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4364140383822590013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1c5e9d3b8f4260b4d6a0c2e8f19b53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostFootsteps
+  clip: {fileID: 8300000, guid: b3e7a9c1d5f24860a2c4e6d8f0b17a39, type: 3}
+  volume: 1
+  leftPitch: 0.93
+  rightPitch: 1.07
+  pitchJitter: 0.035
+  liftHeight: 0.06
+  plantBand: 0.03
+  minMoveSpeed: 0.25
+  minAirSeconds: 0.12
+  sameFootInterval: 0.45
+  anyFootInterval: 0.16
+  heightSmoothing: 25

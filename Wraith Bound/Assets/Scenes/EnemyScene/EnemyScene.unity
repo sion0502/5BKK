@@ -3304,67 +3304,63 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalPosition.x
       value: 2.26
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalPosition.z
       value: 10.55642
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalRotation.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalRotation.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4024909794415405703, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 2426748730706977205, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 3091259007560268559, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_Name
       value: NurseGhost
       objectReference: {fileID: 0}
-    - target: {fileID: 4364140383822590013, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 3091259007560268559, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 5337591576704304548, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+    - target: {fileID: 7179670969302359134, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
       propertyPath: patrolPointZone
       value: 
       objectReference: {fileID: 880001002}
-    - target: {fileID: 5718204936150283947, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
-      propertyPath: patrolLoop
-      value: 
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 52128078cd99e4a4fb34b401a6e076cd, type: 3}
+  m_SourcePrefab: {fileID: 100100000, guid: 1d7f4891b01134245abbcc61bb7bdec2, type: 3}
 --- !u!1001 &3733554278373770679
 PrefabInstance:
   m_ObjectHideFlags: 0
