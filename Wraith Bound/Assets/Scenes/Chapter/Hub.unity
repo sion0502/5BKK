@@ -28198,7 +28198,7 @@ MonoBehaviour:
     \uAC83 \uAC19\uC740\uB370."
   audioSource: {fileID: 2074714481}
   gaspClip: {fileID: 0}
-  standUpClip: {fileID: 0}
+  standUpClip: {fileID: 8300000, guid: f26d31bbdb5150a4ea4dda4012b03866, type: 3}
 --- !u!82 &2074714481
 AudioSource:
   m_ObjectHideFlags: 0
@@ -28851,9 +28851,9 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: da35c010faa44b8489f5a07b3c141732, type: 3}
+  m_Resource: {fileID: 8300000, guid: bdb227c6c8c06c44e817c4d8492624e8, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.08
+  m_Volume: 0.12
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -28949,6 +28949,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 082c325b6c8cebd4b9beea1801417a83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BGMManager
+  loopCrossfadeSeconds: 0.4
+  loopStartSeconds: 2
+  loopEndSeconds: 5.82
 --- !u!4 &2100000403
 Transform:
   m_ObjectHideFlags: 0

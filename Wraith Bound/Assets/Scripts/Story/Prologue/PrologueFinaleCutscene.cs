@@ -159,6 +159,13 @@ public class PrologueFinaleCutscene : MonoBehaviour
         player = GameObject.FindWithTag("Player");
         cam = player.GetComponentInChildren<Camera>();
         PlayerControlLock.Lock(player); // 씬을 떠나므로 복구 안 함
+        // 문을 열려고 상호작용한 순간부터 발소리 끔 (W를 누른 채 E를 눌러도 걸음 소리가 이어지지 않게)
+        PlayerAudioMixerController footsteps = player.GetComponent<PlayerAudioMixerController>();
+        if (footsteps != null)
+        {
+            footsteps.enabled = false;
+        }
+
         playerLights = player.GetComponentsInChildren<Light>(true);
         CamcorderController camcorder = player.GetComponentInChildren<CamcorderController>();
         if (camcorder != null && camcorder.IsViewfinderActive)
@@ -200,6 +207,7 @@ public class PrologueFinaleCutscene : MonoBehaviour
         // ① 문 앞으로 다가서며 문을 봄 → 덜컹
         yield return MoveAndLook(standPoint.position, doorLookPoint.position, 0.35f);
         Play(rattleClip);
+        GameSfx.PlayDoorRattle(); // "안 돼… 왜 안 열려…!" 구간 문 덜컹 소리
         SubtitleUI.ShowForDuration("나", rattleLine, rattleSeconds + 0.4f);
         for (float t = 0f; t < rattleSeconds; t += Time.deltaTime)
         {

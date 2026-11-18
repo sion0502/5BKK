@@ -57,7 +57,12 @@ public class UnlockSwitchInteract : MonoBehaviour, IInteractable
         hasActivated = true;
         hasError = false;
 
-        PlaySound(unlockSound);
+        // 잠금 해제 성공 — 키패드 삑 소리 (공용 GameSfx에 소리가 없으면 기존 unlockSound)
+        if (!GameSfx.PlayKeypadBeep())
+        {
+            PlaySound(unlockSound);
+        }
+
         ShowOpenState();
 
         foreach (LockedDoor targetDoor in targetDoors)

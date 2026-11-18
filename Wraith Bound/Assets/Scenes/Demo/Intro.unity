@@ -185136,6 +185136,7 @@ GameObject:
   - component: {fileID: 1390226503}
   - component: {fileID: 1390226502}
   - component: {fileID: 1390226501}
+  - component: {fileID: 1390226599}
   m_Layer: 0
   m_Name: IntroCutscene
   m_TagString: Untagged
@@ -185166,6 +185167,39 @@ MonoBehaviour:
   skipFadeDuration: 0.5
   blackScreen: {fileID: 482785891}
   showSkipHint: 1
+--- !u!114 &1390226599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1390226500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1e5b0a9d3f4a62b8e4f1d2a6c93e57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IntroAudio
+  director: {fileID: 1390226502}
+  heldDocument: {fileID: 2113982125}
+  windClip: {fileID: 8300000, guid: 643f075416ec4cc4e9823419f2e85b96, type: 3}
+  cricketClip: {fileID: 8300000, guid: 3645f0531020dfe49b0435da6634e42b, type: 3}
+  paperClip: {fileID: 8300000, guid: 2f40bc3474c0f9f4cb81dc4130eedc50, type: 3}
+  doorSlamClip: {fileID: 8300000, guid: d1783a70f15a9e74fab6c260ec4e3866, type: 3}
+  windVolume: 0.25
+  cricketVolume: 0.5
+  paperVolume: 0.8
+  doorSlamVolume: 1
+  loopFadeInSeconds: 1.5
+  cricketCrossfadeSeconds: 2
+  paperStartOffset: 0
+  paperPlaySeconds: 1.4
+  paperFadeOutSeconds: 0.15
+  slamTime: 61.6
+  loopFadeOutSeconds: 1.2
+  lineDelay: 0.8
+  lineSpeaker: "\uB098"
+  line: "\uBC14\uB78C\uC778\uAC00?"
+  lineDuration: 1.8
 --- !u!320 &1390226502
 PlayableDirector:
   m_ObjectHideFlags: 0

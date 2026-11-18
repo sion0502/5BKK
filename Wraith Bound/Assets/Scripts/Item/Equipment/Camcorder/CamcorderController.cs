@@ -162,6 +162,8 @@ public class CamcorderController : MonoBehaviour
     [Header("Use Sound")]
     [SerializeField] private AudioClip useClip;
     [SerializeField] private float useSoundVolume = 0.8f;
+    [Tooltip("사용 소리(삐용) 전체 음량 배율 — 너무 커서 더 줄임")]
+    [SerializeField, Range(0f, 1f)] private float useSoundScaleV3 = 0.05f;
     [Tooltip("뷰파인더 펼치기 연출 후 재생까지 대기(초)")]
     [SerializeField] private float useSoundDelay = 1f;
 
@@ -1060,7 +1062,7 @@ public class CamcorderController : MonoBehaviour
             return;
         }
 
-        AudioSource.PlayClipAtPoint(useClip, transform.position, useSoundVolume);
+        AudioSource.PlayClipAtPoint(useClip, transform.position, useSoundVolume * useSoundScaleV3);
     }
 
     private void SyncLensCameraToEye()

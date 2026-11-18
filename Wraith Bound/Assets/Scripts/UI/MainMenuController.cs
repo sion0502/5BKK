@@ -134,6 +134,8 @@ public class MainMenuController : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        MenuMusic.Begin(); // 새로운 게임·이어서 하기를 누르기 전까지 메뉴 BGM
+
         StartCoroutine(mode == MenuMode.FirstPlay ? InitializeFirstPlayRoutine() : InitializeReturningRoutine());
     }
 
@@ -181,6 +183,7 @@ public class MainMenuController : MonoBehaviour
 
         if (mode == MenuMode.FirstPlay)
         {
+            MenuMusic.Stop();
             StartCoroutine(StartIntroInPlaceRoutine());
             return;
         }
@@ -189,6 +192,7 @@ public class MainMenuController : MonoBehaviour
             "새로운 게임을 시작하면\n지금까지의 진행 기록이 사라집니다.\n계속할까요?",
             "시작", () =>
             {
+                MenuMusic.Stop();
                 GameProgress.Clear();
                 StartCoroutine(LoadIntroSceneRoutine());
             },
@@ -209,6 +213,7 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
+        MenuMusic.Stop();
         StartCoroutine(StartGameRoutine());
     }
 
@@ -938,10 +943,11 @@ public class MainMenuController : MonoBehaviour
         float step = buttonHeight + buttonSpacing;
         Vector2 size = new Vector2(buttonWidth, buttonHeight);
 
-        MenuUIUtility.CreateMenuButton(column, "새로운 게임", menuFont, new Vector2(x, topY), size, OnNewGameClicked);
+        AddHoverSound(MenuUIUtility.CreateMenuButton(column, "새로운 게임", menuFont, new Vector2(x, topY), size, OnNewGameClicked));
         Button continueButton = MenuUIUtility.CreateMenuButton(column, "이어서 하기", menuFont, new Vector2(x, topY - step), size, OnContinueClicked);
-        MenuUIUtility.CreateMenuButton(column, "설정", menuFont, new Vector2(x, topY - step * 2f), size, OnSettingsClicked);
-        MenuUIUtility.CreateMenuButton(column, "게임 종료", menuFont, new Vector2(x, topY - step * 3f), size, OnQuitClicked);
+        AddHoverSound(continueButton);
+        AddHoverSound(MenuUIUtility.CreateMenuButton(column, "설정", menuFont, new Vector2(x, topY - step * 2f), size, OnSettingsClicked));
+        AddHoverSound(MenuUIUtility.CreateMenuButton(column, "게임 종료", menuFont, new Vector2(x, topY - step * 3f), size, OnQuitClicked));
 
         if (mode == MenuMode.FirstPlay)
         {
@@ -1004,8 +1010,8 @@ public class MainMenuController : MonoBehaviour
             });
         fullscreenLabel = fullscreenButton.GetComponentInChildren<TextMeshProUGUI>(true);
 
-        MenuUIUtility.CreateMenuButton(panel, "뒤로", menuFont, new Vector2(0f, -175f),
-            new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f), ClosePanels);
+        AddHoverSound(MenuUIUtility.CreateMenuButton(panel, "뒤로", menuFont, new Vector2(0f, -175f),
+            new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f), ClosePanels));
 
         RefreshSettingsLabels();
     }
@@ -1046,6 +1052,17 @@ public class MainMenuController : MonoBehaviour
         Vector2 size = new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f);
         dialogYesButton = MenuUIUtility.CreateMenuButton(panel, "확인", menuFont, new Vector2(-120f, -80f), size, null);
         dialogNoButton = MenuUIUtility.CreateMenuButton(panel, "취소", menuFont, new Vector2(120f, -80f), size, null);
+        AddHoverSound(dialogYesButton);
+        AddHoverSound(dialogNoButton);
+    }
+
+    // 버튼에 마우스를 올리면 EscHover 소리
+    private static void AddHoverSound(Button button)
+    {
+        if (button != null && button.GetComponent<MenuHoverSound>() == null)
+        {
+            button.gameObject.AddComponent<MenuHoverSound>();
+        }
     }
 
     private static RectTransform CreateGroupRoot(RectTransform parent, string name, out CanvasGroup group)
