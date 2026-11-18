@@ -425,6 +425,15 @@ public class PauseMenuController : MonoBehaviour
         }
     }
 
+    // 버튼에 마우스를 올리면 EscHover 소리
+    private static void AddHoverSound(Button button)
+    {
+        if (button != null && button.GetComponent<MenuHoverSound>() == null)
+        {
+            button.gameObject.AddComponent<MenuHoverSound>();
+        }
+    }
+
     private void BuildUI()
     {
         TMP_FontAsset menuFont = UIFontConfig.UI;
@@ -460,33 +469,33 @@ public class PauseMenuController : MonoBehaviour
         TextMeshProUGUI hint = MenuUIUtility.CreateLabel(canvasRect, "ESC   계속하기", menuFont, new Vector2(0f, lastY - 105f),
             new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center, MenuSkin.TextDim);
         hint.characterSpacing = 4f;
-        MenuUIUtility.CreateMenuButton(
+        AddHoverSound(MenuUIUtility.CreateMenuButton(
             canvasRect,
             "계속하기",
             menuFont,
             new Vector2(0f, startY),
             new Vector2(buttonWidth, buttonHeight),
-            ResumeGame);
-        MenuUIUtility.CreateMenuButton(
+            ResumeGame));
+        AddHoverSound(MenuUIUtility.CreateMenuButton(
             canvasRect,
             "다시하기",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing)),
             new Vector2(buttonWidth, buttonHeight),
-            RestartStage);
-        MenuUIUtility.CreateMenuButton(
+            RestartStage));
+        AddHoverSound(MenuUIUtility.CreateMenuButton(
             canvasRect,
             "메인메뉴로",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 2f),
             new Vector2(buttonWidth, buttonHeight),
-            GoToMainMenu);
-        MenuUIUtility.CreateMenuButton(
+            GoToMainMenu));
+        AddHoverSound(MenuUIUtility.CreateMenuButton(
             canvasRect,
             "바탕화면으로",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 3f),
             new Vector2(buttonWidth, buttonHeight),
-            QuitToDesktop);
+            QuitToDesktop));
     }
 }

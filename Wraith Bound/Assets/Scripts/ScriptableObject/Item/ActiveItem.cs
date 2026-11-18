@@ -17,6 +17,10 @@ public class ActiveItem : Items
     public bool isInstantUse; // 랜덤박스 맵에서 즉시실행
     public GameObject deployPrefab; // 가시덤불, 라디오 등 설치 아이템 사용 시 생성될 모델
 
+    [Header("사용 소리 (사용 완료 시 한 번 — 주웠을 때 아님)")]
+    public AudioClip useSound;
+    [Range(0f, 1f)] public float useSoundVolume = 1f;
+
     [Header("투척 (야광봉 등)")]
     public bool isThrowable; // 포물선으로 던지는 아이템인지
     public float throwForce = 9f; // 던지는 힘
@@ -47,6 +51,12 @@ public class ActiveItem : Items
 
         // 3. 효과 적용 (체력/스태미나 회복)
         ApplyRecoveryEffect(player);
+
+        // 사용 소리 (생수 마시는 소리, 통조림 먹는 소리 등)
+        if (useSound != null)
+        {
+            GameSfx.PlayClip(useSound, useSoundVolume);
+        }
 
         // 4. 부모의 파괴/소모 로직 실행
         base.Use(player);

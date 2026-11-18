@@ -192,6 +192,7 @@ public class LockedDoor : MonoBehaviour
         }
 
         SetLocked(false);
+        GameSfx.PlayKeyUnlock();
         Debug.Log($"[{name}] 열쇠로 잠금을 해제했습니다.");
     }
 
@@ -359,7 +360,43 @@ public class LockedDoor : MonoBehaviour
             body.AddForce((Vector3.down + transform.forward * 0.2f) * padlockDropForce, ForceMode.Impulse);
             body.AddTorque(Random.insideUnitSphere * padlockTorque, ForceMode.Impulse);
 
+            if (padlock.GetComponent<PadlockImpactSound>() == null)
+            {
+                padlock.gameObject.AddComponent<PadlockImpactSound>();
+            }
+
             StartCoroutine(FadeAndDestroyPadlock(padlock.gameObject));
+        }
+    }
+
+    /// <summary>자물쇠가 바닥에 떨어져 처음 부딪힐 때 "열쇠 떨어뜨린 소리" (충돌이 없으면 0.5초 뒤 재생).</summary>
+    private class PadlockImpactSound : MonoBehaviour
+    {
+        private bool played;
+        private float age;
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            if (!played && age > 0.5f)
+            {
+                PlayOnce();
+            }
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            // 떨어지자마자 문짝과 스치는 접촉은 무시
+            if (!played && age > 0.05f)
+            {
+                PlayOnce();
+            }
+        }
+
+        private void PlayOnce()
+        {
+            played = true;
+            GameSfx.PlayKeyDrop();
         }
     }
 

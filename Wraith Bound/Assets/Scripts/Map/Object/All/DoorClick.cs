@@ -42,6 +42,8 @@ public class DoorClick : MonoBehaviour, IInteractable
     [Tooltip("재생마다 랜덤 피치 범위 (낮을수록 굵고, 높을수록 가늘게 들림)")]
     public float pitchMin = 0.88f;
     public float pitchMax = 1.12f;
+    [Tooltip("캐비닛/옷장/사물함 문 여닫는 소리 음량 (너무 커서 줄임)")]
+    [Range(0f, 1f)] public float cabinetSoundVolume = 0.35f;
 
     private AudioSource audioSource;
     private bool lastNavBlocked = true;
@@ -81,6 +83,10 @@ public class DoorClick : MonoBehaviour, IInteractable
         targetLocalSlidePos = defaultLocalPos + slideOffset;
 
         audioSource = gameObject.AddComponent<AudioSource>();
+        if (IsCabinetDoor())
+        {
+            audioSource.volume = cabinetSoundVolume;
+        }
 
         if (viewCamera == null)
             viewCamera = Camera.main;
@@ -151,6 +157,26 @@ public class DoorClick : MonoBehaviour, IInteractable
     public string GetInteractPrompt()
     {
         return open ? closeMessage : openMessage;
+    }
+
+    // 캐비닛·옷장·사물함 문인지 (WardrobeDoorInteract가 붙어 있거나 이름에 Cabinet/Wardrobe/Locker 등이 있으면)
+    private bool IsCabinetDoor()
+    {
+        if (GetComponent<WardrobeDoorInteract>() != null)
+        {
+            return true;
+        }
+
+        for (Transform t = transform; t != null; t = t.parent)
+        {
+            string n = t.name.ToLowerInvariant();
+            if (n.Contains("cabinet") || n.Contains("wardrobe") || n.Contains("wardorbe") || n.Contains("locker") || n.Contains("사물함") || n.Contains("캐비닛"))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void PlayDoorSound()

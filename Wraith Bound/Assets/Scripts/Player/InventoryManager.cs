@@ -647,6 +647,7 @@ public class InventoryManager : MonoBehaviour
 
         ownsCamcorder = true;
         Debug.Log($"[Inventory] 캠코더 전용 슬롯 획득: {camcorderEquipment.itemName}");
+        PlayItemPickupSound(); // 다른 아이템과 같은 줍는 소리
         return true;
     }
 

@@ -48,6 +48,7 @@ public class StoryDocumentReader : MonoBehaviour
 
         reader.controlLock = PlayerControlLock.Lock(player);
         IsOpen = true;
+        GameSfx.PlayPaperFlutter(); // 쪽지를 꺼내는 소리
         reader.StartCoroutine(reader.Run());
     }
 
@@ -93,6 +94,7 @@ public class StoryDocumentReader : MonoBehaviour
             yield return null;
         }
 
+        GameSfx.PlayPaperFlutter(); // 쪽지를 집어넣는 소리
         yield return Fade(1f, 0f);
         controlLock?.Release();
         IsOpen = false;
