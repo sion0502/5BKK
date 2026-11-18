@@ -226,12 +226,31 @@ public static class FixedDemoStoryBuilder
         so.FindProperty("audioSource").objectReferenceValue = audio;
         so.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("탈춤귀신 등장 " + spawn.ToString("F1") + (ghost != null ? "" : " (EnemyBase 없음!)"));
+        ApproachingSong(root, talisman.transform, sealIndex, log);
     }
 
     // 맵에 놓는 부적 크기 (종이 약 0.34×0.92m — 플레이어 1.3배 맵에서 눈에 띄게)
     private const float TalismanScale = 0.8f;
 
     // 배치 표시(노란 공) 바로 아래 표면(책상·침대·진열장·바닥)에 눕혀 놓음. 방향은 번호마다 조금씩 비뚤게
+    private const string MaskGhostSongClip = "Assets/Sound/TaepyeongsoNeungge_Loop.ogg"; // 팀원 사운드 — 탈춤귀신 순찰 노래
+
+    // ③ 전에 탈춤귀신 노래가 북쪽 홀 깊은 곳에서 방 북쪽 문 바로 밖까지 다가옴 (2026-11-19 사용자 요청) — 침대 부적 12m 안에 들어오면 시작
+    private static void ApproachingSong(Transform root, Transform talisman, int sealIndex, System.Text.StringBuilder log)
+    {
+        DemoApproachingSound song = root.gameObject.AddComponent<DemoApproachingSound>();
+        Transform from = DemoSetPieceBuilder.Point(root, "SongFrom", new Vector3(325f, 1.5f, 112f));
+        Transform to = DemoSetPieceBuilder.Point(root, "SongTo", new Vector3(322f, 1.5f, 85f));
+        var so = new SerializedObject(song);
+        so.FindProperty("clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(MaskGhostSongClip);
+        so.FindProperty("from").objectReferenceValue = from;
+        so.FindProperty("to").objectReferenceValue = to;
+        so.FindProperty("triggerCenter").objectReferenceValue = talisman;
+        so.FindProperty("sealIndex").intValue = sealIndex;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        log.AppendLine("③ 다가오는 탈춤귀신 노래 (325,112) → (322,85), 침대 12m 안에서 시작");
+    }
+
     internal static readonly Vector3 LobbyTalismanAbove = new Vector3(183f, 3f, 81f); // 로비 대기 의자(HH_Public_Seating_01) 위 — 안내 데스크는 막힌 카운터 안이라 걸어서 못 닿았음
 
     private static DemoTalisman PlaceTalismanAt(Transform parent, int index, Vector3 above, string label, System.Text.StringBuilder log)

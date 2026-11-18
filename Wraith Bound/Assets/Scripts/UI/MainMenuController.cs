@@ -15,10 +15,11 @@ using UnityEngine.UI;
 ///  - 메뉴를 누를 때마다 카메라가 병원 곳곳의 다른 시점으로 날아감 (MainMenuViews)
 ///  - 새로운 게임: 병원 입구로 이동 → 암전 → 이미 로드된 인트로 컷씬을 그 자리에서 재생 (로딩 없음)
 ///
-/// [이어서 하기 가능] 진행 기록 있음 (허브에 한 번이라도 도착)
-///  - 기존 방식: Hub 씬을 배경으로 Additive 로드, 메뉴 카메라를 플레이어 시점에 맞춤
-///  - 이어서 하기: 로딩 없이 배경이 그대로 플레이 화면으로 전환
-///  - 새로운 게임: 확인 후 진행 기록을 지우고 Intro 씬 로드
+/// [이어서 하기 가능] 진행 기록 있음 (허브에 한 번이라도 도착) — 2026-11-19부터 배경은 똑같이 병원 바깥(인트로)
+///  - 이어서 하기: 카메라가 '이어서 하기' 시점으로 날아가며 화면 가장자리부터 까맣게 → 인트로를 내리고 허브를 Additive 로드 →
+///    가운데부터 열리며 플레이어 눈 시점의 허브가 보이고 확인 없이 바로 플레이 (EdgeFadeOverlay)
+///  - 새로운 게임: 확인 후 진행 기록을 지우고 그 자리에서 인트로 컷씬 재생
+///  - 인트로 씬이 빌드에 없으면 예전처럼 허브 배경 메뉴(Returning)
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
@@ -114,11 +115,14 @@ public class MainMenuController : MonoBehaviour
     private bool swayActive;
 
     private CutsceneBlackScreen startupBlack;
+    private bool hasSave;
 
     void Start()
     {
-        mode = (GameProgress.HasSave && !forceFirstPlayMenu) ? MenuMode.Returning : MenuMode.FirstPlay;
-        if (mode == MenuMode.FirstPlay && !Application.CanStreamedLevelBeLoaded(introSceneName))
+        // 진행 기록이 있어도 처음엔 병원 바깥 배경 (2026-11-19 사용자 요청) — 이어서 하기를 누르면 허브로 넘어감
+        hasSave = GameProgress.HasSave && !forceFirstPlayMenu;
+        mode = MenuMode.FirstPlay;
+        if (!Application.CanStreamedLevelBeLoaded(introSceneName))
         {
             Debug.LogWarning($"[MainMenuController] '{introSceneName}' 씬이 빌드 세팅에 없어 허브 배경 메뉴로 띄웁니다.");
             mode = MenuMode.Returning;
@@ -183,6 +187,22 @@ public class MainMenuController : MonoBehaviour
 
         if (mode == MenuMode.FirstPlay)
         {
+            if (hasSave)
+            {
+                MoveCameraTo(MainMenuViews.Id.NewGame);
+                ShowDialog(
+                    "새로운 게임을 시작하면\n지금까지의 진행 기록이 사라집니다.\n계속할까요?",
+                    "시작", () =>
+                    {
+                        SetGroupVisible(dialogGroup, false);
+                        panelOpen = false;
+                        MenuMusic.Stop();
+                        StartCoroutine(StartIntroInPlaceRoutine());
+                    },
+                    "취소", ClosePanels);
+                return;
+            }
+
             MenuMusic.Stop();
             StartCoroutine(StartIntroInPlaceRoutine());
             return;
@@ -208,6 +228,12 @@ public class MainMenuController : MonoBehaviour
 
         if (mode == MenuMode.FirstPlay)
         {
+            if (hasSave)
+            {
+                StartCoroutine(ContinueFromIntroRoutine());
+                return;
+            }
+
             MoveCameraTo(MainMenuViews.Id.Continue);
             ShowDialog("아직 저장된 기록이 없습니다.", "확인", ClosePanels, null, null);
             return;
@@ -543,6 +569,113 @@ public class MainMenuController : MonoBehaviour
 
     private IEnumerator InitializeReturningRoutine()
     {
+        yield return LoadHubBackdropRoutine();
+        yield return FinishStartupRoutine();
+    }
+
+    /// <summary>
+    /// 병원 바깥 메뉴에서 '이어서 하기' (2026-11-19): 카메라가 이어서 하기 시점으로 날아가며 화면 가장자리부터 까맣게 조여 듦 →
+    /// 인트로 내리고 허브 로드(메뉴 카메라 = 플레이어 눈, 몸 렌더러 숨김) → 가운데부터 열리며 허브가 보이고 확인 없이 바로 플레이.
+    /// </summary>
+    private IEnumerator ContinueFromIntroRoutine()
+    {
+        isTransitioning = true;
+        FadeGroup(mainButtonsGroup, 0f, menuFadeDuration);
+        if (moveRoutine != null)
+        {
+            StopCoroutine(moveRoutine);
+        }
+
+        // 카메라가 '이어서 하기' 시점으로 날아가는 동안 화면 가장자리부터 까맣게 조여 듦 (2026-11-19 사용자 요청)
+        EdgeFadeOverlay edge = EdgeFadeOverlay.Create(canvasSortOrder + 100, transform); // 메뉴 오브젝트 자식 — 인트로를 내려도 안 지워짐
+        if (views.TryGetValue(MainMenuViews.Id.Continue, out Pose continueView))
+        {
+            moveRoutine = StartCoroutine(MoveCameraRoutine(continueView));
+        }
+
+        yield return edge.Close(1.6f);
+        FadeGroup(menuCanvasGroup, 0f, 0.2f); // 제목·버튼도 숨김 (허브에선 바로 플레이)
+
+        // 인트로 배경 내리기 — 메뉴 카메라로 되돌림
+        swayActive = false;
+        if (menuCamera != null)
+        {
+            menuCamera.gameObject.SetActive(true);
+            menuCamera.enabled = true;
+        }
+
+        if (menuAudioListener != null)
+        {
+            menuAudioListener.enabled = true;
+        }
+
+        Scene intro = SceneManager.GetSceneByName(introSceneName);
+        if (intro.IsValid() && intro.isLoaded)
+        {
+            AsyncOperation unload = SceneManager.UnloadSceneAsync(intro);
+            while (unload != null && !unload.isDone)
+            {
+                yield return null;
+            }
+        }
+
+        CutsceneDirector.HoldAutoPlay = false;
+        introCutscene = null;
+        introBlackScreen = null;
+        viewCamera = menuCamera;
+        ApplyMenuBlur(0f);
+
+        yield return LoadHubBackdropRoutine(); // 메뉴 카메라 = 플레이어 눈 시점 (몸이 안 보이게 뒤에서 미끄러져 들어오지 않음)
+        mode = MenuMode.Returning;
+        SetHubPlayerRenderersVisible(false); // 혹시 몸이 비치지 않게 — 플레이 시작 때 되돌림
+
+        // '이어서 하시겠습니까?' 확인 없이 바로 시작 (사용자 요청) — 가운데부터 열리며 허브가 보이고 그대로 플레이
+        MenuMusic.Stop();
+        StartCoroutine(edge.Open(1.4f));
+        isTransitioning = false;
+        yield return StartGameRoutine();
+        SetHubPlayerRenderersVisible(true);
+        yield return new WaitForSecondsRealtime(1.5f);
+        Destroy(edge.gameObject);
+    }
+
+    private readonly List<Renderer> hiddenPlayerRenderers = new List<Renderer>();
+
+    private void SetHubPlayerRenderersVisible(bool visible)
+    {
+        if (!visible)
+        {
+            hiddenPlayerRenderers.Clear();
+            if (hubPlayer == null)
+            {
+                return;
+            }
+
+            foreach (Renderer r in hubPlayer.GetComponentsInChildren<Renderer>())
+            {
+                if (r.enabled)
+                {
+                    r.enabled = false;
+                    hiddenPlayerRenderers.Add(r);
+                }
+            }
+
+            return;
+        }
+
+        foreach (Renderer r in hiddenPlayerRenderers)
+        {
+            if (r != null)
+            {
+                r.enabled = true;
+            }
+        }
+
+        hiddenPlayerRenderers.Clear();
+    }
+
+    private IEnumerator LoadHubBackdropRoutine()
+    {
         HubArrival.MenuBackdrop = true; // 허브 깨어남 연출·독백이 메뉴 위에서 시작되지 않게
         HubArrival.FromPrologue = false;
 
@@ -574,8 +707,6 @@ public class MainMenuController : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-
-        yield return FinishStartupRoutine();
     }
 
     private IEnumerator StartGameRoutine()

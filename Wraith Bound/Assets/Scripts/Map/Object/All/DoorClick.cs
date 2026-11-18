@@ -83,6 +83,12 @@ public class DoorClick : MonoBehaviour, IInteractable
         targetLocalSlidePos = defaultLocalPos + slideOffset;
 
         audioSource = gameObject.AddComponent<AudioSource>();
+        // 문 자리에서 나는 3D 소리 — 기본값(2D)이면 멀리서 괴물이 문을 열어도 플레이어 귀에 바로 들렸음 (2026-11-19)
+        audioSource.spatialBlend = 1f;
+        audioSource.rolloffMode = AudioRolloffMode.Linear;
+        audioSource.minDistance = 2f;
+        audioSource.maxDistance = 25f;
+        audioSource.dopplerLevel = 0f;
         if (IsCabinetDoor())
         {
             audioSource.volume = cabinetSoundVolume;

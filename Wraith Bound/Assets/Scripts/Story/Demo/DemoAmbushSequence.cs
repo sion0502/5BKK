@@ -28,6 +28,15 @@ public class DemoAmbushSequence : MonoBehaviour
     [Tooltip("나타난 뒤 이 시간 동안은 못 봐도 플레이어 위치를 계속 쫓음 — 벽 너머라 시야에 안 들어오면 10초 뒤 추격을 포기하고 순찰로 돌아갔음")]
     [SerializeField] private float huntSeconds = 25f;
 
+    [Header("예고 소리 — 크리처가 나타나기 전 근처에서 한 번 (2026-11-19 ④ 얼굴 없는 귀신 비명)")]
+    [Tooltip("비우면 생략. 플레이어에게 붙이지 않고 foreshadowPoint 자리에서 3D로 남 — 근처 어딘가에서 들리는 느낌")]
+    [SerializeField] private AudioClip foreshadowClip;
+    [SerializeField] private Transform foreshadowPoint;
+    [SerializeField, Range(0f, 1f)] private float foreshadowVolume = 1f;
+    [SerializeField] private float foreshadowMaxDistance = 45f;
+    [Tooltip("예고 소리 뒤 크리처가 나타나기까지(초)")]
+    [SerializeField] private float foreshadowLead = 1.8f;
+
     [Header("대사 (화자 '나', 비우면 생략)")]
     [SerializeField] private string beforeLine = string.Empty;
     [SerializeField] private string afterLine = string.Empty;
@@ -73,6 +82,25 @@ public class DemoAmbushSequence : MonoBehaviour
         }
     }
 
+    // 예고 소리: 그 자리에 잠깐 쓰는 3D 소리 (거리 따라 작아짐, 끝나면 지움)
+    private void PlayForeshadow()
+    {
+        var go = new GameObject("ForeshadowSound");
+        go.transform.position = foreshadowPoint.position;
+        AudioSource src = go.AddComponent<AudioSource>();
+        src.clip = foreshadowClip;
+        src.volume = foreshadowVolume;
+        src.spatialBlend = 1f;
+        src.rolloffMode = AudioRolloffMode.Linear;
+        src.minDistance = 4f;
+        src.maxDistance = foreshadowMaxDistance;
+        src.dopplerLevel = 0f;
+        src.playOnAwake = false;
+        src.Play();
+        Destroy(go, foreshadowClip.length + 0.5f);
+        Debug.Log("[Demo] 예고 소리 " + foreshadowClip.name + " @" + foreshadowPoint.position.ToString("F1"));
+    }
+
     private IEnumerator Run()
     {
         Debug.Log("[Demo] 기습 연출 " + name);
@@ -80,6 +108,16 @@ public class DemoAmbushSequence : MonoBehaviour
         if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
         {
             yield break;
+        }
+
+        if (foreshadowClip != null && foreshadowPoint != null)
+        {
+            PlayForeshadow();
+            yield return new WaitForSeconds(foreshadowLead);
+            if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
+            {
+                yield break;
+            }
         }
 
         if (!string.IsNullOrEmpty(beforeLine))

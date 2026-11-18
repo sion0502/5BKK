@@ -15,6 +15,7 @@ public static class FixedDemoSetPieces
     private const string KeyPrefab = "Assets/Prefab/Item/World_Item/Active/World_Key.prefab";
     private const string FacelessPrefab = "Assets/Prefab/Enemy/Monster/Non-FaceGhost.prefab";
     private const string XenoPrefab = "Assets/Prefab/Enemy/Monster/Xenosaurid.prefab";
+    private const string FacelessScreamClip = "Assets/Sound/NonFaceGhostScream.wav"; // 팀원 사운드(얼굴 없는 귀신 추격 비명)
 
     internal static void Build(Transform parent, System.Text.StringBuilder log)
     {
@@ -300,6 +301,12 @@ public static class FixedDemoSetPieces
         EnemyBase ghost = Creature(root, FacelessPrefab, "FacelessGhost", spawn, 1f);
         Ambush(root, t1, zone, ghost, spawn, doors.ToArray(), new Object[0], 0.4f,
             string.Empty, string.Empty); // 대사 없이 연출만 (2026-11-19 사용자 결정)
+        // 나타나기 전, 구역 뒤쪽 남서 문(얼굴 없는 귀신이 지나올 문) 근처에서 비명 한 번 — 플레이어에게 붙이지 않고 그 자리 3D 소리 (2026-11-19 사용자 요청)
+        Transform scream = DemoSetPieceBuilder.Point(root, "ForeshadowScream", new Vector3(293.9f, 1.6f, 3.7f));
+        var fso = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        fso.FindProperty("foreshadowClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(FacelessScreamClip);
+        fso.FindProperty("foreshadowPoint").objectReferenceValue = scream;
+        fso.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("④ 얼굴 없는 귀신: 부적" + Index(t1) + " 뒤, 등장 " + spawnPos.ToString("F1") + ", 열어 줄 문 " + doors.Count + "개" + (westDoor != null ? "" : " (서쪽 문 못 찾음)"));
     }
 

@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 적(EnemyBase) 중 하나라도 플레이어를 '직접 보고' 쫓는 중이면 PlayerChaseEffectController의 추격 연출을 켭니다.
-/// 발소리만 듣고 Chase로 들어온 경우는 제외 — 그 Chase 동안 한 번이라도 시야로 플레이어를 확인해야 연출이 켜지고,
+/// 발소리만 듣고 Chase로 들어온 경우는 제외 — 그 Chase 동안 한 번이라도 시야로 플레이어를 확인하거나 nearChaseRadius 안으로 다가와야 연출이 켜지고,
 /// 이후 시야를 잠깐 놓쳐도 해당 적이 Chase를 벗어날 때까지 유지됩니다.
 /// 시야가 없는 Xenosaurid는 Taunt를 마치고 실제로 달려들 때 연출을 켭니다 (발소리 감지 순간엔 켜지지 않음).
 /// EnemyBase는 수정하지 않고 RuntimeState를 읽기만 합니다.
@@ -16,6 +16,8 @@ public class PlayerChaseStateLink : MonoBehaviour
     [SerializeField] private float enemyRefreshInterval = 0.5f;
     [Tooltip("모든 적이 Chase를 벗어난 뒤 연출을 끄기까지 유지 시간(초). 상태가 잠깐 바뀌어도 연출이 끊기지 않도록.")]
     [SerializeField] private float chaseReleaseDelay = 1.5f;
+    [Tooltip("시야로 확인하지 않았어도 Chase 중인 적이 이 거리(m) 안이면 연출을 켬 — 뒤에서 따라와 잡을 때 연출 없이 죽던 것 (2026-11-19, 시연 ④ 얼굴 없는 귀신)")]
+    [SerializeField] private float nearChaseRadius = 12f;
 
     private readonly List<EnemyBase> enemies = new List<EnemyBase>();
     // 현재 Chase 구간에서 플레이어를 시야로 확인한 적
@@ -88,7 +90,8 @@ public class PlayerChaseStateLink : MonoBehaviour
             }
 
             if (enemy.RuntimeState.LastSawPlayer ||
-                (xenosaurids.TryGetValue(enemy, out XenosauridController xenosaurid) && xenosaurid.IsChasingAfterRoar))
+                (xenosaurids.TryGetValue(enemy, out XenosauridController xenosaurid) && xenosaurid.IsChasingAfterRoar) ||
+                (enemy.transform.position - transform.position).sqrMagnitude <= nearChaseRadius * nearChaseRadius)
             {
                 sightedChasers.Add(enemy);
             }

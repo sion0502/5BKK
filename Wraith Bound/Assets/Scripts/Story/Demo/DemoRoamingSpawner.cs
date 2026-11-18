@@ -27,6 +27,8 @@ public class DemoRoamingSpawner : MonoBehaviour
     [SerializeField] private Creature[] creatures = { };
     [Tooltip("스폰 후보 타일 — 괴물끼리 같은 타일엔 안 나옴")]
     [SerializeField] private Transform[] spawnTiles = { };
+    [Tooltip("후보에 있어도 스폰·옮김에서 빼는 타일 이름 — 입구 바로 다음 첫 타일(시작하자마자 마주치지 않게, 2026-11-19 사용자 요청)")]
+    [SerializeField] private string[] excludedTileNames = { "Tile_4Way (Corrider)" };
     [Tooltip("순찰 지점을 깔 타일 (맵 전체)")]
     [SerializeField] private Transform[] patrolTiles = { };
     [SerializeField] private NavMeshSurface surface;
@@ -183,7 +185,7 @@ public class DemoRoamingSpawner : MonoBehaviour
         var tiles = new List<Transform>();
         foreach (Transform tile in spawnTiles)
         {
-            if (tile != null)
+            if (tile != null && !IsExcluded(tile))
             {
                 tiles.Add(tile);
             }
@@ -355,7 +357,7 @@ public class DemoRoamingSpawner : MonoBehaviour
         for (int k = 0; k < 6; k++)
         {
             Transform tile = spawnTiles[UnityEngine.Random.Range(0, spawnTiles.Length)];
-            if (tile == null || !TryRandomPoint(tile, minPlayerDistance, out Vector3 p))
+            if (tile == null || IsExcluded(tile) || !TryRandomPoint(tile, minPlayerDistance, out Vector3 p))
             {
                 continue;
             }
@@ -372,6 +374,11 @@ public class DemoRoamingSpawner : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool IsExcluded(Transform tile)
+    {
+        return excludedTileNames != null && System.Array.IndexOf(excludedTileNames, tile.name) >= 0;
     }
 
     private readonly Dictionary<Transform, Rect> rects = new Dictionary<Transform, Rect>();

@@ -15,6 +15,8 @@ public class DemoCreatureTuning : MonoBehaviour
     [SerializeField] private float maskGhostFactor = 1.1f;
 
     private static readonly FieldInfo DataField = typeof(EnemyBase).GetField("data", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly FieldInfo StateLogField = typeof(EnemyBase).GetField("debugStateLog", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly FieldInfo SenseLogField = typeof(EnemyBase).GetField("debugSenseLog", BindingFlags.Instance | BindingFlags.NonPublic);
     private static DemoCreatureTuning instance;
 
     private void Awake()
@@ -47,6 +49,10 @@ public class DemoCreatureTuning : MonoBehaviour
         {
             return;
         }
+
+        // 괴물 디버그 로그 끔 — 팀원 프리팹 4종 모두 켜져 있어 괴물이 많으면 몇 초마다 로그가 쌓임(빌드에서 끊김 원인, 2026-11-19). 프리팹은 그대로
+        StateLogField?.SetValue(enemy, false);
+        SenseLogField?.SetValue(enemy, false);
 
         // 화면 밖에서도 애니메이션 갱신 — 기본(화면 밖이면 멈춤)이면 그동안 몸 보정(문 접기·발 붙이기)이 골반을 매 프레임 덧밀어
         // 몸이 바닥 아래/위 몇 m로 쌓여 가고, 그러면 렌더러가 '화면 밖'으로 판정돼 영영 안 보였음(배회 괴물이 투명해 보이던 원인, 2026-11-19)

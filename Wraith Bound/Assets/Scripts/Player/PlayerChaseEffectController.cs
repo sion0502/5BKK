@@ -18,6 +18,8 @@ public class PlayerChaseEffectController : MonoBehaviour
     [SerializeField] private float impactDuration = 0.55f;
     [SerializeField] private Color impactRedColor = new Color(1f, 0.22f, 0.22f, 1f);
     [SerializeField] private float impactRedVignette = 0.85f;
+    [Tooltip("화면이 붉어지는(색·붉은 비네트) 지속 시간 — 줌·흔들림(impactDuration)과 따로 (2026-11-19 사용자 요청 '붉어지는 거 3초 정도')")]
+    [SerializeField] private float impactRedDuration = 3f;
     [SerializeField] private Color impactVignetteColor = new Color(0.9f, 0f, 0f, 1f);
     [SerializeField] private float impactFovPunch = -12f;
     [SerializeField] private float impactShakeDuration = 0.65f;
@@ -101,6 +103,7 @@ public class PlayerChaseEffectController : MonoBehaviour
     private float sustainWeight;
     private float burstIntensity;
     private float impactIntensity;
+    private float redIntensity;
     private float shakeTimeRemaining;
     private float flickerNoiseSeed;
     private float flickerBlendSeed;
@@ -110,6 +113,7 @@ public class PlayerChaseEffectController : MonoBehaviour
 
     private Coroutine burstRoutine;
     private Coroutine impactRoutine;
+    private Coroutine redRoutine;
 
     public bool IsBeingChased => isBeingChased;
     public float HardBlackoutThreshold => hardBlackoutThreshold;
@@ -186,6 +190,11 @@ public class PlayerChaseEffectController : MonoBehaviour
             StopCoroutine(impactRoutine);
         }
 
+        if (redRoutine != null)
+        {
+            StopCoroutine(redRoutine);
+        }
+
         if (detectionSound != null && detectionAudioSource != null && !ShouldSuppressEffects())
         {
             detectionAudioSource.PlayOneShot(detectionSound, detectionSoundVolume);
@@ -194,6 +203,7 @@ public class PlayerChaseEffectController : MonoBehaviour
         shakeTimeRemaining = impactShakeDuration;
         burstRoutine = StartCoroutine(BurstRoutine());
         impactRoutine = StartCoroutine(ImpactRoutine());
+        redRoutine = StartCoroutine(RedRoutine());
     }
 
     /// <summary>씬 라이트 점멸 배율 (1=기본). phaseOffset으로 라이트별 위상을 분리합니다.</summary>
@@ -329,12 +339,13 @@ public class PlayerChaseEffectController : MonoBehaviour
         float sustain = sustainWeight;
         float burst = burstIntensity;
         float impact = impactIntensity;
+        float red = redIntensity; // 붉은 색·비네트는 따로 길게(impactRedDuration)
         float flicker01 = GetFlicker01();
 
         chaseVolume.weight = Mathf.Clamp01(
-            Mathf.Max(sustain * sustainVolumeWeight, burst * burstVolumeWeight, impact));
+            Mathf.Max(sustain * sustainVolumeWeight, burst * burstVolumeWeight, impact, red));
 
-        colorAdjustments.colorFilter.value = Color.Lerp(Color.white, impactRedColor, impact);
+        colorAdjustments.colorFilter.value = Color.Lerp(Color.white, impactRedColor, red);
         colorAdjustments.saturation.value = 0f;
 
         float sustainExposure = 0f;
@@ -345,7 +356,7 @@ public class PlayerChaseEffectController : MonoBehaviour
 
         colorAdjustments.postExposure.value = burst * burstPostExposurePeak + sustainExposure;
 
-        vignette.intensity.value = impact * impactRedVignette;
+        vignette.intensity.value = red * impactRedVignette;
         vignette.color.value = impactVignetteColor;
 
         float baseGrain = sustain * sustainGrain;
@@ -511,6 +522,23 @@ public class PlayerChaseEffectController : MonoBehaviour
 
         impactIntensity = 0f;
         impactRoutine = null;
+    }
+
+    // 붉어짐: 처음 60%는 거의 그대로 유지하다가 나머지 동안 부드럽게 빠짐
+    private IEnumerator RedRoutine()
+    {
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.05f, impactRedDuration);
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            redIntensity = t < 0.6f ? 1f : Mathf.SmoothStep(1f, 0f, (t - 0.6f) / 0.4f);
+            yield return null;
+        }
+
+        redIntensity = 0f;
+        redRoutine = null;
     }
 
     private void ResolveCameraReferences()
