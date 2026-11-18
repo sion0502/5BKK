@@ -78,6 +78,12 @@ public class EnemyStun : MonoBehaviour
         }
 
         enemy.ReturnToPatrolAfterDeath();
+        // ReturnToPatrolAfterDeath가 '이미 잡음'을 켜 둬서 구사일생 뒤 이 적은 다시 못 잡았음 → 풂 (갓모드로 면제된 적은 그대로)
+        if (enemy.RuntimeState != null && !DemoGodMode.IsImmune(enemy))
+        {
+            enemy.RuntimeState.PlayerDeadLogged = false;
+        }
+
         Destroy(this);
     }
 }
