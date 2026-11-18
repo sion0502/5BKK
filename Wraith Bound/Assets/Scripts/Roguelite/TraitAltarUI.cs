@@ -125,15 +125,13 @@ public class TraitAltarUI : MonoBehaviour
         Transform root = canvas.transform;
         MenuUIUtility.CreateFullScreenPanel(root, new Color(0f, 0f, 0f, 0.88f), "Backdrop");
 
-        // 제목
-        TextMeshProUGUI title = MenuUIUtility.CreateHeader(root, "기", UIFontConfig.UIBold, new Vector2(0f, 462f), 360f);
-        title.fontSize = 50f;
+        BuildTitle(root);
 
-        // 착용 칸 (기본 2칸)
+        // 착용 칸 (기본 2칸) — 낡은 부적
         for (int i = 0; i < TraitLoadout.DefaultSlots; i++)
         {
-            float x = (i - (TraitLoadout.DefaultSlots - 1) * 0.5f) * (SlotSize.x + 70f);
-            slots.Add(new TraitSlotView(root, i, new Vector2(x, 258f), SlotSize, OnSlotClicked));
+            float x = (i - (TraitLoadout.DefaultSlots - 1) * 0.5f) * (SlotSize.x + 80f);
+            slots.Add(new TraitSlotView(root, i, new Vector2(x, 236f), SlotSize, OnSlotClicked));
         }
 
         // 아래 패널
@@ -150,6 +148,28 @@ public class TraitAltarUI : MonoBehaviour
 
         TraitUIFactory.Label(root, "Hint", "카드 클릭: 고르기      장착 칸 클릭: 해제      E · ESC: 닫기", UIFontConfig.UI, 21f, TraitUIFactory.TextDim,
             new Vector2(0f, -518f), new Vector2(1400f, 36f));
+    }
+
+    // 제목: 메인메뉴 鬼行과 같은 붉은 붓글씨 '气' + 아래 작게 '기'.
+    // 붓글씨 폰트엔 氣(정자)가 없고 간체 气만 있어서 气를 씀. 폰트를 못 읽으면 예전처럼 '기'만.
+    private static void BuildTitle(Transform root)
+    {
+        TMP_FontAsset brush = TitleFontLoader.Load();
+        bool hasBrush = brush != null && brush.TryAddCharacters("气", out string missing) && string.IsNullOrEmpty(missing);
+        if (hasBrush)
+        {
+            TextMeshProUGUI glyph = TraitUIFactory.Label(root, "TitleBrush", "气", brush, 118f, TitleFontLoader.TitleRed,
+                new Vector2(0f, 452f), new Vector2(300f, 150f));
+            glyph.characterSpacing = 0f;
+            TextMeshProUGUI sub = TraitUIFactory.Label(root, "TitleSub", "기", UIFontConfig.UI, 22f, TraitUIFactory.TextDim,
+                new Vector2(0f, 372f), new Vector2(300f, 30f));
+            sub.characterSpacing = 30f;
+        }
+        else
+        {
+            TextMeshProUGUI title = MenuUIUtility.CreateHeader(root, "기", UIFontConfig.UIBold, new Vector2(0f, 462f), 360f);
+            title.fontSize = 50f;
+        }
     }
 
     // 오른쪽 카드 목록: ScrollRect(세로) + 3열 GridLayoutGroup + 오른쪽 스크롤바
