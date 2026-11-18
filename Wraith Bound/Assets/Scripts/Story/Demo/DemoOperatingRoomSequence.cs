@@ -10,7 +10,8 @@ using UnityEngine;
 /// </summary>
 public class DemoOperatingRoomSequence : MonoBehaviour
 {
-    [SerializeField] private DemoSealKey key;
+    [Tooltip("이 번호의 봉인(열쇠·부적)이 기록되면 연출 시작")]
+    [SerializeField] private int sealIndex;
     [SerializeField] private Light surgicalLight;
     [SerializeField] private Renderer[] surgicalGlow = { };
     [SerializeField] private Light[] redLights = { };
@@ -22,6 +23,8 @@ public class DemoOperatingRoomSequence : MonoBehaviour
     [SerializeField] private EnemyBase ghost;
     [SerializeField] private Transform ghostSpawn;
     [SerializeField] private float ghostDelay = 1.4f;
+    [Tooltip("귀신이 나올 때 열어 둘 문 — 닫힌 문 앞에서 경로가 끊겨 추격을 포기하던 것 방지")]
+    [SerializeField] private DoorClick[] openOnRelease = { };
 
     [SerializeField] private string redLine = "…뭐, 뭐야…?";
     [SerializeField] private string runLine = "…도망쳐야 해!";
@@ -30,15 +33,28 @@ public class DemoOperatingRoomSequence : MonoBehaviour
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip alarmClip;
 
+    private bool started;
     private bool pulsing;
     private float pulseStart;
 
     private void Start()
     {
         SetRed(0f);
-        if (key != null)
+        // 열쇠든 부적이든 이 연출에 걸린 봉인 번호가 기록되면 시작 (Chapter1_Demo = 봉인 열쇠, Chapter1_FixedDemo = 부적)
+        DemoSealProgress.Collected += OnSealCollected;
+    }
+
+    private void OnDestroy()
+    {
+        DemoSealProgress.Collected -= OnSealCollected;
+    }
+
+    private void OnSealCollected(int index)
+    {
+        if (index == sealIndex && !started)
         {
-            key.PickedUp += () => StartCoroutine(Run());
+            started = true;
+            StartCoroutine(Run());
         }
     }
 
@@ -83,6 +99,28 @@ public class DemoOperatingRoomSequence : MonoBehaviour
 
         SubtitleUI.ShowForDuration("나", redLine, 2f);
         yield return new WaitForSeconds(ghostDelay);
+
+        foreach (DoorClick door in openOnRelease)
+        {
+            if (door != null)
+            {
+                DemoDoorOpener.Open(door, true);
+            }
+        }
+
+        // 귀신을 숨겨 둔 채(비활성) 배치한 씬(Chapter1_FixedDemo): 등장 자리에서 켜고 AI가 초기화될 때까지 기다림
+        if (ghost != null && !ghost.gameObject.activeSelf)
+        {
+            if (ghostSpawn != null)
+            {
+                ghost.transform.SetPositionAndRotation(ghostSpawn.position, ghostSpawn.rotation);
+            }
+
+            ghost.gameObject.SetActive(true);
+            yield return null;
+            yield return null;
+        }
+
         ReleaseGhost();
         yield return new WaitForSeconds(0.9f);
         SubtitleUI.ShowForDuration("나", runLine, 2f);

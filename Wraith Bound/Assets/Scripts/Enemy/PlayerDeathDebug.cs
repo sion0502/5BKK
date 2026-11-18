@@ -14,6 +14,19 @@ public static class PlayerDeathDebug
     /// <summary>죽기 직전에 물어봄 — true를 돌려주면 죽지 않음(기 '구사일생' 부활, TraitRuntime이 등록).</summary>
     public static System.Func<bool> ReviveHandler;
 
+    /// <summary>시연 갓모드(DemoGodMode) — ReviveHandler보다 먼저 물어봄. true면 죽지 않음(구사일생도 쓰지 않음).</summary>
+    public static System.Func<bool> GodModeHandler;
+
+    /// <summary>마지막으로 플레이어를 잡은 적 (점프스케어 시작 때 기록).</summary>
+    public static EnemyBase LastCatcher { get; private set; }
+
+    static bool TryAvoidDeath()
+    {
+        if (GodModeHandler != null && GodModeHandler())
+            return true;
+        return ReviveHandler != null && ReviveHandler();
+    }
+
     /// <summary>실제로 죽었을 때 (기 해금 카운터).</summary>
     public static event System.Action Died;
 
@@ -38,6 +51,7 @@ public static class PlayerDeathDebug
     public static void BeginJumpscare(EnemyBase enemy)
     {
         if (IsDead || IsDying) return;
+        LastCatcher = enemy;
         Camera camera = enemy != null && enemy.Player != null
             ? enemy.Player.GetComponentInChildren<Camera>() : null;
         if (camera == null) camera = Camera.main;
@@ -58,7 +72,7 @@ public static class PlayerDeathDebug
     {
         if (IsDead)
             return;
-        if (ReviveHandler != null && ReviveHandler())
+        if (TryAvoidDeath())
             return;
         Died?.Invoke();
 
@@ -73,7 +87,7 @@ public static class PlayerDeathDebug
 
     public static void KeepViewAfterJumpscare()
     {
-        if (ReviveHandler != null && ReviveHandler())
+        if (TryAvoidDeath())
             return;
         Died?.Invoke();
         IsDead = true;
@@ -131,6 +145,11 @@ public static class PlayerDeathDebug
             }
 
             enemy.ReturnToPatrolAfterDeath();
+            // ReturnToPatrolAfterDeath는 '이미 잡음'(PlayerDeadLogged)을 켜 둠 — 죽은 뒤엔 맞지만 되살아난 경우엔
+            // 그 판 내내 어떤 적도 다시 못 잡게 됐음(구사일생 버그) → 되살아날 땐 다시 잡을 수 있게 풂.
+            // (갓모드는 이 뒤에 잡았던 적만 다시 켬 — DemoGodMode)
+            if (enemy.RuntimeState != null)
+                enemy.RuntimeState.PlayerDeadLogged = false;
         }
     }
 

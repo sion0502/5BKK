@@ -28,13 +28,15 @@ public class CreatureChaseStretch : MonoBehaviour
         new StretchBone { bone = HumanBodyBones.UpperChest, factor = 1.6f },
         new StretchBone { bone = HumanBodyBones.Neck, factor = 1.4f },
         new StretchBone { bone = HumanBodyBones.Head, factor = 2.6f },          // 목이 길게
-        new StretchBone { bone = HumanBodyBones.LeftLowerArm, factor = 1.7f },  // 위팔
-        new StretchBone { bone = HumanBodyBones.RightLowerArm, factor = 1.7f },
-        new StretchBone { bone = HumanBodyBones.LeftHand, factor = 1.8f },      // 아래팔
-        new StretchBone { bone = HumanBodyBones.RightHand, factor = 1.8f },
-        new StretchBone { bone = HumanBodyBones.LeftLowerLeg, factor = 1.2f },
+        // 팔은 일부러 짝짝이 (2026-11-18 — 양쪽이 같은 길이라 우스워 보인다는 반응): 왼팔은 바닥에 끌릴 만큼 길게, 오른팔은 짧게.
+        // 다리는 양쪽 같게 — 짝짝이로 했더니 짧은 다리가 땅에 안 닿아 떠서 더 우스웠음
+        new StretchBone { bone = HumanBodyBones.LeftLowerArm, factor = 2.3f },  // 위팔
+        new StretchBone { bone = HumanBodyBones.RightLowerArm, factor = 1.3f },
+        new StretchBone { bone = HumanBodyBones.LeftHand, factor = 2.6f },      // 아래팔
+        new StretchBone { bone = HumanBodyBones.RightHand, factor = 1.45f },
+        new StretchBone { bone = HumanBodyBones.LeftLowerLeg, factor = 1.2f },  // 허벅지
         new StretchBone { bone = HumanBodyBones.RightLowerLeg, factor = 1.2f },
-        new StretchBone { bone = HumanBodyBones.LeftFoot, factor = 1.2f },
+        new StretchBone { bone = HumanBodyBones.LeftFoot, factor = 1.2f },      // 정강이
         new StretchBone { bone = HumanBodyBones.RightFoot, factor = 1.2f },
     };
 

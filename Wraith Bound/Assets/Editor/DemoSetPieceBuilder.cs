@@ -254,7 +254,7 @@ public static class DemoSetPieceBuilder
         audio.loop = true;
         audio.spatialBlend = 0.6f;
         var so = new SerializedObject(seq);
-        so.FindProperty("key").objectReferenceValue = key;
+        so.FindProperty("sealIndex").intValue = key.Index;
         so.FindProperty("surgicalLight").objectReferenceValue = spot;
         SetArray(so.FindProperty("redLights"), reds);
         so.FindProperty("ghost").objectReferenceValue = ghost;
@@ -267,7 +267,7 @@ public static class DemoSetPieceBuilder
     }
 
     // 봉인 열쇠: World_Key 메쉬를 3배로 키우고 금빛 발광 재질 + 작은 금빛 점광, E로 줍는 트리거
-    private static DemoSealKey SealKey(Transform parent, int index, Vector3 position)
+    internal static DemoSealKey SealKey(Transform parent, int index, Vector3 position)
     {
         GameObject go = new GameObject("SealKey_" + (index + 1));
         go.transform.SetParent(parent, false);
@@ -302,7 +302,7 @@ public static class DemoSetPieceBuilder
         return key;
     }
 
-    private static Material SealKeyMaterial()
+    internal static Material SealKeyMaterial()
     {
         Material mat = AssetDatabase.LoadAssetAtPath<Material>(SealKeyMat);
         if (mat == null)
@@ -425,7 +425,7 @@ public static class DemoSetPieceBuilder
         return go.AddComponent<StoryZone>();
     }
 
-    private static Transform Point(Transform parent, string name, Vector3 position)
+    internal static Transform Point(Transform parent, string name, Vector3 position)
     {
         Transform t = new GameObject(name).transform;
         t.SetParent(parent, false);
@@ -433,7 +433,7 @@ public static class DemoSetPieceBuilder
         return t;
     }
 
-    private static void SetArray(SerializedProperty array, Object[] values)
+    internal static void SetArray(SerializedProperty array, Object[] values)
     {
         array.arraySize = values.Length;
         for (int i = 0; i < values.Length; i++)
