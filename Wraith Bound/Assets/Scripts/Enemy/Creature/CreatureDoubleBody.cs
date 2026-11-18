@@ -16,6 +16,17 @@ public class CreatureDoubleBody : MonoBehaviour
     [SerializeField, Range(0f, 0.5f)] private float phaseOffset = 0.18f;
     [Tooltip("겹친 몸의 재생 속도 배수 — 1에서 살짝 벗어나면 시간이 지날수록 어긋남이 변함")]
     [SerializeField] private float speedRatio = 1.07f;
+    [Tooltip("다리는 겹치지 않게 — 겹친 몸의 다리 뼈를 매 프레임 원본 다리와 똑같이 맞춰 다리는 한 쌍만 보임 (2026-11-18 사용자 요청)")]
+    [SerializeField] private bool mergeLegs = true;
+
+    private static readonly HumanBodyBones[] LegBones =
+    {
+        HumanBodyBones.LeftUpperLeg, HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot, HumanBodyBones.LeftToes,
+        HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, HumanBodyBones.RightToes,
+    };
+
+    private Transform[] legSource;
+    private Transform[] legTwin;
 
     private static readonly int StateHash = Animator.StringToHash("State");
     private static readonly int SpeedHash = Animator.StringToHash(CreatureLocomotionSync.SpeedParameter);
@@ -148,6 +159,51 @@ public class CreatureDoubleBody : MonoBehaviour
     private float CurrentNormalizedTime()
     {
         return animator.enabled ? animator.GetCurrentAnimatorStateInfo(0).normalizedTime : 0f;
+    }
+
+    private void OnEnable()
+    {
+        Application.onBeforeRender += MergeLegs;
+    }
+
+    private void OnDisable()
+    {
+        Application.onBeforeRender -= MergeLegs;
+    }
+
+    // 렌더링 직전(모든 LateUpdate — 관절 꺾기·몸 늘어남·발 붙이기·문 접기 뒤)에 겹친 몸의 다리를 원본 다리 위치·각도로 덮어씀
+    private void MergeLegs()
+    {
+        if (!mergeLegs || twin == null || !twin.activeInHierarchy)
+        {
+            return;
+        }
+
+        if (legTwin == null)
+        {
+            if (!animator.isHuman || !twinAnimator.isHuman)
+            {
+                mergeLegs = false;
+                return;
+            }
+
+            legSource = new Transform[LegBones.Length];
+            legTwin = new Transform[LegBones.Length];
+            for (int i = 0; i < LegBones.Length; i++)
+            {
+                legSource[i] = animator.GetBoneTransform(LegBones[i]);
+                legTwin[i] = twinAnimator.GetBoneTransform(LegBones[i]);
+            }
+        }
+
+        // 위(허벅지)부터 — 부모를 먼저 맞춰야 자식 월드 위치가 그대로 맞음
+        for (int i = 0; i < legTwin.Length; i++)
+        {
+            if (legSource[i] != null && legTwin[i] != null)
+            {
+                legTwin[i].SetPositionAndRotation(legSource[i].position, legSource[i].rotation);
+            }
+        }
     }
 
     private void OnDestroy()
