@@ -4,31 +4,36 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 기 고르기 화면 (허브 기 제단에서 E). 코드로 만든 오버레이 — 기 13종 카드(이름·효과·해금 조건과 진행)와 착용 칸.
-/// 카드 클릭 = 착용/해제(TraitLoadout), 잠긴 기는 해금 조건만 보여 줌. E·ESC로 닫음. 열려 있는 동안 조작 잠금·커서 표시·일시정지 메뉴 막음.
+/// 기 고르기 화면 (허브 기 제단에서 E). 코드로 만든 오버레이 — 2026-11-18 사용자 스케치대로 개편:
+///  · 위: 제목 '기' + 착용 칸(노란 부적 종이, 비면 '+') — 칸 클릭 = 해제 (TraitSlotView)
+///  · 아래 패널 왼쪽: 고른 기 상세(큰 그림·이름·효과) + [장착]/[해제] (TraitDetailPanel)
+///  · 아래 패널 오른쪽: 기 카드 목록 3열, 세로 스크롤(다음 줄이 살짝 보임) + 오른쪽 스크롤바 (TraitCardView)
+///    카드 클릭 = 고르기(붉은 테두리), 잠긴 기는 빗금+자물쇠+해금 조건
+/// E·ESC로 닫음. 열려 있는 동안 조작 잠금·커서 표시·일시정지 메뉴 막음.
 /// </summary>
 public class TraitAltarUI : MonoBehaviour
 {
     private const int SortingOrder = 820;
-    private static readonly Color CardColor = new Color(0.1f, 0.1f, 0.11f, 0.95f);
-    private static readonly Color EquippedColor = new Color(0.42f, 0.07f, 0.06f, 0.95f);
-    private static readonly Color LockedColor = new Color(0.06f, 0.06f, 0.06f, 0.92f);
-    private static readonly Color TextColor = new Color(0.92f, 0.9f, 0.86f);
-    private static readonly Color DimText = new Color(0.55f, 0.53f, 0.5f);
-    private static readonly Color AccentRed = new Color(0.9f, 0.25f, 0.22f);
+    private const int Columns = 3;
+    private static readonly Vector2 CardSize = new Vector2(300f, 380f);
+    private static readonly Vector2 CardGap = new Vector2(44f, 40f);
+    private static readonly Vector2 SlotSize = new Vector2(170f, 220f);
+    private static readonly Vector2 PanelSize = new Vector2(1660f, 600f);
+    private const float PanelCenterY = -192f;
+    private const float DetailWidth = 480f;
 
     public static bool IsOpen { get; private set; }
 
     private PlayerControlLock controlLock;
     private int openedFrame;
-    private TMP_FontAsset font;
-    private TextMeshProUGUI slotsLabel;
-    private const string IconResourceDir = "Roguelite/TraitIcons/"; // Resources/Roguelite/TraitIcons/<TraitId>.png
-    private const float IconSize = 56f;
-
-    private readonly List<(TraitDef def, Image bg, TextMeshProUGUI status, RawImage icon)> cards = new List<(TraitDef, Image, TextMeshProUGUI, RawImage)>();
     private bool cursorWasVisible;
     private CursorLockMode cursorWasLock;
+
+    private readonly List<Canvas> hiddenCanvases = new List<Canvas>();
+    private readonly List<TraitSlotView> slots = new List<TraitSlotView>();
+    private readonly List<TraitCardView> cards = new List<TraitCardView>();
+    private TraitDetailPanel detail;
+    private TraitDef selected;
 
     public static void Open()
     {
@@ -44,13 +49,15 @@ public class TraitAltarUI : MonoBehaviour
     {
         IsOpen = true;
         openedFrame = Time.frameCount;
-        font = UIFontConfig.UI;
         controlLock = PlayerControlLock.Lock(GameObject.FindWithTag("Player"));
         PauseMenuSuppressor.Suppress();
         cursorWasVisible = Cursor.visible;
         cursorWasLock = Cursor.lockState;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+
+        selected = TraitLoadout.Equipped.Count > 0 ? TraitCatalog.Get(TraitLoadout.Equipped[0]) : TraitCatalog.All[0];
+        HideOtherOverlays();
         Build();
         Refresh();
     }
@@ -75,148 +82,186 @@ public class TraitAltarUI : MonoBehaviour
         PauseMenuSuppressor.Release();
         Cursor.visible = cursorWasVisible;
         Cursor.lockState = cursorWasLock;
+        foreach (Canvas c in hiddenCanvases)
+        {
+            if (c != null)
+            {
+                c.enabled = true;
+            }
+        }
     }
+
+    // HUD·튜토리얼 안내 등 다른 화면 오버레이가 이 화면 위에 그려지던 것 — 열려 있는 동안만 끔 (안내 문구·자막은 그대로)
+    private void HideOtherOverlays()
+    {
+        foreach (Canvas c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            if (c.isRootCanvas && c.enabled && c.renderMode == RenderMode.ScreenSpaceOverlay
+                && c.sortingOrder < 600 && !c.transform.IsChildOf(transform))
+            {
+                c.enabled = false;
+                hiddenCanvases.Add(c);
+            }
+        }
+
+        foreach (TutorialPromptUI prompt in FindObjectsByType<TutorialPromptUI>(FindObjectsSortMode.None))
+        {
+            foreach (Canvas c in prompt.GetComponentsInParent<Canvas>())
+            {
+                if (c.enabled && c.isRootCanvas)
+                {
+                    c.enabled = false;
+                    hiddenCanvases.Add(c);
+                }
+            }
+        }
+    }
+
+    // ── 화면 구성 ───────────────────────────────────
 
     private void Build()
     {
         Canvas canvas = MenuUIUtility.CreateOverlayCanvas("Canvas", SortingOrder, transform);
         Transform root = canvas.transform;
-        MenuUIUtility.CreateFullScreenPanel(root, new Color(0f, 0f, 0f, 0.86f), "Backdrop");
+        MenuUIUtility.CreateFullScreenPanel(root, new Color(0f, 0f, 0f, 0.88f), "Backdrop");
 
-        Label(root, "Title", "기", 64, new Vector2(0f, -70f), new Vector2(600f, 80f), TextAlignmentOptions.Center, AccentRed);
-        slotsLabel = Label(root, "Slots", string.Empty, 26, new Vector2(0f, -140f), new Vector2(1600f, 44f), TextAlignmentOptions.Center, TextColor);
+        // 제목
+        TextMeshProUGUI title = MenuUIUtility.CreateHeader(root, "기", UIFontConfig.UIBold, new Vector2(0f, 462f), 360f);
+        title.fontSize = 50f;
 
-        const int columns = 5;
-        const float w = 320f, h = 212f, gap = 18f;
-        float left = -(columns * w + (columns - 1) * gap) * 0.5f + w * 0.5f;
+        // 착용 칸 (기본 2칸)
+        for (int i = 0; i < TraitLoadout.DefaultSlots; i++)
+        {
+            float x = (i - (TraitLoadout.DefaultSlots - 1) * 0.5f) * (SlotSize.x + 70f);
+            slots.Add(new TraitSlotView(root, i, new Vector2(x, 258f), SlotSize, OnSlotClicked));
+        }
+
+        // 아래 패널
+        RectTransform panel = MenuUIUtility.CreateCenteredPanel(root, "Panel", new Vector2(0f, PanelCenterY), PanelSize, new Color(0.08f, 0.075f, 0.07f, 0.96f));
+
+        float left = -PanelSize.x * 0.5f;
+        detail = new TraitDetailPanel(panel, new Vector2(left + DetailWidth * 0.5f, 0f), new Vector2(DetailWidth - 20f, PanelSize.y - 50f), OnEquipClicked);
+
+        // 세로 구분선
+        RectTransform divider = TraitUIFactory.Centered(panel, "Divider", new Vector2(left + DetailWidth, 0f), new Vector2(2f, PanelSize.y - 60f));
+        TraitUIFactory.AddImage(divider, null, new Color(0.8f, 0.76f, 0.7f, 0.25f));
+
+        BuildList(panel, left + DetailWidth + 20f);
+
+        TraitUIFactory.Label(root, "Hint", "카드 클릭: 고르기      장착 칸 클릭: 해제      E · ESC: 닫기", UIFontConfig.UI, 21f, TraitUIFactory.TextDim,
+            new Vector2(0f, -518f), new Vector2(1400f, 36f));
+    }
+
+    // 오른쪽 카드 목록: ScrollRect(세로) + 3열 GridLayoutGroup + 오른쪽 스크롤바
+    private void BuildList(RectTransform panel, float listLeft)
+    {
+        const float scrollbarWidth = 14f;
+        float right = PanelSize.x * 0.5f - 24f;
+        float listWidth = right - scrollbarWidth - 16f - listLeft;
+        float listHeight = PanelSize.y - 40f;
+        RectTransform viewport = TraitUIFactory.Centered(panel, "Viewport", new Vector2(listLeft + listWidth * 0.5f, 0f), new Vector2(listWidth, listHeight));
+        viewport.gameObject.AddComponent<RectMask2D>();
+        Image hit = viewport.gameObject.AddComponent<Image>(); // 빈 곳에서도 휠 스크롤이 먹게
+        hit.color = new Color(0f, 0f, 0f, 0f);
+
+        RectTransform content = TraitUIFactory.Rect(viewport, "Content", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(listWidth, 0f));
+        GridLayoutGroup grid = content.gameObject.AddComponent<GridLayoutGroup>();
+        grid.cellSize = CardSize;
+        grid.spacing = CardGap;
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = Columns;
+        grid.childAlignment = TextAnchor.UpperCenter;
+        grid.padding = new RectOffset(0, 0, 26, 26);
+        ContentSizeFitter fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
         for (int i = 0; i < TraitCatalog.All.Count; i++)
         {
-            TraitDef def = TraitCatalog.All[i];
-            int row = i / columns, col = i % columns;
-            Vector2 pos = new Vector2(left + col * (w + gap), -260f - row * (h + gap) - h * 0.5f);
-            BuildCard(root, def, pos, new Vector2(w, h));
+            cards.Add(new TraitCardView(content, TraitCatalog.All[i], i, CardSize, OnCardClicked));
         }
 
-        Label(root, "Hint", "클릭: 착용 / 해제      E · ESC: 닫기", 22, new Vector2(0f, 60f), new Vector2(1200f, 40f),
-            TextAlignmentOptions.Center, DimText, bottom: true);
+        // 스크롤바 (가는 홈 + 손잡이)
+        RectTransform barRect = TraitUIFactory.Centered(panel, "Scrollbar", new Vector2(right - scrollbarWidth * 0.5f, 0f), new Vector2(scrollbarWidth, listHeight - 20f));
+        TraitUIFactory.AddImage(barRect, null, new Color(1f, 1f, 1f, 0.07f), raycast: true);
+        RectTransform sliding = TraitUIFactory.Rect(barRect, "SlidingArea", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        sliding.anchorMin = Vector2.zero;
+        sliding.anchorMax = Vector2.one;
+        sliding.offsetMin = sliding.offsetMax = Vector2.zero;
+        RectTransform handle = TraitUIFactory.Rect(sliding, "Handle", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        handle.anchorMin = Vector2.zero;
+        handle.anchorMax = Vector2.one;
+        handle.offsetMin = handle.offsetMax = Vector2.zero;
+        Image handleImage = TraitUIFactory.AddImage(handle, null, new Color(0.82f, 0.78f, 0.72f, 0.55f), raycast: true);
+        Scrollbar scrollbar = barRect.gameObject.AddComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.handleRect = handle;
+        scrollbar.targetGraphic = handleImage;
+        Navigation nav = scrollbar.navigation;
+        nav.mode = Navigation.Mode.None;
+        scrollbar.navigation = nav;
+
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.content = content;
+        scroll.viewport = viewport;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 45f;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        scroll.inertia = true;
+        scroll.decelerationRate = 0.08f;
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+        scroll.verticalNormalizedPosition = 1f;
     }
 
-    private void BuildCard(Transform parent, TraitDef def, Vector2 pos, Vector2 size)
-    {
-        GameObject go = new GameObject(def.Name, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        RectTransform rect = (RectTransform)go.transform;
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = pos;
-        rect.sizeDelta = size;
-        Image bg = go.GetComponent<Image>();
-        go.GetComponent<Button>().onClick.AddListener(() =>
-        {
-            TraitLoadout.Toggle(def.Id);
-            Refresh();
-        });
+    // ── 입력 ────────────────────────────────────────
 
-        RawImage icon = BuildIcon(go.transform, def.Id);
-        // 이름은 오른쪽 위 아이콘 자리만큼 비워 둠 (왼쪽 정렬 유지)
-        Label(go.transform, "Name", def.Name, 30, new Vector2(-(IconSize + 8f) * 0.5f, -22f),
-            new Vector2(size.x - 28f - IconSize - 8f, 40f), TextAlignmentOptions.TopLeft, TextColor);
-        TextMeshProUGUI effect = Label(go.transform, "Effect", def.Effect, 18, new Vector2(0f, -66f), new Vector2(size.x - 28f, 100f), TextAlignmentOptions.TopLeft, DimText);
-        effect.textWrappingMode = TextWrappingModes.Normal;
-        effect.enableAutoSizing = true;
-        effect.fontSizeMin = 13f;
-        effect.fontSizeMax = 18f;
-        TextMeshProUGUI status = Label(go.transform, "Status", string.Empty, 17, new Vector2(0f, 14f), new Vector2(size.x - 28f, 44f), TextAlignmentOptions.BottomLeft, AccentRed, bottom: true);
-        status.textWrappingMode = TextWrappingModes.Normal;
-        cards.Add((def, bg, status, icon));
+    private void OnCardClicked(TraitDef def)
+    {
+        selected = def;
+        Refresh();
     }
 
-    /// <summary>카드 오른쪽 위 아이콘. 그림이 없으면 만들지 않음.</summary>
-    private static RawImage BuildIcon(Transform card, TraitId id)
+    private void OnSlotClicked(TraitDef equipped)
     {
-        Texture2D texture = Resources.Load<Texture2D>(IconResourceDir + id);
-        if (texture == null)
+        if (equipped == null)
         {
-            return null;
+            return;
         }
 
-        GameObject go = new GameObject("Icon", typeof(RectTransform));
-        go.transform.SetParent(card, false);
-        RectTransform rect = (RectTransform)go.transform;
-        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
-        rect.anchoredPosition = new Vector2(-12f, -12f);
-        rect.sizeDelta = new Vector2(IconSize, IconSize);
-        RawImage image = go.AddComponent<RawImage>();
-        image.texture = texture;
-        image.raycastTarget = false;
-        return image;
+        TraitLoadout.Toggle(equipped.Id); // 착용 칸 클릭 = 해제
+        selected = equipped;
+        Refresh();
+    }
+
+    private void OnEquipClicked(TraitDef def)
+    {
+        if (def == null || !TraitUIFactory.IsUnlocked(def))
+        {
+            return;
+        }
+
+        TraitLoadout.Toggle(def.Id); // 착용 중이면 해제, 아니면 장착(칸이 차면 먼저 낀 것과 교체)
+        Refresh();
     }
 
     private void Refresh()
     {
-        var names = new List<string>();
-        foreach (TraitId id in TraitLoadout.Equipped)
-        {
-            names.Add(TraitCatalog.Get(id).Name);
-        }
-
+        IReadOnlyList<TraitId> equipped = TraitLoadout.Equipped;
         int max = TraitLoadout.MaxSlots;
-        while (names.Count < max)
+        for (int i = 0; i < slots.Count; i++)
         {
-            names.Add("— 비어 있음 —");
+            TraitDef def = i < equipped.Count ? TraitCatalog.Get(equipped[i]) : null;
+            slots[i].Show(def, i >= max, def != null && def == selected);
         }
 
-        slotsLabel.text = "착용 (" + TraitLoadout.Equipped.Count + "/" + max + ")    " + string.Join("     ", names);
-
-        foreach (var (def, bg, status, icon) in cards)
+        foreach (TraitCardView card in cards)
         {
-            bool unlocked = def.Implemented && TraitProgress.IsUnlocked(def.Id);
-            bool equipped = TraitLoadout.IsEquipped(def.Id);
-            bg.color = equipped ? EquippedColor : unlocked ? CardColor : LockedColor;
-            if (icon != null)
-            {
-                // 잠긴 기는 아이콘을 어둡게
-                icon.color = unlocked ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.55f);
-            }
-            if (!def.Implemented)
-            {
-                status.text = "추후 공개";
-                status.color = DimText;
-            }
-            else if (!unlocked)
-            {
-                int cur = Mathf.Min(TraitProgress.Get(def.Counter), def.Goal);
-                status.text = "잠김 · " + def.UnlockText + (def.Goal > 1 ? " (" + cur + "/" + def.Goal + ")" : string.Empty);
-                status.color = DimText;
-            }
-            else
-            {
-                status.text = equipped ? "착용 중" : def.SingleSlot ? "클릭해서 착용 · 기 1개만" : "클릭해서 착용";
-                status.color = equipped ? TextColor : AccentRed;
-            }
-        }
-    }
-
-    private TextMeshProUGUI Label(Transform parent, string name, string text, float size, Vector2 pos, Vector2 box,
-        TextAlignmentOptions align, Color color, bool bottom = false)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        RectTransform rect = (RectTransform)go.transform;
-        rect.anchorMin = rect.anchorMax = rect.pivot = bottom ? new Vector2(0.5f, 0f) : new Vector2(0.5f, 1f);
-        rect.anchoredPosition = pos;
-        rect.sizeDelta = box;
-        TextMeshProUGUI label = go.AddComponent<TextMeshProUGUI>();
-        if (font != null)
-        {
-            label.font = font;
+            card.Refresh(card.Def == selected);
         }
 
-        label.text = text;
-        label.fontSize = size;
-        label.color = color;
-        label.alignment = align;
-        label.raycastTarget = false;
-        label.textWrappingMode = TextWrappingModes.NoWrap;
-        return label;
+        detail.Show(selected);
     }
 }
