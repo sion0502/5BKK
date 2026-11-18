@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// Chapter1_FixedDemo 시연 동선(2026-11-18 확정)용 배치 — FixedDemoStoryBuilder.Build가 부름.
@@ -149,7 +150,7 @@ public static class FixedDemoSetPieces
     }
 
     /// <summary>임시 NavMesh: 일반 문·레버 문 충돌체를 잠깐 끄고 구움 → 판단 끝나면 ClearReachability.</summary>
-    private static Unity.AI.Navigation.NavMeshSurface BakeReachability()
+    internal static Unity.AI.Navigation.NavMeshSurface BakeReachability(bool openKeyDoors = false)
     {
         GameObject mg = GameObject.Find("MapGenerator");
         var surface = mg != null ? mg.GetComponent<Unity.AI.Navigation.NavMeshSurface>() : null;
@@ -163,7 +164,7 @@ public static class FixedDemoSetPieces
         foreach (DoorClick d in Object.FindObjectsByType<DoorClick>(FindObjectsSortMode.None))
         {
             LockedDoor locked = d.GetComponentInParent<LockedDoor>();
-            if (d.name.Contains("Wardrobe") || (locked != null && locked.UnlockMethod == LockedDoor.UnlockType.Key))
+            if (d.name.Contains("Wardrobe") || (!openKeyDoors && locked != null && locked.UnlockMethod == LockedDoor.UnlockType.Key))
             {
                 continue;
             }
@@ -193,7 +194,7 @@ public static class FixedDemoSetPieces
         return surface;
     }
 
-    private static void ClearReachability(Unity.AI.Navigation.NavMeshSurface surface)
+    internal static void ClearReachability(Unity.AI.Navigation.NavMeshSurface surface)
     {
         if (surface != null)
         {
@@ -274,7 +275,8 @@ public static class FixedDemoSetPieces
         root.SetParent(parent, false);
 
         // 부적 방에서 나와 북쪽 복도(x 302.5~306)로 올라가면 발동
-        StoryZone zone = Zone(root, "Trigger", new Vector3(304.4f, 1.5f, 15f), new Vector3(4.5f, 3f, 14f));
+        // 북쪽으로 가는 실제 복도(x 298~302) — 예전 (304.4, 폭 4.5)는 Wall (13) 동쪽의 벽으로 막힌 빈 공간이라 플레이어가 못 들어가 ④가 절대 안 터졌음(2026-11-19 확인)
+        StoryZone zone = Zone(root, "Trigger", new Vector3(300.0f, 1.5f, 15f), new Vector3(3.6f, 3f, 14f));
         // 서쪽 연결 복도(시작 타일에서 들어온 길) — 플레이어 뒤에서 문을 열고 나타남
         Vector3 spawnPos = Ground(new Vector3(257f, 0f, 2.5f));
         Transform spawn = DemoSetPieceBuilder.Point(root, "Spawn", spawnPos);
@@ -295,39 +297,88 @@ public static class FixedDemoSetPieces
         NavLink(root, "DoorLink", new Vector3(291.2f, 0f, 3f), new Vector3(296f, 0f, 3f), 1.2f);
 
         DoorClick westDoor = doors.Count > 0 ? (DoorClick)doors[0] : null;
-        EnemyBase ghost = Creature(root, FacelessPrefab, "FacelessGhost", spawn, 1.5f);
+        EnemyBase ghost = Creature(root, FacelessPrefab, "FacelessGhost", spawn, 1f);
         Ambush(root, t1, zone, ghost, spawn, doors.ToArray(), new Object[0], 0.4f,
-            "…방금, 뒤에서 문 열리는 소리…?", "…따라오고 있어. 뛰어!");
+            string.Empty, string.Empty); // 대사 없이 연출만 (2026-11-19 사용자 결정)
         log.AppendLine("④ 얼굴 없는 귀신: 부적" + Index(t1) + " 뒤, 등장 " + spawnPos.ToString("F1") + ", 열어 줄 문 " + doors.Count + "개" + (westDoor != null ? "" : " (서쪽 문 못 찾음)"));
     }
 
     // ── ⑤ Xenosaurid (북동 계단1) ─────────────────────
 
+    // ⑤ 로비 (2026-11-19 사용자 결정 '루트대로 가면 Xeno가 안 나옴 → 로비 부적에 Xeno 연출'): 로비 대기 의자 부적을 태우면
+    // 로비 모퉁이 너머(부적에서 안 보이는 18~30m, 걸어서 45m 안)에서 Xenosaurid가 튀어나와 추격. 로비 1층엔 부서지는 문이 없어 문 없이 등장.
+    // 예전 ⑤(북동 계단1 2층 부적7 → 1층 계단실 옆방 문 부수기)는 루트에서 가장 먼 구간(약 320m)이라 뺌 — 부적7은 예비 부적으로 남음.
     private static void Xenosaurid(Transform parent, System.Text.StringBuilder log)
     {
-        DemoTalisman t7 = NearestTalisman(new Vector3(326.3f, 7f, 230.4f));
+        DemoTalisman seal = NearestTalisman(FixedDemoStoryBuilder.LobbyTalismanAbove);
         Transform root = new GameObject("SetPiece5_Xenosaurid").transform;
         root.SetParent(parent, false);
 
-        // 1층 계단실 문(300.8, 0, 207) 앞으로 나오면 발동
-        StoryZone zone = Zone(root, "Trigger", new Vector3(303f, 1.5f, 202.5f), new Vector3(14f, 3f, 7f));
-        // 왼쪽 방(x 266~297) 문(297.5, 0, 194.9) 바로 안쪽에 숨어 있다가 문을 부수고 나옴
-        Vector3 spawnPos = Ground(new Vector3(293.5f, 0f, 194.9f));
-        Transform spawn = DemoSetPieceBuilder.Point(root, "Spawn", spawnPos);
-        spawn.rotation = Quaternion.LookRotation(Vector3.right);
-        DoorBrokenTest roomDoor = null;
-        foreach (DoorBrokenTest d in Object.FindObjectsByType<DoorBrokenTest>(FindObjectsSortMode.None))
+        Vector3 from = seal != null ? seal.transform.position : FixedDemoStoryBuilder.LobbyTalismanAbove;
+        Vector3 spawnPos = from;
+        float bestLen = float.MaxValue;
+        var surface = BakeReachability(openKeyDoors: true);
+        try
         {
-            if (Vector3.Distance(d.transform.position, new Vector3(297.5f, 0f, 194.9f)) < 1.5f)
+            NavMesh.SamplePosition(from, out NavMeshHit start, 4f, NavMesh.AllAreas);
+            var path = new NavMeshPath();
+            for (float x = 150f; x <= 256f; x += 2f)
             {
-                roomDoor = d;
+                for (float z = 51f; z <= 151f; z += 2f)
+                {
+                    var c = new Vector3(x, 0.3f, z);
+                    float flat = Vector2.Distance(new Vector2(x, z), new Vector2(from.x, from.z));
+                    if (flat < 18f || flat > 30f || !NavMesh.SamplePosition(c, out NavMeshHit h, 0.8f, NavMesh.AllAreas) || h.position.y > 1f)
+                    {
+                        continue;
+                    }
+
+                    if (NavMesh.FindClosestEdge(h.position, out NavMeshHit edge, NavMesh.AllAreas) && edge.distance < 1.2f)
+                    {
+                        continue; // 큰 몸이 끼지 않게 트인 곳
+                    }
+
+                    if (!Physics.Linecast(from + Vector3.up * 1.5f, h.position + Vector3.up * 2f, ~0, QueryTriggerInteraction.Ignore))
+                    {
+                        continue; // 부적 자리에서 보이면 안 됨 — 모퉁이 너머
+                    }
+
+                    if (!NavMesh.CalculatePath(h.position, start.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
+                    {
+                        continue;
+                    }
+
+                    float len = 0f;
+                    for (int k = 1; k < path.corners.Length; k++)
+                    {
+                        len += Vector3.Distance(path.corners[k - 1], path.corners[k]);
+                    }
+
+                    if (len <= 45f && len < bestLen)
+                    {
+                        bestLen = len;
+                        spawnPos = h.position;
+                    }
+                }
             }
         }
+        finally
+        {
+            ClearReachability(surface);
+        }
 
-        EnemyBase xeno = Creature(root, XenoPrefab, "Xenosaurid", spawn, 1.3f);
-        Ambush(root, t7, zone, xeno, spawn, new Object[0], roomDoor != null ? new Object[] { roomDoor } : new Object[0], 1.3f,
-            "…?! 저 방 안에서 뭔가가…", "도망쳐!");
-        log.AppendLine("⑤ Xenosaurid: 부적" + Index(t7) + " 뒤, 숨은 자리 " + spawnPos.ToString("F1") + ", 부술 문 " + (roomDoor != null ? "찾음" : "없음!"));
+        Transform spawn = DemoSetPieceBuilder.Point(root, "Spawn", spawnPos);
+        Vector3 look = from - spawnPos;
+        look.y = 0f;
+        spawn.rotation = look.sqrMagnitude > 0.01f ? Quaternion.LookRotation(look) : Quaternion.identity;
+
+        EnemyBase xeno = Creature(root, XenoPrefab, "Xenosaurid", spawn, 1f);
+        // 구역 없음 → 부적을 태우면(준비되면) 바로 발동, delay 1.2초 뒤 등장
+        Ambush(root, seal, null, xeno, spawn, new Object[0], new Object[0], 0f, string.Empty, string.Empty);
+        var so = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        so.FindProperty("delay").floatValue = 1.2f;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        log.AppendLine("⑤ Xenosaurid(로비): 부적" + Index(seal) + " 뒤, 등장 " + spawnPos.ToString("F1") + (bestLen < float.MaxValue ? ", 부적까지 " + bestLen.ToString("F0") + "m" : " — 조건 맞는 자리 없음!"));
     }
 
     // ── 공용 ─────────────────────────────────────
@@ -357,12 +408,22 @@ public static class FixedDemoSetPieces
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    /// <summary>괴물 크기 = 프리팹 원래 크기 × 씬 플레이어 크기 × extra — EnemyScene(플레이어 1배, 프리팹 그대로)과 같은 비율 (2026-11-19).
+    /// 예전엔 Vector3.one × 1.5로 덮어써 프리팹 자체 크기(1.6~2배)보다 작아졌음.</summary>
+    internal static Vector3 CreatureScale(string prefabPath, float extra = 1f)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        GameObject player = GameObject.FindWithTag("Player");
+        float p = player != null ? player.transform.lossyScale.y : 1f;
+        return (prefab != null ? prefab.transform.localScale : Vector3.one) * (p * extra);
+    }
+
     private static EnemyBase Creature(Transform root, string prefabPath, string name, Transform spawn, float scale)
     {
         GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath), root);
         go.name = name;
         go.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
-        go.transform.localScale = Vector3.one * scale;
+        go.transform.localScale = CreatureScale(prefabPath, scale);
         go.SetActive(false); // 연출이 켬
         return go.GetComponent<EnemyBase>();
     }

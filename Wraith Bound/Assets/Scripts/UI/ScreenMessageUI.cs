@@ -71,14 +71,15 @@ public class ScreenMessageUI : MonoBehaviour
         rect.sizeDelta = new Vector2(900f, 50f);
 
         label = labelGo.AddComponent<TextMeshProUGUI>();
-        TMP_FontAsset font = UIFontConfig.UI;
+        // 2026-11-19 사용자 '알림 폰트가 게임 분위기랑 안 맞음' → 이야기 폰트(마루부리 명조 Bold), 바랜 종이색
+        TMP_FontAsset font = UIFontConfig.StoryBold != null ? UIFontConfig.StoryBold : UIFontConfig.UI;
         if (font != null)
         {
             label.font = font;
         }
 
-        label.fontSize = 26f;
-        label.color = new Color(1f, 0.86f, 0.86f, 1f);
+        label.fontSize = 28f;
+        label.color = new Color(0.93f, 0.86f, 0.74f, 1f);
         label.alignment = TextAlignmentOptions.Center;
         label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Overflow;

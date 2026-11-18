@@ -47,16 +47,6 @@ public class PlayerConditions : MonoBehaviour
         playerController = GetComponent<PlayerController>();
     }
 
-    void Update()
-    {
-        // [임시] 체력 UI·색상 테스트용
-        if (Input.GetKeyDown(KeyCode.F5))
-        {
-            onDamage(10);
-            Debug.Log($"[Debug] F5 테스트 데미지 -10, 현재 체력: {currentHealth}");
-        }
-    }
-
     public void onDamage(int damage) // 데미지를 받는 메서드
     {
         currentHealth = Mathf.Max(currentHealth - damage, 0);

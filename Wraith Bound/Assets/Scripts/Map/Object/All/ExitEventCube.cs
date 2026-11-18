@@ -18,6 +18,8 @@ public class ExitEventCube : MonoBehaviour
 
     [Header("Direction")]
     public bool useNegativeForward = true;
+    [Tooltip("켜면 큐브 방향 대신 '플레이어가 들어온 쪽 → 큐브 중심' 방향으로 걸어 나감 (2026-11-19: 시연 씬에서 큐브 방향이 대문 쪽이라 탈출구를 지나면 뒤로 걸었음)")]
+    public bool walkAwayFromEntry = true;
 
     private bool isTransitioning;
     private BoxCollider trigger;
@@ -66,6 +68,16 @@ public class ExitEventCube : MonoBehaviour
         SetPlayerScriptsEnabled(player, mouseLook, false);
 
         Vector3 walkDirection = useNegativeForward ? -transform.forward : transform.forward;
+        if (walkAwayFromEntry)
+        {
+            Vector3 through = transform.position - player.transform.position;
+            through.y = 0f;
+            if (through.sqrMagnitude > 0.01f)
+            {
+                walkDirection = through;
+            }
+        }
+
         walkDirection.y = 0f;
         walkDirection.Normalize();
 

@@ -44,6 +44,12 @@ public static class TraitProgress
 
     public static bool IsUnlocked(TraitId id)
     {
+        TraitDef def = TraitCatalog.Get(id);
+        if (def != null && def.AlwaysUnlocked)
+        {
+            return true;
+        }
+
         return D.unlocked.Contains(id.ToString());
     }
 

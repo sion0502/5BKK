@@ -81,6 +81,10 @@ public class CutsceneDocumentOverlay : CutsceneOverlayBase
         bodyRect.offsetMax = new Vector2(-70f, -260f);
         bodyLabel.alignment = TextAlignmentOptions.TopLeft;
         bodyLabel.lineSpacing = 12f;
+        // 글이 길면 종이 밖으로 넘치지 않게 줄여 맞춤 (2026-11-19 허브 쪽지에 기 설명 추가로 길어짐) — 짧은 글은 30 그대로
+        bodyLabel.enableAutoSizing = true;
+        bodyLabel.fontSizeMin = 20f;
+        bodyLabel.fontSizeMax = 30f;
         bodyLabel.text = body;
     }
 

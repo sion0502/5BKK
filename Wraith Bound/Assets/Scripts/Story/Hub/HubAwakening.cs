@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class HubAwakening : MonoBehaviour
 {
     [Tooltip("에디터에서 허브 씬을 바로 실행해도 깨어나는 연출을 볼지 (테스트용)")]
-    [SerializeField] private bool playWhenStartedDirectly = true;
+    [SerializeField] private bool playWhenStartedDirectly = false; // 2026-11-19 사용자 요청: 인트로·프롤로그를 거쳐 왔을 때만 연출 (에디터에서 허브 바로 실행 땐 안 나옴)
 
     [Tooltip("컷씬 동안 숨길 HUD 등")]
     [SerializeField] private GameObject[] hideDuringWake = { };

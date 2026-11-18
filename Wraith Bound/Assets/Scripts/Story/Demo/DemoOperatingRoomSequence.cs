@@ -25,9 +25,11 @@ public class DemoOperatingRoomSequence : MonoBehaviour
     [SerializeField] private float ghostDelay = 1.4f;
     [Tooltip("귀신이 나올 때 열어 둘 문 — 닫힌 문 앞에서 경로가 끊겨 추격을 포기하던 것 방지")]
     [SerializeField] private DoorClick[] openOnRelease = { };
+    [Tooltip("켜면 부서지는 문(DoorBrokenTest)은 열지 않고 귀신이 부수게 둠")]
+    [SerializeField] private bool breakableDoorsStayClosed = true;
 
-    [SerializeField] private string redLine = "…뭐, 뭐야…?";
-    [SerializeField] private string runLine = "…도망쳐야 해!";
+    [SerializeField] private string redLine = string.Empty; // 시연 연출은 대사 없이(2026-11-19 사용자 결정) — 비우면 생략
+    [SerializeField] private string runLine = string.Empty;
 
     [Header("Sound (비워 두면 무음)")]
     [SerializeField] private AudioSource audioSource;
@@ -97,12 +99,17 @@ public class DemoOperatingRoomSequence : MonoBehaviour
             audioSource.Play();
         }
 
-        SubtitleUI.ShowForDuration("나", redLine, 2f);
+        if (!string.IsNullOrEmpty(redLine))
+        {
+            SubtitleUI.ShowForDuration("나", redLine, 2f);
+        }
+
         yield return new WaitForSeconds(ghostDelay);
 
         foreach (DoorClick door in openOnRelease)
         {
-            if (door != null)
+            // 부서지는 문은 열어 두지 않음 — 쫓아오는 탈춤귀신이 직접 부수고 들어오게 (2026-11-19 '연출 때 문이 안 부서진다')
+            if (door != null && !(breakableDoorsStayClosed && door.GetComponent<DoorBrokenTest>() != null))
             {
                 DemoDoorOpener.Open(door, true);
             }
@@ -117,13 +124,17 @@ public class DemoOperatingRoomSequence : MonoBehaviour
             }
 
             ghost.gameObject.SetActive(true);
+            DemoRoamingSpawner.RetireSameKind(ghost); // 같은 종류 배회 괴물은 사라짐 (중복 방지)
             yield return null;
             yield return null;
         }
 
         ReleaseGhost();
         yield return new WaitForSeconds(0.9f);
-        SubtitleUI.ShowForDuration("나", runLine, 2f);
+        if (!string.IsNullOrEmpty(runLine))
+        {
+            SubtitleUI.ShowForDuration("나", runLine, 2f);
+        }
     }
 
     private void ReleaseGhost()

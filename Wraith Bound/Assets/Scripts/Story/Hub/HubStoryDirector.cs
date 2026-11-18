@@ -71,6 +71,10 @@ public class HubStoryDirector : MonoBehaviour
 
         // 허브 첫 진행이 이미 끝났거나, 깨어난 적도 없는 입장(챕터 테스트 등)이면 조용히
         bool firstArrival = awakening == null || awakening.Played;
+        if (!firstArrival)
+        {
+            HideFirstArrivalItems();
+        }
         if (awakening != null && awakening.Played)
         {
             // 깨어남 연출 = 프롤로그에서 막 넘어온 새 진행 (또는 에디터에서 허브 바로 실행) → 처음부터
@@ -90,7 +94,10 @@ public class HubStoryDirector : MonoBehaviour
         // 반응 독백은 저장해 두고 평생 한 번만. 깨어나는 동안 이미 구역에 들어가 발동했으면 지금 띄움
         SubscribeZone(doorsZone, HubStoryProgress.DoorsLine, doorsLine, 2.4f);
         SubscribeZone(openDoorZone, HubStoryProgress.OpenDoorLine, openDoorLine, 3.2f);
-        StartCoroutine(WatchCamcorder());
+        if (firstArrival)
+        {
+            StartCoroutine(WatchCamcorder());
+        }
         if (doorsZone == null)
         {
             // 작은 방 — 깨어나자마자 문 세 개가 다 보이므로 구역 대신 바로
@@ -100,12 +107,35 @@ public class HubStoryDirector : MonoBehaviour
 
         // 쪽지 → 캠코더 → 열린 문 순으로, 해당 단계에서 오래 머뭇거릴 때만 한 번씩 재촉
         // (캠코더는 인벤토리가 저장되지 않아 다시 들어오면 또 주워야 하므로 지금 상태로 판단)
-        yield return Nudge(() => noteRead || note == null, noteNudgeAfter, noteNudgeLine);
-        yield return Nudge(HasCamcorder, camcorderNudgeAfter, camcorderNudgeLine);
+        if (firstArrival) // 재입장이면 쪽지·캠코더가 없으니 재촉도 안 함
+        {
+            yield return Nudge(() => noteRead || note == null, noteNudgeAfter, noteNudgeLine);
+            yield return Nudge(HasCamcorder, camcorderNudgeAfter, camcorderNudgeLine);
+        }
         yield return Nudge(() => openDoorZone == null || openDoorZone.HasFired, openDoorNudgeAfter, openDoorNudgeLine);
 
         HubStoryProgress.MarkComplete();
         Log("허브 첫 진행 완료");
+    }
+
+    // 깨어남 연출 없이 들어온 허브(챕터 클리어·사망 후 귀환 등)엔 바닥 쪽지·캠코더를 두지 않음 (2026-11-19 사용자 요청).
+    // 쪽지는 뒷벽 게시판(HubNoteArchive)에 항상 걸려 있어 거기서 다시 읽음
+    private void HideFirstArrivalItems()
+    {
+        if (note != null)
+        {
+            note.gameObject.SetActive(false);
+        }
+
+        foreach (ItemObject item in FindObjectsByType<ItemObject>(FindObjectsSortMode.None))
+        {
+            if (item.name.StartsWith("World_Camcorder") && item.gameObject.scene == gameObject.scene)
+            {
+                item.gameObject.SetActive(false);
+            }
+        }
+
+        Log("재입장 — 바닥 쪽지·캠코더 숨김");
     }
 
     private static void SubscribeZone(StoryZone zone, string lineId, string line, float seconds)

@@ -8,6 +8,8 @@ using UnityEngine;
 public class DemoTalisman : MonoBehaviour, IInteractable
 {
     [SerializeField] private int index;
+
+    public int Index => index;
     [SerializeField] private string prompt = "[E] 부적 태우기";
 
     private TalismanBurnEffect burn;
@@ -20,6 +22,7 @@ public class DemoTalisman : MonoBehaviour, IInteractable
 
     private void Start()
     {
+        DemoTalismanTip.Ensure(); // 처음 조준할 때 부적 설명 팝업
         if (DemoSealProgress.Has(index))
         {
             used = true;

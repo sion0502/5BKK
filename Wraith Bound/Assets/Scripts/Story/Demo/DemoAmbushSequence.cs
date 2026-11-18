@@ -95,6 +95,7 @@ public class DemoAmbushSequence : MonoBehaviour
             }
 
             creature.gameObject.SetActive(true);
+            DemoRoamingSpawner.RetireSameKind(creature); // 같은 종류 배회 괴물은 사라짐 (중복 방지)
             yield return null;
             yield return null;
         }

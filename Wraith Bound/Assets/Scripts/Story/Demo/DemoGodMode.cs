@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 /// 한 번 잡은 적은 그 뒤로 다시 잡지 못함(그 적의 RuntimeState.PlayerDeadLogged를 켜 둠 — EnemySense가 잡기 전에 확인하는 값).
 /// 다른 적은 계속 잡을 수 있게 되살아날 때 그 값을 풀어 줌(되살리기가 모든 적에 켜 버리기 때문).
 /// 프롤로그 간호사(EnemyBase 아님, 고정 사망 연출)는 영향 없음. 구사일생보다 먼저 확인 — 갓모드면 기를 쓰지 않음.
+/// 스태미나 무한(2026-11-19): 켜져 있으면 매 프레임 끝(LateUpdate)에 스태미나를 가득 채우고 탈진 상태를 풂.
 /// 켜져 있는 동안 왼쪽 위에 작게 'GOD' 표시.
 /// </summary>
 public class DemoGodMode : MonoBehaviour
@@ -61,6 +62,32 @@ public class DemoGodMode : MonoBehaviour
         }
     }
 
+    private PlayerConditions conditions;
+    private static readonly System.Reflection.FieldInfo ExhaustedField =
+        typeof(PlayerConditions).GetField("staminaExhausted", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+    // 달리기로 닳은 만큼(PlayerController.Update) 같은 프레임 끝에 다시 채움 — 0이 되기 전이라 탈진도 안 걸림
+    private void LateUpdate()
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        if (conditions == null)
+        {
+            GameObject player = GameObject.FindWithTag("Player");
+            conditions = player != null ? player.GetComponentInChildren<PlayerConditions>() : null;
+            if (conditions == null)
+            {
+                return;
+            }
+        }
+
+        conditions.currentStamina = conditions.maxStamina;
+        ExhaustedField?.SetValue(conditions, false);
+    }
+
     /// <summary>갓모드에서 한 번 잡아 이제 못 잡는 적인지.</summary>
     public static bool IsImmune(EnemyBase enemy)
     {
@@ -80,7 +107,7 @@ public class DemoGodMode : MonoBehaviour
             instance.badge.enabled = on;
         }
 
-        ScreenMessageUI.Show(on ? "갓모드 켜짐 — 잡혀도 죽지 않음" : "갓모드 꺼짐", 1.8f);
+        ScreenMessageUI.Show(on ? "갓모드 켜짐 — 잡혀도 죽지 않음 · 스태미나 무한" : "갓모드 꺼짐", 1.8f);
         Debug.Log("[GodMode] " + (on ? "ON" : "OFF"));
     }
 

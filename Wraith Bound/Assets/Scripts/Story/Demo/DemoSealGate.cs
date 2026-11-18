@@ -19,7 +19,7 @@ public class DemoSealGate : MonoBehaviour
     [SerializeField] private float burnDelay = 0.4f;
     [SerializeField] private float openDelay = 1.2f;
 
-    [SerializeField] private string openLine = "…열렸어. 나가자.";
+    [SerializeField] private string openLine = string.Empty; // 시연 연출은 대사 없이(2026-11-19) — 비우면 생략
 
     private bool opened;
     private float lastHint = -99f;
@@ -90,8 +90,10 @@ public class DemoSealGate : MonoBehaviour
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // 테스트: G = 아직 안 태운 다음 부적을 태운 것으로 처리 (SealTest의 G키 대신)
-        if (Input.GetKeyDown(KeyCode.G))
+        // 테스트: F4 = 아직 안 태운 다음 부적을 태운 것으로 처리 (SealTest의 G키 대신).
+        // 예전 G는 갓모드 Ctrl+Shift+G와 겹쳐 갓모드를 켤 때 부적이 탔음(2026-11-19) → F9 → F4(사용자 요청), Ctrl·Shift 누른 채면 무시
+        bool modifier = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (!modifier && Input.GetKeyDown(KeyCode.F4))
         {
             for (int i = 0; i < 32; i++)
             {
@@ -157,7 +159,10 @@ public class DemoSealGate : MonoBehaviour
 
         Debug.Log("[Demo] 출구 봉인 해제 — 문 열림");
         ScreenMessageUI.Show("출구의 봉인이 모두 풀렸다", 3f);
-        yield return new WaitForSeconds(1.2f);
-        SubtitleUI.ShowForDuration("나", openLine, 2.4f);
+        if (!string.IsNullOrEmpty(openLine))
+        {
+            yield return new WaitForSeconds(1.2f);
+            SubtitleUI.ShowForDuration("나", openLine, 2.4f);
+        }
     }
 }

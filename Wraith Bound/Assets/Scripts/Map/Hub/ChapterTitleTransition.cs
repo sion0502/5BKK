@@ -48,19 +48,26 @@ public static class ChapterTitleTransition
             config.TitleFadePeriod
         );
 
+        // 제목 화면(검은 배경 포함)이 사라지는 동안 뒤가 비면 허브(올려다본 구멍)·HUD가 비쳐 보였음 (2026-11-19)
+        // → 제목이 사라지기 전에 검은 화면을 먼저 켜 둠 (제목 캔버스 32767이 그 위)
+        if (fadeCanvasRoot != null)
+        {
+            fadeCanvasRoot.SetActive(true);
+            Canvas fadeCanvas = fadeCanvasRoot.GetComponent<Canvas>();
+            if (fadeCanvas != null)
+            {
+                fadeCanvas.sortingOrder = 32766; // 제목(32767) 바로 아래 — 다음 Prepare가 다시 32767로 올림
+            }
+        }
+
+        ScreenFader.SetAlpha(fade, 1f);
+
         yield return FadeOutTitleScreen(titleCanvasGroup, titleLabel, config.TitleExitFadeDuration);
 
         if (titleScreen != null)
         {
             UnityEngine.Object.Destroy(titleScreen);
         }
-
-        if (fadeCanvasRoot != null)
-        {
-            fadeCanvasRoot.SetActive(true);
-        }
-
-        ScreenFader.SetAlpha(fade, 1f);
         ScreenFader.PersistBlack(fade);
         SceneManager.LoadScene(config.SceneName);
     }
@@ -205,7 +212,7 @@ public static class ChapterTitleTransition
         Canvas canvas = canvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.overrideSorting = true;
-        canvas.sortingOrder = 32768;
+        canvas.sortingOrder = 32767; // 최대값 — 32768은 short 범위를 넘어 −32768(맨 아래)이 돼 HUD가 제목 위에 보였음 (2026-11-19)
 
         CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

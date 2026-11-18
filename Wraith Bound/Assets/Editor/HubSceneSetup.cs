@@ -24,14 +24,8 @@ public static class HubSceneSetup
     private const float Half = 6f;
     private const float CorridorLength = 12f;
 
-    public const string NoteTitle = "누군가의 쪽지";
-    public const string NoteBody =
-        "이 쪽지를 읽고 있다면, 당신도 죽었다가 이곳에서 눈을 떴겠지.\n\n" +
-        "여기는 귀문(鬼門)의 방. 이 섬에서 죽은 자는 이곳으로 돌아온다. 몇 번이든.\n\n" +
-        "문은 셋. 지금 열리는 건 하나뿐이다.\n" +
-        "그 너머 병원 어딘가에 봉인을 푸는 열쇠 세 개가 있다.\n\n" +
-        "죽으면 손에 쥔 것은 모두 잃는다. 내가 남긴 기록만이 남는다.\n\n" +
-        "— 기록자";
+    public const string NoteTitle = HubNoteText.Title;
+    public const string NoteBody = HubNoteText.Body; // 문구는 Scripts/Story/Hub/HubNoteText.cs
 
     [MenuItem("Tools/Story/Setup Hub Story")]
     public static void Setup()

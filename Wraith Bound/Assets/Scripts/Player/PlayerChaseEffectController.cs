@@ -74,12 +74,6 @@ public class PlayerChaseEffectController : MonoBehaviour
     [Header("Scene Lights")]
     [SerializeField] private ChaseSceneLightFlicker sceneLightFlicker;
 
-    [Header("Debug (Chapter1 테스트)")]
-    [Tooltip("에디터·Development 빌드에서만 동작합니다. 일반 빌드(시연용)에서는 자동으로 꺼집니다.")]
-    [SerializeField] private bool enableDebugKeys = true;
-    [SerializeField] private KeyCode debugBurstKey = KeyCode.F6;
-    [SerializeField] private KeyCode debugChaseToggleKey = KeyCode.F7;
-
     private Volume chaseVolume;
     private VolumeProfile chaseProfile;
     private ColorAdjustments colorAdjustments;
@@ -156,11 +150,6 @@ public class PlayerChaseEffectController : MonoBehaviour
 
     void Update()
     {
-        if (enableDebugKeys && (Application.isEditor || Debug.isDebugBuild))
-        {
-            HandleDebugInput();
-        }
-
         UpdateSustainWeight();
         UpdateShake();
         SyncSceneLightFlicker();
@@ -269,21 +258,6 @@ public class PlayerChaseEffectController : MonoBehaviour
         float phase = Time.time * hz + phaseOffset;
         float cycle = phase - Mathf.Floor(phase);
         return cycle < duty ? flickerMax : flickerMin;
-    }
-
-    private void HandleDebugInput()
-    {
-        if (Input.GetKeyDown(debugBurstKey))
-        {
-            SetBeingChased(true);
-            Debug.Log("[ChaseEffect] Debug: 발각 + 추적 ON (F6)");
-        }
-
-        if (Input.GetKeyDown(debugChaseToggleKey))
-        {
-            SetBeingChased(!isBeingChased);
-            Debug.Log($"[ChaseEffect] Debug: 추적 {(isBeingChased ? "ON" : "OFF")} (F7)");
-        }
     }
 
     private bool ShouldSuppressEffects()

@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 /// 효과: 무리한 질주·무거운 배낭·가시날개(속도·소모·칸), 아드레날린(발각 3초 무소모), 스타터팩(런 시작 시 패시브),
 ///       락픽 툴(열쇠 20% 유지), 타고난 신체(잠긴 문 파괴), 구사일생(1회 부활), 런닝맨(음식→스태미나는 ActiveItem, 획득 확률은 여기).
 /// 진행: 숨기·추격 30초·인벤 가득·잠긴 문 열기·"열쇠가 필요합니다"·사망·체력 20% 이하 생존 귀환.
-/// 운영자 초기화: Ctrl+Shift+F12 (부스 반복 시연).
+/// 운영자 초기화: F5 (부스 반복 시연) — 기 해금 + 스토리 쪽지 수집 전부.
 /// </summary>
 public class TraitRuntime : MonoBehaviour
 {
@@ -178,10 +178,13 @@ public class TraitRuntime : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.F12))
+        if (Input.GetKeyDown(KeyCode.F5)) // 운영자 초기화 (2026-11-19 Ctrl+Shift+F12 → F5, 사용자 요청)
         {
+            // 운영자 초기화 = 전부(기 해금 + 스토리 쪽지 수집) — 2026-11-19 사용자 결정. 누르기 전까진 쪽지가 관람객 사이에 쌓임.
             TraitProgress.ResetAll();
-            ScreenMessageUI.Show("기 해금 진행을 초기화했습니다 (운영자)", 2.5f);
+            StoryNoteProgress.ResetAll();
+            DemoTalismanTip.Reset(); // 다음 관람객에게 부적 설명 팝업 다시
+            ScreenMessageUI.Show("기 해금·쪽지 수집을 모두 초기화했습니다 (운영자)", 2.5f);
         }
 
         if (conditions == null || PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)

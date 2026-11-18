@@ -16,6 +16,7 @@ public enum TraitId
     K2C1,           // K2C1
     Map,            // 지도
     Lockpick,       // 락픽 툴
+    GuideWisp,      // 길잡이 혼불 (시연 전용, 2026-11-19)
 }
 
 /// <summary>기 하나의 정의 — 이름·효과(팀 기획 원문)·해금 조건(진행 카운터가 목표치에 닿으면 해금).</summary>
@@ -29,6 +30,7 @@ public sealed class TraitDef
     public int Goal;
     public bool Implemented; // 시연 범위 밖이면 false — 목록엔 잠긴 채 '추후 공개'
     public bool SingleSlot;  // 착용하면 기를 1개만 (구사일생·시련)
+    public bool AlwaysUnlocked; // 처음부터 해금 (시연 전용 길잡이 혼불 — 해금 초기화해도 유지)
 }
 
 /// <summary>
@@ -49,6 +51,13 @@ public static class TraitCatalog
 
     public static readonly IReadOnlyList<TraitDef> All = new List<TraitDef>
     {
+        // 시연 전용(2026-11-19 사용자 요청): 챕터에서 혼불이 떠다니며 다음 목표(연출 루트 순서)로 길 안내, 괴물이 가까우면 붉게 — DemoGuideRoute/DemoGuideWisp
+        new TraitDef
+        {
+            Id = TraitId.GuideWisp, Name = "길잡이 혼불",
+            Effect = "희미한 혼불이 앞장서 떠다니며 다음 부적이 있는 곳으로 길을 안내한다. 가까이에 괴물이 있으면 혼불이 붉게 물든다.",
+            UnlockText = null, Implemented = true, AlwaysUnlocked = true,
+        },
         Def(TraitId.RecklessSprint, "무리한 질주", "이동 속도가 50% 증가하는 대신 소모 스태미나와 소모 체력이 50% 증가한다.",
             "추격을 30초 이상 버티고 살아남기", Chase30, 1),
         Def(TraitId.Strongman, "괴력난신", "단 한 번, 자신의 체력이 100일 때 추적자와 부딪혔을 때 추적자를 무력화할 수 있다.",

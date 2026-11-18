@@ -70,6 +70,9 @@ public static class FixedDemoStoryBuilder
             }
         }
 
+        // 로비 대기 의자 위 부적 (2026-11-19 사용자 결정 — ⑤ Xenosaurid를 로비로 옮겨 루트 단축). 번호 = 배치 표시 다음(8번째)
+        PlaceTalismanAt(talismans, markers.Count, LobbyTalismanAbove, "로비 대기 의자", log);
+
         DemoHideOnPlay hider = talismans.gameObject.AddComponent<DemoHideOnPlay>();
         var hso = new SerializedObject(hider);
         DemoSetPieceBuilder.SetArray(hso.FindProperty("targets"), markers.ConvertAll(m => (Object)m.gameObject).ToArray());
@@ -84,8 +87,13 @@ public static class FixedDemoStoryBuilder
             log.AppendLine("수술실 타일 배치 표시 없음 — 연출 ③ 생략");
         }
 
+        root.gameObject.AddComponent<DemoCreatureTuning>(); // 괴물 추격 속도 = 플레이어 달리기 (탈춤귀신 ×1.1)
         FixedDemoSetPieces.Build(root, log); // 시연 동선: 잠긴 문 풀기·열쇠·④ 얼굴 없는 귀신·⑤ Xenosaurid
+        FixedDemoHideSpots.Build(root, log); // ③ 수술실 방 숨는 곳(트롤리) — 사용자 요청 2개 이상
+        FixedDemoRoamers.Build(root, log); // 맵을 돌아다니는 괴물 4종(무작위 타일)
         SealGate(root, log);
+        FixedDemoNotes.Build(root, log); // 스토리 쪽지 20장 후보 자리
+        FixedDemoGuide.Build(root, log); // 길잡이 혼불 루트(연출 순서) — 열쇠·부적·④⑤ 구역·출구 뒤에 만들어야 함
 
         EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log("[FixedDemoStory] 배치 완료\n" + log);
@@ -172,7 +180,7 @@ public static class FixedDemoStoryBuilder
         GameObject ghostGo = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(MaskGhostPrefab), root);
         ghostGo.name = "MaskGhost";
         ghostGo.transform.SetPositionAndRotation(spawn, ghostSpawn.rotation);
-        ghostGo.transform.localScale = Vector3.one * 1.5f; // 천장 6m 맵이라 다른 시연 맵과 같은 1.5배
+        ghostGo.transform.localScale = FixedDemoSetPieces.CreatureScale(MaskGhostPrefab); // 프리팹 크기 × 플레이어 크기 (EnemyScene 비율, 2026-11-19)
         ghostGo.SetActive(false); // 부적을 태우기 전엔 숨김 → DemoOperatingRoomSequence가 켬
         EnemyBase ghost = ghostGo.GetComponent<EnemyBase>();
 
@@ -224,6 +232,19 @@ public static class FixedDemoStoryBuilder
     private const float TalismanScale = 0.8f;
 
     // 배치 표시(노란 공) 바로 아래 표면(책상·침대·진열장·바닥)에 눕혀 놓음. 방향은 번호마다 조금씩 비뚤게
+    internal static readonly Vector3 LobbyTalismanAbove = new Vector3(183f, 3f, 81f); // 로비 대기 의자(HH_Public_Seating_01) 위 — 안내 데스크는 막힌 카운터 안이라 걸어서 못 닿았음
+
+    private static DemoTalisman PlaceTalismanAt(Transform parent, int index, Vector3 above, string label, System.Text.StringBuilder log)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(above, Vector3.down, 6f, ~0, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        Vector3 pos = hits.Length > 0 ? hits[0].point + Vector3.up * 0.008f : above;
+        float yaw = (index * 67f + 20f) % 360f;
+        DemoTalisman t = TalismanBuilder.CreateInteractable(parent, index, pos, Quaternion.Euler(90f, yaw, 0f), TalismanScale);
+        log.AppendLine("부적" + (index + 1) + " " + label + " → " + (hits.Length > 0 ? hits[0].collider.name : "표면 없음") + " " + pos.ToString("F2"));
+        return t;
+    }
+
     private static DemoTalisman PlaceTalismanAtMarker(Transform parent, int index, Transform marker, System.Text.StringBuilder log)
     {
         Vector3 origin = marker.position;
@@ -311,7 +332,7 @@ public static class FixedDemoStoryBuilder
         spot.color = new Color(0.8f, 0.88f, 1f);
         spot.shadows = LightShadows.None;
 
-        // 원래 봉인 구슬 5개 + 에너지 줄기는 숨김
+        // 원래 봉인 구슬 5개 + 에너지 줄기 — 2026-11-19 사용자 결정으로 씬에서 삭제함(부적 봉인만 씀). 남아 있으면 숨김
         var hidden = new System.Collections.Generic.List<Object>();
         foreach (SealOrb o in test.seals)
         {
