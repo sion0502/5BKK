@@ -2,10 +2,13 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 추격 중 관절을 매 순간 '뚝뚝' 꺾으며 발광하듯 쫓아옴 (탈춤귀신). 달리기 애니메이션 위에 덧씌우는 실시간 레이어.
-/// · 뼈마다 따로 짧은 간격으로 새 각도를 무작위로 골라 거의 순간적으로 꺾임(가끔 멈칫). 무릎·팔꿈치는 반대로도 꺾임.
-/// · 발작: 몇 초마다 잠깐 훨씬 빠르고 크게 경련.
-/// · 몸 전체 요동: 골반 위치가 좌우·앞뒤로 덜컥 튐(높이는 발 붙이기가 다시 맞춤).
+/// 추격 중 관절을 기괴하게 꺾으며 쫓아옴 (탈춤귀신). 달리기 애니메이션 위에 덧씌우는 실시간 레이어.
+/// 2026-11-18 시연 반응("너무 빠르게 흔들려서 알아보기 어렵다")으로 느리게 → 너무 느려 "바람 빠진 풍선 같다"는 반응으로 중간쯤:
+/// · 뼈마다 0.35~0.9초마다 새 자세를 골라 비틀어 감, 절반 가까이(suddenChance) 그 뼈만 '뚝' 빠르게 꺾임. 가끔 멈칫.
+/// · 각도는 끝 쪽으로 치우치게 골라(extremeBias) 한 순간에 여러 관절이 크게 꺾여 보이게. 무릎·팔꿈치는 반대로도, 발가락까지.
+/// · 발작: 3~5초마다 1초 안팎 — 간격 0.12~0.22초로 '경련'이 보이는 속도.
+/// · 몸 전체 요동: 골반 위치가 좌우·앞뒤로 덜컥 튐(작게, 높이는 발 붙이기가 다시 맞춤).
+/// · 강제 발작(SetForced — 점프스케어·프롤로그 마지막 간호사)은 예전 빠른 값(forced*)을 따로 씀.
 /// 각도는 크리처 기준 축(roll=좌우 갸웃·pitch=앞뒤·yaw=비틀기). Animator가 매 프레임 포즈를 다시 쓰므로 누적 안 됨.
 /// Animator가 꺼져 있으면(점프스케어) 쉼. 발 붙이기(CreatureFootGrounding)보다 먼저 실행.
 /// </summary>
@@ -42,26 +45,41 @@ public class CreatureJointSnap : MonoBehaviour
         new SnapBone { bone = HumanBodyBones.RightUpperLeg, maxAngles = new Vector3(32f, 50f, 40f) },
         new SnapBone { bone = HumanBodyBones.LeftLowerLeg, maxAngles = new Vector3(18f, 85f, 30f) },    // 무릎 앞뒤로 — 역관절처럼
         new SnapBone { bone = HumanBodyBones.RightLowerLeg, maxAngles = new Vector3(18f, 85f, 30f) },
-        new SnapBone { bone = HumanBodyBones.LeftFoot, maxAngles = new Vector3(30f, 45f, 30f) },
-        new SnapBone { bone = HumanBodyBones.RightFoot, maxAngles = new Vector3(30f, 45f, 30f) },
+        new SnapBone { bone = HumanBodyBones.LeftFoot, maxAngles = new Vector3(35f, 60f, 35f) },
+        new SnapBone { bone = HumanBodyBones.RightFoot, maxAngles = new Vector3(35f, 60f, 35f) },
+        new SnapBone { bone = HumanBodyBones.LeftToes, maxAngles = new Vector3(15f, 70f, 15f) },        // 발가락 젖힘
+        new SnapBone { bone = HumanBodyBones.RightToes, maxAngles = new Vector3(15f, 70f, 15f) },
     };
 
-    [Header("평소")]
-    [Tooltip("새 각도로 바뀌는 간격(초) 범위")]
-    [SerializeField] private Vector2 interval = new Vector2(0.05f, 0.16f);
-    [Tooltip("새 각도로 꺾이는 빠르기 — 클수록 '뚝'")]
-    [SerializeField] private float snapSpeed = 60f;
+    [Header("평소 (추격 중) — 느린 몸부림")]
+    [Tooltip("뼈마다 새 자세로 바뀌는 간격(초) 범위")]
+    [SerializeField] private Vector2 interval = new Vector2(0.35f, 0.9f);
+    [Tooltip("새 자세로 비틀어 가는 빠르기 — 작을수록 천천히")]
+    [SerializeField] private float snapSpeed = 9f;
+    [Tooltip("자세를 바꿀 때 이 확률로 그 뼈만 '뚝' 빠르게 꺾음")]
+    [SerializeField, Range(0f, 1f)] private float suddenChance = 0.45f;
+    [SerializeField] private float suddenSpeed = 55f;
+    [Tooltip("각도를 끝 쪽으로 치우치게 (0=고르게, 1=거의 항상 최대) — 여러 관절이 한꺼번에 크게 꺾여 보이게")]
+    [SerializeField, Range(0f, 1f)] private float extremeBias = 0.6f;
     [Tooltip("간격마다 이 확률로 각도를 바꾸지 않고 멈칫")]
     [SerializeField, Range(0f, 1f)] private float holdChance = 0.15f;
+    [Tooltip("자세를 바꿀 때 이 확률로 꺾지 않고 바른 자세(0)로 돌아감 — 높이면 '가끔 뚝'만 (탈춤 추격과 함께 쓸 때)")]
+    [SerializeField, Range(0f, 1f)] private float restChance = 0f;
 
-    [Header("발작 — 몇 초마다 잠깐 훨씬 빠르고 크게")]
-    [SerializeField] private Vector2 burstEvery = new Vector2(1.0f, 2.5f);
-    [SerializeField] private Vector2 burstLength = new Vector2(0.3f, 0.6f);
-    [SerializeField] private Vector2 burstInterval = new Vector2(0.02f, 0.05f);
-    [SerializeField] private float burstAmplitude = 1.35f;
+    [Header("발작 (추격 중) — 가끔 경련, 알아볼 수 있는 속도")]
+    [SerializeField] private Vector2 burstEvery = new Vector2(3f, 5f);
+    [SerializeField] private Vector2 burstLength = new Vector2(0.6f, 1.0f);
+    [SerializeField] private Vector2 burstInterval = new Vector2(0.12f, 0.22f);
+    [SerializeField] private float burstAmplitude = 1.3f;
+    [SerializeField] private float burstSnapSpeed = 25f;
+
+    [Header("강제 발작 (SetForced — 점프스케어·프롤로그 마지막) — 예전 빠른 값 유지")]
+    [SerializeField] private Vector2 forcedInterval = new Vector2(0.02f, 0.05f);
+    [SerializeField] private float forcedSnapSpeed = 96f;
+    [SerializeField] private float forcedAmplitudeBase = 1.35f;
 
     [Header("몸 전체 요동 (골반 위치, m — 크리처 기준 x=좌우 y=위아래 z=앞뒤)")]
-    [SerializeField] private Vector3 hipJolt = new Vector3(0.16f, 0.08f, 0.14f);
+    [SerializeField] private Vector3 hipJolt = new Vector3(0.12f, 0.05f, 0.1f);
 
     [Tooltip("추격 시작·끝에 꺾임이 켜지고 꺼지는 시간")]
     [SerializeField] private float fadeSeconds = 0.2f;
@@ -72,6 +90,7 @@ public class CreatureJointSnap : MonoBehaviour
     private Vector3[] current;
     private Vector3[] target;
     private float[] nextChange;
+    private float[] boneSpeed;
     private Vector3 joltCurrent;
     private Vector3 joltTarget;
     private float nextJolt;
@@ -113,12 +132,23 @@ public class CreatureJointSnap : MonoBehaviour
         current = new Vector3[bones.Length];
         target = new Vector3[bones.Length];
         nextChange = new float[bones.Length];
+        boneSpeed = new float[bones.Length];
         for (int i = 0; i < bones.Length; i++)
         {
             transforms[i] = animator.isHuman ? animator.GetBoneTransform(bones[i].bone) : null;
+            boneSpeed[i] = snapSpeed;
+            // 처음부터 다 같이 바뀌지 않게 엇갈림
+            nextChange[i] = Time.time + UnityEngine.Random.Range(0f, interval.y);
         }
 
         ScheduleBurst(Time.time);
+    }
+
+    // −max~max 무작위, bias만큼 끝 쪽으로 치우침 (|r|^(1−bias))
+    private static float Pick(float max, float bias)
+    {
+        float r = UnityEngine.Random.Range(-1f, 1f);
+        return Mathf.Sign(r) * Mathf.Pow(Mathf.Abs(r), 1f - bias * 0.85f) * max;
     }
 
     private void ScheduleBurst(float from)
@@ -168,11 +198,13 @@ public class CreatureJointSnap : MonoBehaviour
             ScheduleBurst(now);
         }
 
-        bool burst = forced || InBurst;
-        Vector2 gap = burst ? burstInterval : interval;
-        float amp = forced ? burstAmplitude * forcedAmplitude : burst ? burstAmplitude : 1f;
+        bool burst = !forced && InBurst;
+        Vector2 gap = forced ? forcedInterval : burst ? burstInterval : interval;
+        float amp = forced ? forcedAmplitudeBase * forcedAmplitude : burst ? burstAmplitude : 1f;
         bool frozen = forced && forcedAmplitude <= 0f;
-        float k = frozen ? 0f : 1f - Mathf.Exp(-(burst ? snapSpeed * 1.6f : snapSpeed) * dt);
+        // 강제·발작은 모든 뼈 같은 빠르기, 평소엔 뼈마다(느리게, 가끔 '뚝')
+        float sharedSpeed = forced ? forcedSnapSpeed : burst ? burstSnapSpeed : -1f;
+        float k = frozen ? 0f : 1f - Mathf.Exp(-(sharedSpeed > 0f ? sharedSpeed : snapSpeed) * dt);
         Vector3 fwd = transform.forward, right = transform.right, up = transform.up;
 
         // 몸 전체 요동
@@ -203,17 +235,18 @@ public class CreatureJointSnap : MonoBehaviour
             if (!frozen && now >= nextChange[i])
             {
                 nextChange[i] = now + UnityEngine.Random.Range(gap.x, gap.y);
-                if (burst || UnityEngine.Random.value >= holdChance)
+                if (forced || burst || UnityEngine.Random.value >= holdChance)
                 {
                     Vector3 m = bones[i].maxAngles * amp;
-                    target[i] = new Vector3(
-                        UnityEngine.Random.Range(-m.x, m.x),
-                        UnityEngine.Random.Range(-m.y, m.y),
-                        UnityEngine.Random.Range(-m.z, m.z));
+                    float bias = forced ? 0f : extremeBias; // 강제 발작은 예전처럼 고르게
+                    bool rest = !forced && !burst && UnityEngine.Random.value < restChance;
+                    target[i] = rest ? Vector3.zero : new Vector3(Pick(m.x, bias), Pick(m.y, bias), Pick(m.z, bias));
+                    boneSpeed[i] = UnityEngine.Random.value < suddenChance ? suddenSpeed : snapSpeed;
                 }
             }
 
-            current[i] = Vector3.Lerp(current[i], target[i], k);
+            float kb = frozen ? 0f : sharedSpeed > 0f ? k : 1f - Mathf.Exp(-boneSpeed[i] * dt);
+            current[i] = Vector3.Lerp(current[i], target[i], kb);
             Vector3 a = current[i] * weight;
             bone.rotation =
                 Quaternion.AngleAxis(a.z, up) *

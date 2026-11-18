@@ -244,6 +244,10 @@ GameObject:
   - component: {fileID: 4115736355706430552}
   - component: {fileID: 1155966362515180246}
   - component: {fileID: 5013945562312007645}
+  - component: {fileID: 2644680087348478820}
+  - component: {fileID: 2234237226566577408}
+  - component: {fileID: 7731316755350047064}
+  - component: {fileID: 7432115950764954836}
   m_Layer: 9
   m_Name: MaskGhost
   m_TagString: Monster
@@ -395,6 +399,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MaskGhostSound
   footstepSource: {fileID: 0}
   vocalSource: {fileID: 0}
+  patrolSource: {fileID: 0}
   walkFootsteps: []
   runFootsteps: []
   walkFootstepVolume: 0.55
@@ -409,6 +414,12 @@ MonoBehaviour:
   chaseVocalPitchRange: {x: 0.98, y: 1.02}
   chaseVocalInterval: 3
   playVocalOnChaseEnter: 1
+  patrolLoop: {fileID: 0}
+  patrolLoopVolume: 0.8
+  patrolFadeIn: 0.5
+  patrolFadeOut: 0.8
+  patrolMinDistance: 3
+  patrolMaxDistance: 25
 --- !u!114 &9067549134541776367
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -453,8 +464,8 @@ MonoBehaviour:
     local: {x: -0.0024556608, y: 0.077621855, z: 0.035790566}
   - bone: {fileID: 8369969792821487152}
     local: {x: -0.045731854, y: 0.028478665, z: 0.03790746}
-  soleClearance: 0
-  windowSeconds: 0.25
+  soleClearance: -0.02
+  windowSeconds: 0.12
   smoothing: 15
   maxDrop: 1.2
   maxRaise: 0.9
@@ -474,7 +485,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureLocomotionSync
   walkStrideSpeed: 0
-  runStrideSpeed: 3.2
+  runStrideSpeed: 2.85
   minMultiplier: 0.6
   maxMultiplier: 1.5
   smoothing: 6
@@ -526,8 +537,6 @@ MonoBehaviour:
     maxAngles: {x: 30, y: 35, z: 45}
   - bone: 7
     maxAngles: {x: 22, y: 28, z: 35}
-  - bone: 0
-    maxAngles: {x: 14, y: 18, z: 35}
   - bone: 11
     maxAngles: {x: 30, y: 30, z: 30}
   - bone: 12
@@ -544,26 +553,22 @@ MonoBehaviour:
     maxAngles: {x: 60, y: 90, z: 60}
   - bone: 18
     maxAngles: {x: 60, y: 90, z: 60}
-  - bone: 1
-    maxAngles: {x: 32, y: 50, z: 40}
-  - bone: 2
-    maxAngles: {x: 32, y: 50, z: 40}
-  - bone: 3
-    maxAngles: {x: 18, y: 85, z: 30}
-  - bone: 4
-    maxAngles: {x: 18, y: 85, z: 30}
-  - bone: 5
-    maxAngles: {x: 30, y: 45, z: 30}
-  - bone: 6
-    maxAngles: {x: 30, y: 45, z: 30}
-  interval: {x: 0.05, y: 0.16}
-  snapSpeed: 60
-  holdChance: 0.15
-  burstEvery: {x: 1, y: 2.5}
-  burstLength: {x: 0.3, y: 0.6}
-  burstInterval: {x: 0.02, y: 0.05}
-  burstAmplitude: 1.35
-  hipJolt: {x: 0.16, y: 0.08, z: 0.14}
+  interval: {x: 2.5, y: 5}
+  snapSpeed: 9
+  suddenChance: 1
+  suddenSpeed: 60
+  extremeBias: 0.5
+  holdChance: 0
+  restChance: 0.7
+  burstEvery: {x: 9999, y: 9999}
+  burstLength: {x: 0.6, y: 1}
+  burstInterval: {x: 0.12, y: 0.22}
+  burstAmplitude: 1.3
+  burstSnapSpeed: 25
+  forcedInterval: {x: 0.02, y: 0.05}
+  forcedSnapSpeed: 96
+  forcedAmplitudeBase: 1.35
+  hipJolt: {x: 0.03, y: 0.01, z: 0.03}
   fadeSeconds: 0.2
 --- !u!114 &4918884631527259506
 MonoBehaviour:
@@ -589,13 +594,13 @@ MonoBehaviour:
   - bone: 10
     factor: 2.6
   - bone: 15
-    factor: 1.7
+    factor: 2.3
   - bone: 16
-    factor: 1.7
+    factor: 1.3
   - bone: 17
-    factor: 1.8
+    factor: 2.6
   - bone: 18
-    factor: 1.8
+    factor: 1.45
   - bone: 3
     factor: 1.2
   - bone: 4
@@ -634,13 +639,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3083741283288172052}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 09fdc37a982be8a4c832df2d76a7be08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureDoubleBody
   phaseOffset: 0.18
   speedRatio: 1.07
+  mergeLegs: 1
 --- !u!114 &5013945562312007645
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -703,6 +709,86 @@ MonoBehaviour:
   unfoldSpeed: 3
   unfoldDelay: 0.45
   minScale: 0.75
+--- !u!114 &2644680087348478820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 701a873ae9fdc9f4cabe3c3d4a9b2447, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureTalDance
+  beatHz: 1.1
+  strength: 1
+  armRaise: 0
+  armBob: 0
+  armSwing: 0
+  elbowBend: 0
+  wristFlick: 20
+  shoulderShrug: 10
+  torsoSway: 6
+  torsoTwist: 6
+  headTilt: 15
+  headNod: 15
+  kneeLift: 0
+  fadeSeconds: 0.35
+--- !u!114 &2234237226566577408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dac2afe825fc254ca61ef50e50608a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureLookAtPlayer
+  neckShare: 0.35
+  maxAngle: 150
+  fadeSeconds: 0.25
+--- !u!114 &7731316755350047064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70fd6429ea4a09444af4838cff705b2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureFloppyArms
+  stiffness: 6
+  damping: 3
+  buoyancy: 0.35
+  wobbleAngle: 28
+  wobbleHz: 0.6
+  handFollow: 0.7
+  maxBend: 110
+  fadeSeconds: 0.3
+--- !u!114 &7432115950764954836
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3083741283288172052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3d33646cc124da488e490832b71bac2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureLowerBodyTempo
+  layerName: LowerBody
+  speedParameter: LegSpeedMul
+  strideSpeed: 0.63
+  minMultiplier: 0.8
+  maxMultiplier: 4.5
+  smoothing: 6
+  fadeSeconds: 0.25
 --- !u!1 &3281631112770651894
 GameObject:
   m_ObjectHideFlags: 0
