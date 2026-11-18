@@ -84,6 +84,7 @@ public static class FixedDemoStoryBuilder
             log.AppendLine("수술실 타일 배치 표시 없음 — 연출 ③ 생략");
         }
 
+        FixedDemoSetPieces.Build(root, log); // 시연 동선: 잠긴 문 풀기·열쇠·④ 얼굴 없는 귀신·⑤ Xenosaurid
         SealGate(root, log);
 
         EditorSceneManager.MarkSceneDirty(scene);
