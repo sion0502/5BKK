@@ -10,6 +10,7 @@ using UnityEngine.UI;
 public class PauseMenuController : MonoBehaviour
 {
     private const string MainMenuSceneName = "MainMenu";
+    private const string HubSceneName = "Hub";
     private const string DefaultBlurProfilePath = "Assets/Settings/PauseBlurVolume.asset";
 
     [Header("Input")]
@@ -142,6 +143,39 @@ public class PauseMenuController : MonoBehaviour
         }
 
         StartCoroutine(RestartStageRoutine());
+    }
+
+    /// <summary>허브(귀문의 방)로 바로 돌아감. 허브 안에서는 버튼이 보이지 않음.</summary>
+    public void GoToHub()
+    {
+        if (isTransitioning)
+        {
+            return;
+        }
+
+        StartCoroutine(GoToHubRoutine());
+    }
+
+    private IEnumerator GoToHubRoutine()
+    {
+        isTransitioning = true;
+        Time.timeScale = 1f;
+        SetBlurWeight(0f);
+        RestorePlayerCameraPostProcessing();
+        SetGameplayEnabled(true);
+        SetPauseVisible(false);
+
+        if (Application.CanStreamedLevelBeLoaded(HubSceneName))
+        {
+            yield return SceneManager.LoadSceneAsync(HubSceneName, LoadSceneMode.Single);
+        }
+        else
+        {
+            Debug.LogWarning("[PauseMenuController] Hub scene is not in Build Settings.");
+        }
+
+        isTransitioning = false;
+        isPaused = false;
     }
 
     public void GoToMainMenu()
@@ -479,8 +513,24 @@ public class PauseMenuController : MonoBehaviour
                 "DimBackground");
         }
 
-        float startY = buttonSpacing * 1.5f + (buttonHeight + buttonSpacing) * 0.5f;
-        float lastY = startY - (buttonHeight + buttonSpacing) * 4f;
+        // 버튼 목록 — 허브 안에서는 '허브맵으로'를 뺌. 개수에 맞춰 세로 가운데 정렬
+        var buttons = new List<KeyValuePair<string, UnityEngine.Events.UnityAction>>
+        {
+            new KeyValuePair<string, UnityEngine.Events.UnityAction>("계속하기", ResumeGame),
+            new KeyValuePair<string, UnityEngine.Events.UnityAction>("옵션", OpenSettings),
+            new KeyValuePair<string, UnityEngine.Events.UnityAction>("다시하기", RestartStage),
+        };
+        if (SceneManager.GetActiveScene().name != HubSceneName)
+        {
+            buttons.Add(new KeyValuePair<string, UnityEngine.Events.UnityAction>("허브맵으로", GoToHub));
+        }
+
+        buttons.Add(new KeyValuePair<string, UnityEngine.Events.UnityAction>("메인메뉴로", GoToMainMenu));
+        buttons.Add(new KeyValuePair<string, UnityEngine.Events.UnityAction>("바탕화면으로", QuitToDesktop));
+
+        float step = buttonHeight + buttonSpacing;
+        float startY = buttonSpacing * 1.5f + step * (buttons.Count - 4) * 0.5f;
+        float lastY = startY - step * (buttons.Count - 1);
 
         // 참고 디자인: 은은한 연기 바탕 위에 붓질 머리 '일시정지' + 아래 구분선·조작 안내 (테두리 없음)
         Sprite smoke = MenuSkin.PanelBg;
@@ -496,41 +546,16 @@ public class PauseMenuController : MonoBehaviour
         TextMeshProUGUI hint = MenuUIUtility.CreateLabel(mainRoot, "ESC   계속하기", menuFont, new Vector2(0f, lastY - 105f),
             new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center, MenuSkin.TextDim);
         hint.characterSpacing = 4f;
-        AddHoverSound(MenuUIUtility.CreateMenuButton(
-            mainRoot,
-            "계속하기",
-            menuFont,
-            new Vector2(0f, startY),
-            new Vector2(buttonWidth, buttonHeight),
-            ResumeGame));
-        AddHoverSound(MenuUIUtility.CreateMenuButton(
-            mainRoot,
-            "옵션",
-            menuFont,
-            new Vector2(0f, startY - (buttonHeight + buttonSpacing)),
-            new Vector2(buttonWidth, buttonHeight),
-            OpenSettings));
-        AddHoverSound(MenuUIUtility.CreateMenuButton(
-            mainRoot,
-            "다시하기",
-            menuFont,
-            new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 2f),
-            new Vector2(buttonWidth, buttonHeight),
-            RestartStage));
-        AddHoverSound(MenuUIUtility.CreateMenuButton(
-            mainRoot,
-            "메인메뉴로",
-            menuFont,
-            new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 3f),
-            new Vector2(buttonWidth, buttonHeight),
-            GoToMainMenu));
-        AddHoverSound(MenuUIUtility.CreateMenuButton(
-            mainRoot,
-            "바탕화면으로",
-            menuFont,
-            new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 4f),
-            new Vector2(buttonWidth, buttonHeight),
-            QuitToDesktop));
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            AddHoverSound(MenuUIUtility.CreateMenuButton(
+                mainRoot,
+                buttons[i].Key,
+                menuFont,
+                new Vector2(0f, startY - step * i),
+                new Vector2(buttonWidth, buttonHeight),
+                buttons[i].Value));
+        }
 
         // 옵션 패널 (평소엔 숨김 — '옵션' 버튼으로 열고 '뒤로'/ESC로 닫음)
         GameObject settingsObject = new GameObject("SettingsRoot", typeof(RectTransform));

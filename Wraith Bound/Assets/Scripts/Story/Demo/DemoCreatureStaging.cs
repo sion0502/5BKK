@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -248,6 +249,116 @@ public static class DemoCreatureStaging
 
         Vector3 vp = cam.WorldToViewportPoint(ground + Vector3.up * 1.3f);
         return vp.z > 0f && vp.x > 0.1f && vp.x < 0.9f && vp.y > 0.05f && vp.y < 0.95f && IsVisible(ground, player, creature);
+    }
+
+    /// <summary>
+    /// 크리처가 '다른 곳으로 떠날' 목적지 — from(크리처)에서 걸어서 갈 수 있고 minDistance~maxDistance 떨어진 NavMesh 위,
+    /// avoid(플레이어·숨은 곳)에서 될수록 먼 곳. 방 밖 복도 쪽이 고르기 쉽도록 여러 거리·방향을 훑음.
+    /// </summary>
+    public static bool TryPickLeavePoint(Vector3 from, Vector3 avoid, float minDistance, float maxDistance, out Vector3 point)
+    {
+        point = from;
+        float best = float.MinValue;
+        bool found = false;
+        for (int i = 0; i < 24; i++)
+        {
+            float a = i * Mathf.PI * 2f / 24f;
+            Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            for (int ring = 0; ring < 3; ring++)
+            {
+                float r = Mathf.Lerp(minDistance, maxDistance, ring / 2f);
+                if (!NavMesh.SamplePosition(from + dir * r, out NavMeshHit hit, 3f, NavMesh.AllAreas) || Mathf.Abs(hit.position.y - from.y) > 2.5f)
+                {
+                    continue;
+                }
+
+                NavMeshPath path = new NavMeshPath();
+                if (!NavMesh.CalculatePath(from, hit.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
+                {
+                    continue;
+                }
+
+                float len = Length(path.corners);
+                if (len < minDistance || len > maxDistance * 1.8f)
+                {
+                    continue;
+                }
+
+                float score = FlatDistance(hit.position, avoid);
+                if (score > best)
+                {
+                    best = score;
+                    point = hit.position;
+                    found = true;
+                }
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// AI를 잠깐 멈추고 target까지 걸어가게 함(돌아가는 동안엔 잡지 않음). 도착하면 AI를 다시 켜 그 자리부터 평소처럼 순찰.
+    /// 도중에 숨는 곳에서 나온 플레이어가 reengageDistance 안에서 보이면 AI를 켜고 done(true) — 호출한 쪽이 다시 쫓게 함.
+    /// </summary>
+    public static IEnumerator WalkAway(EnemyBase creature, Vector3 target, Transform player, float walkSpeed, float reengageDistance,
+        System.Action<bool> done)
+    {
+        EnemyState s = creature.RuntimeState;
+        NavMeshAgent agent = creature.Agent;
+        creature.Combat.ChangeState(EnemyBase.State.Patrol); // 추격 소리·연출 끔
+        s.PlayerDeadLogged = true; // 떠나는 동안엔 몸에 닿아도 잡지 않음 (EnemySense가 잡기 전에 확인하는 값)
+        creature.enabled = false;  // AI가 숨은 곳으로 되돌아오지 않게 직접 걷게 함
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+            agent.updateRotation = true;
+            agent.autoBraking = true;
+            agent.speed = walkSpeed > 0f ? walkSpeed : (creature.Data != null && creature.Data.moveSpeed > 0f ? creature.Data.moveSpeed : 1.5f);
+            agent.SetDestination(target);
+        }
+
+        creature.SnapToPatrolAnimation(false);
+
+        bool reengage = false;
+        float start = Time.time;
+        while (Time.time - start < 45f)
+        {
+            if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead || creature == null)
+            {
+                break;
+            }
+
+            PlayerHidingController hiding = player != null ? player.GetComponent<PlayerHidingController>() : null;
+            if (player != null && (hiding == null || !hiding.isHiding)
+                && Vector3.Distance(player.position, creature.transform.position) < reengageDistance
+                && IsVisible(creature.transform.position, player, creature.transform))
+            {
+                reengage = true;
+                break;
+            }
+
+            if (agent == null || !agent.isOnNavMesh || agent.pathStatus == NavMeshPathStatus.PathInvalid
+                || (!agent.pathPending && agent.remainingDistance <= 0.8f))
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        if (creature != null)
+        {
+            s.PlayerDeadLogged = false;
+            if (creature.Anim != null)
+            {
+                creature.Anim.speed = 1f;
+            }
+
+            creature.enabled = true; // 이 자리부터 다시 평소 AI (순찰)
+        }
+
+        done(reengage);
     }
 
     private static bool TryFindHiddenPoint(Vector3 target, float distance, Transform player, Transform creature, out Vector3 point)

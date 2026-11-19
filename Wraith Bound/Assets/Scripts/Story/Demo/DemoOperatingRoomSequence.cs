@@ -47,6 +47,19 @@ public class DemoOperatingRoomSequence : MonoBehaviour
     [Tooltip("플레이어와 이 거리보다 가까이에서는 나타나지 않음 (정해 둔 자리가 더 가까우면 그 자리)")]
     [SerializeField] private float approachDistance = 12f;
 
+    [Header("숨으면 어슬렁대다 방 밖으로")]
+    [Tooltip("플레이어가 숨은 채 searchSeconds를 버티면 귀신이 수색을 그만두고 방 밖 다른 곳으로 걸어가 그곳부터 순찰")]
+    [SerializeField] private bool leaveWhenHidden = true;
+    [Tooltip("숨은 뒤 귀신이 숨은 곳 주변을 어슬렁대는 시간(초)")]
+    [SerializeField] private float searchSeconds = 6f;
+    [Tooltip("떠날 곳까지의 거리 범위(m) — 수술실 밖 복도 쪽")]
+    [SerializeField] private float leaveMinDistance = 22f;
+    [SerializeField] private float leaveMaxDistance = 40f;
+    [Tooltip("떠나는 걸음 속도 (0이면 귀신 기본 이동 속도)")]
+    [SerializeField] private float leaveWalkSpeed;
+    [Tooltip("떠나는 중 숨는 곳에서 나온 플레이어가 이 거리(m) 안에서 보이면 다시 쫓아옴")]
+    [SerializeField] private float reengageDistance = 6f;
+
     private bool started;
     private Vector3 appearPoint;
     private readonly System.Collections.Generic.List<Vector3> cuePath = new System.Collections.Generic.List<Vector3>();
@@ -180,6 +193,57 @@ public class DemoOperatingRoomSequence : MonoBehaviour
         if (!string.IsNullOrEmpty(runLine))
         {
             SubtitleUI.ShowForDuration("나", runLine, 2f);
+        }
+
+        if (leaveWhenHidden)
+        {
+            yield return WatchHideAndLeave();
+        }
+    }
+
+    // 플레이어가 숨어 있는 동안(귀신이 쫓거나 수색 중일 때) 시간을 재다가 searchSeconds가 되면 방 밖 다른 곳으로 보냄.
+    // 연출이 시작될 때 이미 숨어 있었어도 똑같이 — 숨은 곳 근처를 어슬렁대다 나감.
+    private IEnumerator WatchHideAndLeave()
+    {
+        GameObject playerGo = GameObject.FindWithTag("Player");
+        Transform player = playerGo != null ? playerGo.transform : null;
+        PlayerHidingController hiding = player != null ? player.GetComponent<PlayerHidingController>() : null;
+        float hidden = 0f;
+        while (ghost != null && ghost.gameObject.activeInHierarchy && player != null)
+        {
+            yield return null;
+            if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
+            {
+                yield break;
+            }
+
+            EnemyBase.State state = ghost.RuntimeState.CurrentState;
+            bool engaged = ghost.enabled && (state == EnemyBase.State.Chase || state == EnemyBase.State.Investigate);
+            hidden = hiding != null && hiding.isHiding && engaged ? hidden + Time.deltaTime : 0f;
+            if (hidden < searchSeconds)
+            {
+                continue;
+            }
+
+            hidden = 0f;
+            if (!DemoCreatureStaging.TryPickLeavePoint(ghost.transform.position, player.position, leaveMinDistance, leaveMaxDistance, out Vector3 leaveTo))
+            {
+                Debug.Log("[Demo] ③ 탈춤귀신 떠날 곳을 못 찾음 → 그냥 순찰로");
+                ghost.Combat.ChangeState(EnemyBase.State.Patrol);
+                continue;
+            }
+
+            Debug.Log("[Demo] ③ 플레이어가 숨어서 버팀 → 탈춤귀신 방 밖으로 " + leaveTo.ToString("F1"));
+            bool reengage = false;
+            yield return DemoCreatureStaging.WalkAway(ghost, leaveTo, player, leaveWalkSpeed, reengageDistance, r => reengage = r);
+            if (reengage && !PlayerDeathDebug.IsDying && !PlayerDeathDebug.IsDead)
+            {
+                Debug.Log("[Demo] ③ 떠나다 플레이어 발견 → 다시 추격");
+                EnemyState s = ghost.RuntimeState;
+                s.LastKnownPosition = player.position;
+                ghost.Combat.ChangeState(EnemyBase.State.Chase);
+                ghost.Combat.ArmChaseGraceTimer();
+            }
         }
     }
 
