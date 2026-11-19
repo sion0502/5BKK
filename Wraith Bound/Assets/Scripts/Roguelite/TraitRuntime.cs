@@ -46,10 +46,16 @@ public class TraitRuntime : MonoBehaviour
         return !NonChapterScenes.Contains(sceneName);
     }
 
+    /// <summary>재시작·허브 귀환 시 판 단위 상태만 초기화합니다. 장착한 기는 유지합니다.</summary>
+    public static void ResetRunState()
+    {
+        runStarted = reviveUsed = lowHpThisRun = false;
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Init()
     {
-        runStarted = reviveUsed = lowHpThisRun = false;
+        ResetRunState();
         SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
         PlayerDeathDebug.ReviveHandler = TryRevive;
@@ -85,7 +91,7 @@ public class TraitRuntime : MonoBehaviour
                 TraitProgress.Add(TraitCatalog.LowHpReturn);
             }
 
-            runStarted = reviveUsed = lowHpThisRun = false;
+            ResetRunState();
         }
 
         if (TraitLoadout.IsEquipped(TraitId.RunningMan))

@@ -18,12 +18,13 @@ public static class GameOverNavigation
         if (!Application.CanStreamedLevelBeLoaded(active.name))
         {
             RestoreTimeAndAudio();
+            TraitRuntime.ResetRunState();
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
                 active.path, new LoadSceneParameters(LoadSceneMode.Single));
             return;
         }
 #endif
-        Load(active.name);
+        Load(active.name, restartRun: true);
     }
 
     public static void GoToHub()
@@ -37,7 +38,7 @@ public static class GameOverNavigation
         AudioListener.pause = false;
     }
 
-    private static void Load(string sceneName)
+    private static void Load(string sceneName, bool restartRun = false)
     {
         if (!Application.CanStreamedLevelBeLoaded(sceneName))
         {
@@ -46,6 +47,11 @@ public static class GameOverNavigation
         }
 
         RestoreTimeAndAudio();
+        if (restartRun)
+        {
+            TraitRuntime.ResetRunState();
+        }
+
         SceneManager.LoadScene(sceneName);
     }
 }

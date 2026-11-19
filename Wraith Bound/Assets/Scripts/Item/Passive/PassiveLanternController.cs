@@ -74,8 +74,8 @@ public class PassiveLanternController : MonoBehaviour
 
         pointLight = lightObject.AddComponent<Light>();
         pointLight.type = LightType.Point;
-        pointLight.shadows = LightShadows.Soft;
-        pointLight.shadowStrength = 0.55f;
+        // 몸체 안에 붙는 주변 조명이 플레이어 자신의 그림자에 가려지지 않게 한다.
+        pointLight.shadows = LightShadows.None;
         pointLight.bounceIntensity = 0.15f;
         pointLight.enabled = false;
     }

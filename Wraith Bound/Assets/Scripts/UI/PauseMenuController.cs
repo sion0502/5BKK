@@ -215,6 +215,7 @@ public class PauseMenuController : MonoBehaviour
         SetPauseVisible(false);
 
         Scene activeScene = SceneManager.GetActiveScene();
+        TraitRuntime.ResetRunState();
         yield return SceneManager.LoadSceneAsync(activeScene.name);
         isTransitioning = false;
         isPaused = false;
