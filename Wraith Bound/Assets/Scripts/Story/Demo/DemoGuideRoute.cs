@@ -87,6 +87,33 @@ public class DemoGuideRoute : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// 캠코더 부적 감지가 가리킬 목표 (2026-11-19): 안내 순서상 아직 안 태운 첫 부적, 부적이 다 모였으면 출구(마지막 단계 목표).
+    /// 연출 루트 순서(④→③→⑤)를 따르게 — 루트 밖 부적은 가리키지 않음.
+    /// </summary>
+    public static Transform NextCamcorderTarget()
+    {
+        if (active == null || active.steps.Length == 0)
+        {
+            return null;
+        }
+
+        if (DemoSealProgress.Count < DemoSealProgress.Total)
+        {
+            foreach (Step s in active.steps)
+            {
+                if (s.kind == StepKind.Talisman && s.talisman != null && !DemoSealProgress.Has(s.talisman.Index))
+                {
+                    return s.talisman.transform;
+                }
+            }
+
+            return null;
+        }
+
+        return active.steps[active.steps.Length - 1].target;
+    }
+
     private void OnEnable()
     {
         active = this;

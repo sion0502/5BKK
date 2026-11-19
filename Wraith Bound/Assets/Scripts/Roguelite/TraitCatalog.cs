@@ -58,7 +58,7 @@ public static class TraitCatalog
             Effect = "희미한 혼불이 앞장서 떠다니며 다음 부적이 있는 곳으로 길을 안내한다. 가까이에 괴물이 있으면 혼불이 붉게 물든다.",
             UnlockText = null, Implemented = true, AlwaysUnlocked = true,
         },
-        Def(TraitId.RecklessSprint, "무리한 질주", "이동 속도가 50% 증가하는 대신 소모 스태미나와 소모 체력이 50% 증가한다.",
+        Def(TraitId.RecklessSprint, "무리한 질주", "이동 속도가 20% 증가하는 대신 소모 스태미나와 소모 체력이 50% 증가한다.",
             "추격을 30초 이상 버티고 살아남기", Chase30, 1),
         Def(TraitId.Strongman, "괴력난신", "단 한 번, 자신의 체력이 100일 때 추적자와 부딪혔을 때 추적자를 무력화할 수 있다.",
             null, null, 0, implemented: false),

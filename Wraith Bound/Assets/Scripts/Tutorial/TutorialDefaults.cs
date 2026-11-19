@@ -13,6 +13,7 @@ public static class TutorialDefaults
             new TutorialStep(TutorialCondition.Move, "WASD", "주변을 걸어서 이동하세요", 3f),
             new TutorialStep(TutorialCondition.Sprint, "Shift", "Shift를 누른 채 앞으로 달리세요", 1f),
             new TutorialStep(TutorialCondition.Crouch, "Ctrl", "Ctrl을 누른 채 웅크리세요", 0.75f),
+            new TutorialStep(TutorialCondition.RearView, "Space", "Space를 누르고 있으면 뒤를 돌아봅니다\n쫓기면서 뒤를 확인해 보세요", 0.6f),
             new TutorialStep(TutorialCondition.CamcorderHold, "F", "F를 눌러 캠코더를 꺼내세요"),
             new TutorialStep(TutorialCondition.CamcorderViewfinder, "좌클릭", "좌클릭으로 뷰파인더를 켜세요\n어둠 속을 볼 수 있습니다"),
             new TutorialStep(TutorialCondition.CamcorderZoom, "휠", "마우스 휠로 줌을 조절하세요", 2f),
@@ -20,6 +21,7 @@ public static class TutorialDefaults
             new TutorialStep(TutorialCondition.PickUpFlashlight, "E", "앞의 데스크에 놓인 손전등을 주우세요", 0f, true),
             new TutorialStep(TutorialCondition.SelectFlashlight, "1~3 / 휠", "숫자키나 마우스 휠로 손전등을 선택하세요"),
             new TutorialStep(TutorialCondition.FlashlightOn, "좌클릭", "좌클릭으로 손전등을 켜세요"),
+            new TutorialStep(TutorialCondition.StatusInfo, "", "왼쪽 아래 숫자는 <b>체력</b>, 달릴 때 나오는 막대는 <b>스태미나</b>입니다\n스태미나가 다 떨어지면 달릴 수 없습니다", 6f),
             new TutorialStep(TutorialCondition.OpenCabinet, "E", "캐비닛 문을 바라보고 E를 눌러 열어 보세요\n안에 아이템이 들어 있을 수 있습니다", 0f, true),
             new TutorialStep(TutorialCondition.ExpandInventory, "Tab", "Tab으로 인벤토리를 펼쳐 보세요"),
         };

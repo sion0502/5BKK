@@ -168,7 +168,7 @@ public class TraitRuntime : MonoBehaviour
         bool reckless = TraitLoadout.IsEquipped(TraitId.RecklessSprint);
         bool heavy = TraitLoadout.IsEquipped(TraitId.HeavyPack);
         bool thorn = TraitLoadout.IsEquipped(TraitId.ThornWings);
-        float all = (reckless ? 1.5f : 1f) * (heavy ? 0.75f : 1f);
+        float all = (reckless ? 1.2f : 1f) * (heavy ? 0.75f : 1f); // 무리한 질주 +20% (2026-11-19 — +50%는 너무 빨라 따돌리기 쉬웠음)
         controller.moveSpeed = baseMove * all * (thorn ? 0.5f : 1f);
         controller.runSpeed = baseRun * all;
         controller.crouchSpeed = baseCrouch * all * (thorn ? 1.3f : 1f);

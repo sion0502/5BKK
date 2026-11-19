@@ -26431,7 +26431,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3650951505023850637, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
       propertyPath: onlySteps.Array.size
-      value: 4
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3650951505023850637, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
+      propertyPath: 'onlySteps.Array.data[0]'
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3650951505023850637, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
       propertyPath: 'onlySteps.Array.data[1]'
@@ -26444,6 +26448,10 @@ PrefabInstance:
     - target: {fileID: 3650951505023850637, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
       propertyPath: 'onlySteps.Array.data[3]'
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 3650951505023850637, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
+      propertyPath: 'onlySteps.Array.data[4]'
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 3901732497028491143, guid: 4dd78a18b005314408714c9fc6d77dcf, type: 3}
       propertyPath: m_AnchorMax.x
