@@ -73,7 +73,7 @@ public static class InteractionAimResolver
         }
 
         HidingSpot spot = hit.collider.GetComponent<HidingSpot>();
-        if (spot == null || Vector3.Angle(hit.normal, spot.transform.forward) > hiding.maxFrontAngle)
+        if (spot == null || (!spot.allowAnySide && Vector3.Angle(hit.normal, spot.transform.forward) > hiding.maxFrontAngle))
         {
             return InteractionPrompt.None;
         }
