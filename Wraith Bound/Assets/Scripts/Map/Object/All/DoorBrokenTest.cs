@@ -33,16 +33,6 @@ public class DoorBrokenTest : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Y))
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            Vector3 attackerPosition = player != null ? player.transform.position : transform.position - transform.forward;
-            HitDoor(attackerPosition);
-        }
-    }
-
     public void HitDoor(Vector3 attackerPosition)
     {
         if (isBroken) return;

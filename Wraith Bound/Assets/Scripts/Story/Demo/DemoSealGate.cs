@@ -88,21 +88,6 @@ public class DemoSealGate : MonoBehaviour
             int left = DemoSealProgress.Total - DemoSealProgress.Count;
             ScreenMessageUI.Show("부적으로 봉인돼 있다 — 남은 봉인 " + left + "장", 2.6f);
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // 테스트: G = 아직 안 태운 다음 부적을 태운 것으로 처리 (SealTest의 G키 대신)
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            for (int i = 0; i < 32; i++)
-            {
-                if (!DemoSealProgress.Has(i))
-                {
-                    DemoSealProgress.Collect(i);
-                    break;
-                }
-            }
-        }
-#endif
     }
 
     private void OnCollected(int index)

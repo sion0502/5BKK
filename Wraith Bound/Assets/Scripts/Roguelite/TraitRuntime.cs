@@ -142,6 +142,21 @@ public class TraitRuntime : MonoBehaviour
         }
     }
 
+    private static void UnlockAllTraits()
+    {
+        int count = 0;
+        foreach (TraitDef def in TraitCatalog.All)
+        {
+            if (def != null && def.Implemented && !TraitProgress.IsUnlocked(def.Id))
+            {
+                TraitProgress.Unlock(def);
+                count++;
+            }
+        }
+
+        ScreenMessageUI.Show(count > 0 ? "기 " + count + "개를 모두 해금했습니다 (운영자)" : "이미 모든 기가 해금돼 있습니다", 2.5f);
+    }
+
     // 속도·스태미나 소모·인벤 칸 — 착용이 바뀔 때마다 기본값에서 다시 계산
     private void ApplyStats()
     {
@@ -182,6 +197,14 @@ public class TraitRuntime : MonoBehaviour
         {
             TraitProgress.ResetAll();
             ScreenMessageUI.Show("기 해금 진행을 초기화했습니다 (운영자)", 2.5f);
+        }
+
+        // 운영자: F12만 — 구현된 기 전부 해금 (시연·테스트용). Ctrl/Shift를 같이 누르면 위의 초기화(Ctrl+Shift+F12)
+        bool modifier = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+            || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (Input.GetKeyDown(KeyCode.F12) && !modifier)
+        {
+            UnlockAllTraits();
         }
 
         if (conditions == null || PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)
