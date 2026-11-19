@@ -118,6 +118,18 @@ public class TutorialConditions
 
             case TutorialCondition.ExpandInventory:
                 return ToProgress(Input.GetKeyDown(KeyCode.Tab));
+
+            case TutorialCondition.RearView:
+                return Accumulate(Input.GetKey(KeyCode.Space) ? Time.deltaTime : 0f, step.requiredAmount);
+
+            case TutorialCondition.StatusInfo:
+                // 읽는 단계 — 일정 시간이 지나거나 Enter
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    return 1f;
+                }
+
+                return Accumulate(Time.unscaledDeltaTime, step.requiredAmount);
         }
 
         return 1f;

@@ -13,6 +13,9 @@ public class HidingSpot : MonoBehaviour
 
     [Tooltip("숨어있을 때 상하로 고개를 돌릴 수 있는 최대 각도")]
     public float lookLimitY;
+
+    [Tooltip("켜면 앞면이 아니라 어느 방향에서 조준해도 숨을 수 있음 (트롤리 — 2026-11-19 사용자 요청). 끄면 앞면 maxFrontAngle 안에서만")]
+    public bool allowAnySide;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

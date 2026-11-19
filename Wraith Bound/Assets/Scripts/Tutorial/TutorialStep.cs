@@ -18,7 +18,9 @@ public enum TutorialCondition
     SelectFlashlight,
     FlashlightOn,
     ExpandInventory,
-    OpenCabinet
+    OpenCabinet,
+    RearView,   // Space를 누르고 있어 뒤돌아보기 (2026-11-19)
+    StatusInfo  // 체력·스태미나 HUD 설명 — 읽는 단계, requiredAmount초 뒤 또는 Enter로 넘어감 (2026-11-19)
 }
 
 /// <summary>상황형 팁이 뜨는 계기. 각 팁은 한 번만 표시됩니다. 직렬화 숫자 유지를 위해 새 값은 맨 뒤에 추가.</summary>

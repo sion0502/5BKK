@@ -88,6 +88,7 @@ public static class FixedDemoStoryBuilder
         }
 
         root.gameObject.AddComponent<DemoCreatureTuning>(); // 괴물 추격 속도 = 플레이어 달리기 (탈춤귀신 ×1.1)
+        root.gameObject.AddComponent<DemoCamcorderTalismanSense>(); // 캠코더로 비추면 다음 루트 부적·출구의 기운이 보임 (2026-11-19)
         FixedDemoSetPieces.Build(root, log); // 시연 동선: 잠긴 문 풀기·열쇠·④ 얼굴 없는 귀신·⑤ Xenosaurid
         FixedDemoHideSpots.Build(root, log); // ③ 수술실 방 숨는 곳(트롤리) — 사용자 요청 2개 이상
         FixedDemoRoamers.Build(root, log); // 맵을 돌아다니는 괴물 4종(무작위 타일)

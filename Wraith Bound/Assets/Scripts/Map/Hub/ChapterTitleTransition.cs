@@ -254,6 +254,8 @@ public static class ChapterTitleTransition
 
         DisableOutline(titleLabel);
 
+        ChapterTitleContinueHint.Attach(canvasObject.transform, fontSize); // '아무 키나 눌러 진행' (2026-11-19)
+
         canvasGroup = canvasObject.AddComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = false;

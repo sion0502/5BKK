@@ -393,6 +393,7 @@ public static class FixedDemoSetPieces
         so.FindProperty("foreshadowPoint").objectReferenceValue = spawn;
         so.FindProperty("foreshadowLead").floatValue = 5f;
         so.FindProperty("foreshadowMaxDistance").floatValue = 50f;
+        so.FindProperty("leaveAfterHide").boolValue = true; // 따돌리면 돌아가서 사라짐 — 남아서 갈 길을 막았음 (2026-11-19)
         so.ApplyModifiedPropertiesWithoutUndo();
         // 1.3배였을 때 몸 캡슐 키가 3.9m라 문 위 벽에 걸려 못 지나갔음 → 크기 1배 + 캡슐 키 2.1m 상한 (실행 중 DemoAmbushSequence가 적용)
         // 예고는 위 포효(foreshadow)가 맡으므로 '멀리서 다가오는 예고 소리'는 끔 (둘 다 켜면 등장이 10초 가까이 늦어짐)

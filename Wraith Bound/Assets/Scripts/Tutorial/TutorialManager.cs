@@ -18,6 +18,7 @@ public class TutorialManager : MonoBehaviour
     private const string SeenPrefsKey = "Tutorial.Seen";
 
     private static HashSet<string> seen;
+    private TutorialHudPointer hudPointer;
 
     [Header("Mode")]
     [Tooltip("켜면 매번 표시(시연용). 끄면 한 번 완료·건너뛰기한 뒤로는 표시하지 않습니다.")]
@@ -294,6 +295,25 @@ public class TutorialManager : MonoBehaviour
             promptUI.ShowStep(step, index, steps.Count);
         }
 
+        // 체력·스태미나 HUD 가리키기 (2026-11-19)
+        if (hudPointer == null)
+        {
+            hudPointer = gameObject.AddComponent<TutorialHudPointer>();
+        }
+
+        if (step.condition == TutorialCondition.StatusInfo)
+        {
+            hudPointer.Show((TutorialHudPointer.Health, "체력"), (TutorialHudPointer.Stamina, "스태미나"));
+        }
+        else if (step.condition == TutorialCondition.Sprint)
+        {
+            hudPointer.Show((TutorialHudPointer.Stamina, "스태미나"));
+        }
+        else
+        {
+            hudPointer.Hide();
+        }
+
         if (highlight != null)
         {
             if (step.highlightTarget && step.condition == TutorialCondition.OpenCabinet)
@@ -362,6 +382,11 @@ public class TutorialManager : MonoBehaviour
     private IEnumerator FinishStepsRoutine()
     {
         stepsRunning = false;
+        if (hudPointer != null)
+        {
+            hudPointer.Hide();
+        }
+
         MarkCompleted();
 
         bool hasFinishMessage = !string.IsNullOrEmpty(finishMessage); // 짧은 모드(onlySteps)는 완료 문구 없이 바로 닫음
@@ -467,6 +492,11 @@ public class TutorialManager : MonoBehaviour
         if (highlight != null)
         {
             highlight.End();
+        }
+
+        if (hudPointer != null)
+        {
+            hudPointer.Hide();
         }
 
         if (promptUI != null)
