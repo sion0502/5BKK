@@ -15,6 +15,7 @@ public static class FixedDemoSetPieces
     private const string KeyPrefab = "Assets/Prefab/Item/World_Item/Active/World_Key.prefab";
     private const string FacelessPrefab = "Assets/Prefab/Enemy/Monster/Non-FaceGhost.prefab";
     private const string XenoPrefab = "Assets/Prefab/Enemy/Monster/Xenosaurid.prefab";
+    private const string XenoRoarClip = "Assets/Sound/Dinosaur roar.mp3"; // 팀원 사운드 — ⑤ 예고 포효
     private const string FacelessScreamClip = "Assets/Sound/NonFaceGhostScream.wav"; // 팀원 사운드(얼굴 없는 귀신 추격 비명)
 
     internal static void Build(Transform parent, System.Text.StringBuilder log)
@@ -384,6 +385,12 @@ public static class FixedDemoSetPieces
         Ambush(root, seal, null, xeno, spawn, new Object[0], new Object[0], 0f, string.Empty, string.Empty);
         var so = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
         so.FindProperty("delay").floatValue = 1.2f;
+        // 숨을 시간 (2026-11-19 사용자 요청): 부적을 태우면 등장 자리(모퉁이 너머)에서 포효가 먼저 울리고 5초 뒤 달려옴 —
+        // 대기 의자 바로 옆(2.4m)에 로비 트롤리 숨는 곳이 있음, 숨으면 사냥(huntSeconds)도 플레이어를 못 찾음
+        so.FindProperty("foreshadowClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(XenoRoarClip);
+        so.FindProperty("foreshadowPoint").objectReferenceValue = spawn;
+        so.FindProperty("foreshadowLead").floatValue = 5f;
+        so.FindProperty("foreshadowMaxDistance").floatValue = 50f;
         so.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("⑤ Xenosaurid(로비): 부적" + Index(seal) + " 뒤, 등장 " + spawnPos.ToString("F1") + (bestLen < float.MaxValue ? ", 부적까지 " + bestLen.ToString("F0") + "m" : " — 조건 맞는 자리 없음!"));
     }

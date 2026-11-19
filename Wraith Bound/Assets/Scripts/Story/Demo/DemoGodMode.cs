@@ -111,6 +111,21 @@ public class DemoGodMode : MonoBehaviour
         Debug.Log("[GodMode] " + (on ? "ON" : "OFF"));
     }
 
+    private static System.Collections.IEnumerator SendAwayAfterCleanup(EnemyBase catcher)
+    {
+        yield return null;
+        yield return null;
+        if (catcher == null)
+        {
+            yield break;
+        }
+
+        catcher.ReturnToPatrolAfterDeath(); // 추격 풂
+        catcher.RuntimeState.PlayerDeadLogged = Immune.Contains(catcher);
+        bool moved = DemoRoamingSpawner.SendAway(catcher);
+        Debug.Log("[GodMode] " + catcher.name + " 추격 해제" + (moved ? " · 다른 자리로 보냄" : ""));
+    }
+
     /// <summary>PlayerDeathDebug가 죽기 직전에 부름. 갓모드면 되살리고 true.</summary>
     private static bool TryRescue()
     {
@@ -126,6 +141,14 @@ public class DemoGodMode : MonoBehaviour
         }
 
         PlayerDeathDebug.ReviveFromJumpscare();
+
+        // 잡은 괴물은 추격을 풀고 플레이어에게서 멀고 안 보이는 다른 자리로 보냄 (2026-11-19 사용자 요청) —
+        // 시연 씬이면 배회 괴물 '갇힘 옮김'과 같은 자리 고르기(DemoRoamingSpawner), 연출 ④⑤ 사냥 모드도 이 괴물엔 더 안 알려 줌(IsImmune)
+        // 점프스케어 정리(EnemyJumpscare.OnDestroy)가 프레임 끝에 괴물을 원래 자리로 되돌리므로 그 뒤에 옮김
+        if (catcher != null && instance != null)
+        {
+            instance.StartCoroutine(SendAwayAfterCleanup(catcher));
+        }
 
         // 되살리기가 모든 적을 '이미 잡음'으로 만들어 두므로, 잡았던 적만 남기고 풀어 줌
         foreach (EnemyBase enemy in FindObjectsByType<EnemyBase>(FindObjectsInactive.Include, FindObjectsSortMode.None))

@@ -95,6 +95,18 @@ public class DemoRoamingSpawner : MonoBehaviour
         }
     }
 
+    /// <summary>이 괴물을 플레이어에게서 멀고 안 보이는 다른 자리로 옮김 (갓모드에서 잡힌 뒤 등). 시연 씬이 아니면 아무것도 안 함.</summary>
+    public static bool SendAway(EnemyBase enemy)
+    {
+        if (instance == null || enemy == null)
+        {
+            return false;
+        }
+
+        NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
+        return agent != null && agent.isActiveAndEnabled && instance.Relocate(agent);
+    }
+
     private static string KindOf(EnemyBase enemy)
     {
         var data = DataField != null ? DataField.GetValue(enemy) as Monsters : null;
@@ -369,7 +381,7 @@ public class DemoRoamingSpawner : MonoBehaviour
 
             agent.Warp(p);
             agent.ResetPath();
-            Debug.Log("[Demo] 배회 괴물 " + agent.name + " 갇혀서 옮김 → " + tile.name + " " + p.ToString("F1"));
+            Debug.Log("[Demo] 괴물 " + agent.name + " 다른 자리로 옮김(갇힘·갓모드) → " + tile.name + " " + p.ToString("F1"));
             return true;
         }
 

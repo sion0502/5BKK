@@ -181,7 +181,7 @@ public class DemoAmbushSequence : MonoBehaviour
 
         // 사냥: 일정 시간 플레이어 위치를 계속 알려 줌 (숨으면 일반 AI 판정에 맡김)
         float end = Time.time + huntSeconds;
-        while (Time.time < end && creature != null && creature.isActiveAndEnabled)
+        while (Time.time < end && creature != null && creature.isActiveAndEnabled && !DemoGodMode.IsImmune(creature))
         {
             yield return new WaitForSeconds(0.5f);
             StartChase(false);
