@@ -275,8 +275,12 @@ public class TutorialConditions
     /// <summary>OpenCabinet 단계에서 하이라이트할, 플레이어와 가장 가까운 닫힌 캐비닛.</summary>
     public Transform FindNearestClosedCabinet()
     {
-        Transform nearest = null;
-        float nearestSqr = float.MaxValue;
+        // 직선거리로만 고르면 벽 너머 옆방·다른 층 캐비닛이 골라져 강조가 안 보였음 (2026-11-19)
+        // → 눈에서 가리는 것 없이 보이는 캐비닛을 먼저, 없으면 같은 층(높이 차 2.5m 안)에서 가장 가까운 것, 그것도 없으면 그냥 가장 가까운 것
+        Camera eye = Camera.main;
+        Vector3 eyePos = eye != null ? eye.transform.position : player.transform.position + Vector3.up * 1.6f;
+        Transform visible = null, sameFloor = null, any = null;
+        float visibleSqr = float.MaxValue, sameSqr = float.MaxValue, anySqr = float.MaxValue;
 
         foreach (DoorClick door in closedCabinetDoors)
         {
@@ -285,15 +289,50 @@ public class TutorialConditions
                 continue;
             }
 
-            float sqr = (door.transform.position - player.transform.position).sqrMagnitude;
-            if (sqr < nearestSqr)
+            Transform root = TutorialWorldObjects.GetCabinetRoot(door);
+            if (root == null)
             {
-                nearestSqr = sqr;
-                nearest = TutorialWorldObjects.GetCabinetRoot(door);
+                continue;
+            }
+
+            float sqr = (door.transform.position - player.transform.position).sqrMagnitude;
+            if (sqr < anySqr)
+            {
+                anySqr = sqr;
+                any = root;
+            }
+
+            if (Mathf.Abs(door.transform.position.y - player.transform.position.y) < 2.5f && sqr < sameSqr)
+            {
+                sameSqr = sqr;
+                sameFloor = root;
+            }
+
+            if (sqr < visibleSqr && sqr < 30f * 30f && IsVisibleFrom(eyePos, door.transform, root))
+            {
+                visibleSqr = sqr;
+                visible = root;
             }
         }
 
-        return nearest;
+        return visible != null ? visible : (sameFloor != null ? sameFloor : any);
+    }
+
+    private static bool IsVisibleFrom(Vector3 eye, Transform door, Transform root)
+    {
+        Collider col = door.GetComponentInChildren<Collider>();
+        Vector3 target = col != null ? col.bounds.center : door.position;
+        foreach (RaycastHit hit in Physics.RaycastAll(eye, target - eye, Vector3.Distance(eye, target), ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.transform.IsChildOf(root) || hit.collider.CompareTag("Player") || hit.collider.GetComponentInParent<CharacterController>() != null)
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     private bool HasOpenedCabinet()

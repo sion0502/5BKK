@@ -29,6 +29,9 @@ public class DemoCamcorderTalismanSense : MonoBehaviour
     private bool hintShown;
     private float startTime;
 
+    private static readonly System.Reflection.FieldInfo SequenceField =
+        typeof(CamcorderController).GetField("sequenceRoutine", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
     private static readonly System.Reflection.FieldInfo LensField =
         typeof(CamcorderController).GetField("lensCamera", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 
@@ -92,7 +95,9 @@ public class DemoCamcorderTalismanSense : MonoBehaviour
         }
 
         Transform target = DemoGuideRoute.NextCamcorderTarget();
-        bool viewing = camcorder != null && camcorder.IsViewfinderActive && lensCamera != null && target != null
+        // 뷰파인더를 완전히 올린 뒤부터 (들어 올리는 동작 중엔 안 보임 — 2026-11-19 사용자 요청)
+        bool raised = camcorder != null && (SequenceField == null || SequenceField.GetValue(camcorder) == null);
+        bool viewing = camcorder != null && camcorder.IsViewfinderActive && raised && lensCamera != null && target != null
             && !PlayerDeathDebug.IsDying && !PlayerDeathDebug.IsDead;
         if (!viewing || Vector3.Distance(lensCamera.transform.position, target.position) > maxDistance)
         {

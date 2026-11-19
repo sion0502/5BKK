@@ -88,7 +88,15 @@ public class TutorialHighlight : MonoBehaviour
 
         // 외곽선이 가장 가까운 단계 모델(LOD0)에만 붙은 가구(캐비닛 문 등)는 조금만 멀어져도 외곽선 없는 모델로 바뀌어
         // 강조가 안 보였음 (2026-11-19) → 강조하는 동안 LOD0으로 고정
-        foreach (LODGroup lod in resolved.GetComponentsInChildren<LODGroup>(true))
+        // 트롤리처럼 LODGroup이 대상(LOD0 자식)의 부모에 있는 경우도 (실측: 트롤리 LOD0 전환 높이 0.61 — 바짝 붙어야만 외곽선이 보였음)
+        var lodGroups = new List<LODGroup>(resolved.GetComponentsInChildren<LODGroup>(true));
+        LODGroup parentLod = resolved.GetComponentInParent<LODGroup>();
+        if (parentLod != null && !lodGroups.Contains(parentLod))
+        {
+            lodGroups.Add(parentLod);
+        }
+
+        foreach (LODGroup lod in lodGroups)
         {
             lod.ForceLOD(0);
             forcedLods.Add(lod);

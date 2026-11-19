@@ -318,10 +318,12 @@ public class TutorialManager : MonoBehaviour
         {
             if (step.highlightTarget && step.condition == TutorialCondition.OpenCabinet)
             {
+                highlight.ShowThroughWalls = true; // 벽 너머에서도 보이게 (2026-11-19)
                 highlight.Begin(conditions.FindNearestClosedCabinet());
             }
             else if (step.highlightTarget)
             {
+                highlight.ShowThroughWalls = false;
                 highlight.Begin(conditions.FlashlightItem, playerTransform);
             }
             else
