@@ -57,6 +57,7 @@ public class TutorialHighlight : MonoBehaviour
 
     private readonly List<OutlineState> outlines = new List<OutlineState>();
     private readonly List<SpotOutline> pausedSpotOutlines = new List<SpotOutline>();
+    private readonly List<LODGroup> forcedLods = new List<LODGroup>();
     private bool isActive;
 
     /// <summary>아이템 하이라이트. 인스펙터 target이 비어 있으면 가장 가까운 해당 아이템을 찾습니다.</summary>
@@ -85,8 +86,26 @@ public class TutorialHighlight : MonoBehaviour
             }
         }
 
+        // 외곽선이 가장 가까운 단계 모델(LOD0)에만 붙은 가구(캐비닛 문 등)는 조금만 멀어져도 외곽선 없는 모델로 바뀌어
+        // 강조가 안 보였음 (2026-11-19) → 강조하는 동안 LOD0으로 고정
+        foreach (LODGroup lod in resolved.GetComponentsInChildren<LODGroup>(true))
+        {
+            lod.ForceLOD(0);
+            forcedLods.Add(lod);
+        }
+
         bool useGlow = glow;
-        Outline[] existing = resolved.GetComponentsInChildren<Outline>(true);
+        // 대상 안에 놓인 아이템(캐비닛 안 통조림 등)의 외곽선은 빼고 가구 자체만 (예전엔 아이템만 빛나 보이기도 했음)
+        var existingList = new List<Outline>();
+        foreach (Outline o in resolved.GetComponentsInChildren<Outline>(true))
+        {
+            if (!IsItemInside(o.transform, resolved))
+            {
+                existingList.Add(o);
+            }
+        }
+
+        Outline[] existing = existingList.ToArray();
         if (existing.Length == 0)
         {
             if (AllMeshesReadable(resolved))
@@ -113,6 +132,13 @@ public class TutorialHighlight : MonoBehaviour
         }
 
         isActive = true;
+    }
+
+    // o가 대상(root) 안에 따로 놓인 아이템의 일부인지 — 대상 자신이 아이템(손전등 등)이면 해당 안 됨
+    private static bool IsItemInside(Transform o, Transform root)
+    {
+        Component item = (Component)o.GetComponentInParent<ItemObject>() ?? o.GetComponentInParent<InteractableItem>();
+        return item != null && item.transform != root && item.transform.IsChildOf(root);
     }
 
     private static bool AllMeshesReadable(Transform root)
@@ -192,6 +218,16 @@ public class TutorialHighlight : MonoBehaviour
         }
 
         isActive = false;
+
+        foreach (LODGroup lod in forcedLods)
+        {
+            if (lod != null)
+            {
+                lod.ForceLOD(-1);
+            }
+        }
+
+        forcedLods.Clear();
 
         if (glowLight != null)
         {
