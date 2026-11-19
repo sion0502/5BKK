@@ -6782,10 +6782,29 @@ MonoBehaviour:
   audioSource: {fileID: 1952921613}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  approachCue: 1
+  cueClip: {fileID: 0}
+  cueVolume: 1
+  cueSeconds: 5
+  cueStartDistance: 27
+  cueGap: {x: 1, y: 2}
+  approachDistance: 15
   revealInSight: 1
+  revealMinDistance: 12
+  revealDistance: 20
+  revealMaxDistance: 28
+  revealLookSeconds: 1.2
+  revealMaxWait: 4
+  revealBreakDistance: 7
+  revealLine: 
+  revealLight: 1
   chaseEffectOnStart: 1
   leaveAfterHide: 1
-  revealLine: 
+  searchSeconds: 7
+  leaveWalkSpeed: 0
+  reengageDistance: 6
+  creatureScale: 0
+  maxBodyHeight: 0
 --- !u!1001 &536907538
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13690,6 +13709,80 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1635219712074309703, guid: 5c4d13d43b0b695469594b3def8f4282, type: 3}
   m_PrefabInstance: {fileID: 885280423}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &885912528
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1121874708}
+    m_Modifications:
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -3.98
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 27.66
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.99643636
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.000047411475
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.08434765
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.0003417889
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -0.009
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 9.677
+      objectReference: {fileID: 0}
+    - target: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0.039
+      objectReference: {fileID: 0}
+    - target: {fileID: 7937855448359066746, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+      propertyPath: m_Name
+      value: Trolley_Hide
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+--- !u!4 &885912529 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1383244556449550315, guid: b61ac66d13b63694aa4467bd5f7d89c0, type: 3}
+  m_PrefabInstance: {fileID: 885912528}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &892017142
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15684,9 +15777,29 @@ MonoBehaviour:
   audioSource: {fileID: 1629218215}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  approachCue: 0
+  cueClip: {fileID: 0}
+  cueVolume: 1
+  cueSeconds: 5
+  cueStartDistance: 27
+  cueGap: {x: 1, y: 2}
+  approachDistance: 15
+  revealInSight: 0
+  revealMinDistance: 12
+  revealDistance: 20
+  revealMaxDistance: 28
+  revealLookSeconds: 1.2
+  revealMaxWait: 4
+  revealBreakDistance: 7
+  revealLine: "\u2026\uC800, \uC800\uAE30\u2026 \uBB50\uAC00 \uC11C \uC788\uC5B4."
+  revealLight: 1
+  chaseEffectOnStart: 0
+  leaveAfterHide: 0
+  searchSeconds: 7
+  leaveWalkSpeed: 0
+  reengageDistance: 6
   creatureScale: 1
   maxBodyHeight: 2.1
-  approachCue: 0
 --- !u!1001 &1005486666
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17139,6 +17252,12 @@ MonoBehaviour:
   runLine: 
   audioSource: {fileID: 1055298220}
   alarmClip: {fileID: 0}
+  approachCue: 1
+  cueClip: {fileID: 0}
+  cueVolume: 0.8
+  cueSeconds: 6
+  cueStartDistance: 27
+  approachDistance: 12
 --- !u!114 &1055298222
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19695,6 +19814,11 @@ Transform:
   - {fileID: 1022381465}
   m_Father: {fileID: 216290313}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1121874708 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1958838501196810189, guid: 7f1a11990bac3364c9986743a259e6f2, type: 3}
+  m_PrefabInstance: {fileID: 900000000000001016}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1122932682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37585,7 +37709,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1958838501196810189, guid: 7f1a11990bac3364c9986743a259e6f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 885912529}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7f1a11990bac3364c9986743a259e6f2, type: 3}
 --- !u!4 &900000000000001017 stripped
