@@ -15,6 +15,10 @@ public class SpatialSoundFx : MonoBehaviour
     [Header("거리 감쇠 (Audio Listener 기준)")]
     [SerializeField] private float minDistance = 1.5f;
     [SerializeField] private float maxDistance = 30f;
+    [Tooltip("멀리서도 작게 들리게 남길 볼륨(0~0.3). 0이면 maxDistance에서 0(기본). 0보다 크면 maxDistance까지 이 값 아래로 안 줄고, " +
+             "maxDistance를 넘으면 farFadeDistance 동안 0으로 — 탈춤귀신이 다가오는지 멀리서부터 알 수 있게 (2026-11-20)")]
+    [SerializeField, Range(0f, 0.3f)] private float farVolume;
+    [SerializeField] private float farFadeDistance = 10f;
 
     [Header("벽 너머 소리 (Low Pass + 볼륨)")]
     [SerializeField] private float farCutoff = 1500f;
@@ -105,11 +109,14 @@ public class SpatialSoundFx : MonoBehaviour
         source.rolloffMode = AudioRolloffMode.Custom;
         source.minDistance = minDistance;
         source.maxDistance = maxDistance;
+        // farVolume만큼 바닥을 올림 (0이면 예전 곡선 그대로)
+        float f = farVolume;
+        float r = 1f - f;
         source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, new AnimationCurve(
-            new Keyframe(0f, 1f, 0f, -1.2f),
-            new Keyframe(0.25f, 0.62f, -1.4f, -1.4f),
-            new Keyframe(0.55f, 0.2f, -0.8f, -0.8f),
-            new Keyframe(1f, 0f, -0.2f, 0f)));
+            new Keyframe(0f, 1f, 0f, -1.2f * r),
+            new Keyframe(0.25f, f + 0.62f * r, -1.4f * r, -1.4f * r),
+            new Keyframe(0.55f, f + 0.2f * r, -0.8f * r, -0.8f * r),
+            new Keyframe(1f, f, -0.2f * r, 0f)));
     }
 
     private void Update()
@@ -150,6 +157,11 @@ public class SpatialSoundFx : MonoBehaviour
         float cutoff = Mathf.Lerp(distCutoff, Mathf.Min(distCutoff, occludedCutoff), occlusion);
         lowPass.cutoffFrequency = Mathf.Lerp(lowPass.cutoffFrequency, cutoff, 1f - Mathf.Exp(-8f * Time.deltaTime));
         volumeFactor = Mathf.Lerp(1f, occludedVolume, occlusion);
+        if (farVolume > 0f && d > maxDistance)
+        {
+            // 곡선은 maxDistance 밖에서 끝값(farVolume)을 계속 쓰므로, 맵 전체에서 들리지 않게 여기서 줄여 끔
+            volumeFactor *= Mathf.Clamp01(1f - (d - maxDistance) / Mathf.Max(0.01f, farFadeDistance));
+        }
 
         float wet = Mathf.Lerp(reverbNear, reverbFar, k);
         reverb.room = Mathf.Lerp(-3000f, -300f, wet);

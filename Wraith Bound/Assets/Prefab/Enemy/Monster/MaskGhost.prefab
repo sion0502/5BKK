@@ -1658,7 +1658,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpatialSoundFx
   minDistance: 2.5
-  maxDistance: 45
+  maxDistance: 70
+  farVolume: 0.1
   farCutoff: 3000
   occludedCutoff: 2500
   occludedVolume: 0.75

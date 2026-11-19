@@ -47,6 +47,8 @@ public class DemoAmbushSequence : MonoBehaviour
     [SerializeField] private float foreshadowMaxDistance = 45f;
     [Tooltip("예고 소리 뒤 크리처가 나타나기까지(초)")]
     [SerializeField] private float foreshadowLead = 1.8f;
+    [Tooltip("크리처가 나타나면 예고 소리를 이 시간(초) 동안 줄여 끔 — 긴 파일(Xeno 포효 87초)이 끝까지 울려 사라진 뒤에도 계속 들렸음")]
+    [SerializeField] private float foreshadowFadeOut = 1.5f;
 
     [Header("대사 (화자 '나', 비우면 생략)")]
     [SerializeField] private string beforeLine = string.Empty;
@@ -214,6 +216,8 @@ public class DemoAmbushSequence : MonoBehaviour
     }
 
     // 예고 소리: 그 자리에 잠깐 쓰는 3D 소리 (거리 따라 작아짐, 끝나면 지움)
+    private AudioSource foreshadowSource;
+
     private void PlayForeshadow()
     {
         var go = new GameObject("ForeshadowSound");
@@ -228,8 +232,34 @@ public class DemoAmbushSequence : MonoBehaviour
         src.dopplerLevel = 0f;
         src.playOnAwake = false;
         src.Play();
+        foreshadowSource = src;
         Destroy(go, foreshadowClip.length + 0.5f);
         Debug.Log("[Demo] 예고 소리 " + foreshadowClip.name + " @" + foreshadowPoint.position.ToString("F1"));
+    }
+
+    // 크리처가 나타나면 예고 소리는 넘겨줌 — 이후 소리는 크리처 자신이 냄
+    private void StopForeshadow()
+    {
+        if (foreshadowSource != null)
+        {
+            StartCoroutine(FadeOutAndDestroy(foreshadowSource, foreshadowFadeOut));
+            foreshadowSource = null;
+        }
+    }
+
+    private static IEnumerator FadeOutAndDestroy(AudioSource src, float seconds)
+    {
+        float start = src.volume;
+        for (float t = 0f; t < seconds && src != null; t += Time.deltaTime)
+        {
+            src.volume = Mathf.Lerp(start, 0f, t / seconds);
+            yield return null;
+        }
+
+        if (src != null)
+        {
+            Destroy(src.gameObject);
+        }
     }
 
     private IEnumerator Run()
@@ -247,6 +277,7 @@ public class DemoAmbushSequence : MonoBehaviour
             yield return new WaitForSeconds(foreshadowLead);
             if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
             {
+                StopForeshadow();
                 yield break;
             }
         }
@@ -327,6 +358,8 @@ public class DemoAmbushSequence : MonoBehaviour
         {
             cue.Finish(); // 이제 크리처 자신의 소리가 이어받음
         }
+
+        StopForeshadow();
 
         if (revealed && creature != null)
         {
