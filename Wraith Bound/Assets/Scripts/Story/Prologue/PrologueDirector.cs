@@ -42,6 +42,8 @@ public class PrologueDirector : MonoBehaviour
     [Header("Timeouts (초)")]
     [SerializeField] private float e1Timeout = 40f;
     [SerializeField] private float apparitionTimeout = 22f;
+    [Tooltip("형체가 나타난 뒤 캠코더 사용법 팝업까지 (초). 길면 플레이어가 복도를 지나쳐 형체를 못 봄")]
+    [SerializeField] private float camcorderTipDelay = 0.6f;
     [Tooltip("진료실 열쇠를 안 주워도 이 시간이 지나면 E2")]
     [SerializeField] private float keyTimeout = 60f;
     [Tooltip("E2 소리 후 이 시간 안에 숨지 않으면 간호사가 나타나 추격")]
@@ -157,8 +159,9 @@ public class PrologueDirector : MonoBehaviour
         apparition.Show();
         SubtitleUI.ShowForDuration("나", "…? 방금 저 끝에서 뭐가 움직였는데.", 3f);
 
-        // 대사가 끝나면 게임을 멈추고 캠코더 사용법 팝업 (튜토리얼 상황형 팁과 같은 UI)
-        yield return new WaitForSecondsRealtime(3.1f);
+        // 형체가 나타나자마자(대사 첫마디) 게임을 멈추고 캠코더 사용법 팝업 (튜토리얼 상황형 팁과 같은 UI)
+        //  — 예전엔 대사가 끝난 3.1초 뒤라, 그사이 플레이어가 복도를 지나쳐 형체를 못 보고 넘어갔음
+        yield return new WaitForSecondsRealtime(camcorderTipDelay);
         if (!seen) // 그새 캠코더로 이미 봤으면 생략
         {
             yield return ShowCamcorderTip();
@@ -230,7 +233,14 @@ public class PrologueDirector : MonoBehaviour
     //    제때 안 숨거나, 지나가는 동안 숨는 곳에서 나와 들키면 추격(false)
     private IEnumerator RunHidePass(System.Action<bool> done)
     {
+        // 숨을 곳(트롤리)에 외곽선을 맥박치듯 켜서 유도 — 벽·문 너머에서도 보이게. 숨거나 시간이 지나면 끔
+        TutorialHighlight hideHighlight = BeginHideSpotHighlight();
         yield return WaitUntilOrTimeout(() => PlayerHidden, hideTimeout);
+        if (hideHighlight != null)
+        {
+            hideHighlight.End();
+        }
+
         if (!PlayerHidden)
         {
             Log("제때 숨지 않음");
@@ -288,6 +298,39 @@ public class PrologueDirector : MonoBehaviour
 
         nurse.Vanish();
         done(true);
+    }
+
+    private TutorialHighlight BeginHideSpotHighlight()
+    {
+        Vector3 near = hideSpotLookAt != null ? hideSpotLookAt.position : (hidePassFront != null ? hidePassFront.position : transform.position);
+        HidingSpot best = null;
+        float bestDist = 8f;
+        foreach (HidingSpot spot in FindObjectsByType<HidingSpot>(FindObjectsSortMode.None))
+        {
+            float d = Vector3.Distance(spot.transform.position, near);
+            if (d < bestDist)
+            {
+                bestDist = d;
+                best = spot;
+            }
+        }
+
+        if (best == null)
+        {
+            Log("숨을 곳 외곽선: 근처 HidingSpot을 못 찾음");
+            return null;
+        }
+
+        TutorialHighlight highlight = GetComponent<TutorialHighlight>();
+        if (highlight == null)
+        {
+            highlight = gameObject.AddComponent<TutorialHighlight>(); // 튜토리얼 프리팹의 하이라이트와 따로 (서로 끄지 않게)
+        }
+
+        highlight.ShowThroughWalls = true;
+        highlight.Begin(best.transform);
+        Log("숨을 곳 외곽선 켬: " + best.name);
+        return highlight;
     }
 
     // 플레이어가 병실 문을 닫고 숨었으면 간호사가 지나갈 수 있게 열어 둠 (DoorClick 내부 상태를 E로 연 것과 같게)
