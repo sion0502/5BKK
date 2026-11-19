@@ -105,6 +105,9 @@ public class PrologueDirector : MonoBehaviour
 
     private IEnumerator Run()
     {
+        // 진료실 책상 위 일지·병실 열쇠는 처음부터 강조 — 관람객이 그냥 지나쳐 숨을 곳(병실)을 못 열었음
+        StartCoroutine(HighlightPickups());
+
         // ① 갇힘 — 대사는 플레이어가 정문을 열어 보려 할 때 정문(SealedDoorInteract)이 띄움
 
         // ② E1 — 복도 A에 들어서면 (또는 시간 초과) 끝에 형체
@@ -307,6 +310,74 @@ public class PrologueDirector : MonoBehaviour
     }
 
     private LODGroup hideSpotLod;
+
+    // 일지·열쇠: 맥박치는 노란 외곽선 + 작은 빛. 읽거나 주우면 각각 꺼짐
+    private IEnumerator HighlightPickups()
+    {
+        GameObject key = FindKeyPickup();
+        TutorialHighlight journalHighlight = journal != null ? BeginPickupHighlight("JournalHighlight", journal.transform) : null;
+        TutorialHighlight keyHighlight = key != null ? BeginPickupHighlight("KeyHighlight", key.transform) : null;
+        Log("일지·열쇠 강조 (일지=" + (journalHighlight != null) + ", 열쇠=" + (keyHighlight != null) + ")");
+
+        bool journalRead = false;
+        if (journal != null)
+        {
+            journal.Read += () => journalRead = true;
+        }
+
+        while (journalHighlight != null || keyHighlight != null)
+        {
+            if (journalHighlight != null && (journalRead || journal == null || !journal.gameObject.activeInHierarchy))
+            {
+                journalHighlight.End();
+                journalHighlight = null;
+            }
+
+            if (keyHighlight != null && (key == null || !key.activeInHierarchy || (inventory != null && inventory.HasKey())))
+            {
+                keyHighlight.End();
+                keyHighlight = null;
+            }
+
+            yield return null;
+        }
+    }
+
+    private TutorialHighlight BeginPickupHighlight(string name, Transform target)
+    {
+        // 숨는 곳 강조(이 오브젝트의 TutorialHighlight)와 따로 쓰도록 자식 오브젝트에 하나씩
+        GameObject holder = new GameObject(name);
+        holder.transform.SetParent(transform, false);
+        TutorialHighlight highlight = holder.AddComponent<TutorialHighlight>();
+        highlight.Glow = true;
+        highlight.Begin(target);
+        return highlight;
+    }
+
+    // 일지 옆(진료실)의 병실 열쇠 — 일지에서 가장 가까운 열쇠 아이템
+    private GameObject FindKeyPickup()
+    {
+        Items keyData = Resources.Load<Items>("ItemDatas/Active/Key");
+        Vector3 near = journal != null ? journal.transform.position : player.transform.position;
+        GameObject best = null;
+        float bestDist = 12f;
+        foreach (ItemObject item in FindObjectsByType<ItemObject>(FindObjectsSortMode.None))
+        {
+            if (item.itemData == null || (keyData != null ? item.itemData != keyData : !item.itemData.name.Contains("Key")))
+            {
+                continue;
+            }
+
+            float d = Vector3.Distance(item.transform.position, near);
+            if (d < bestDist)
+            {
+                bestDist = d;
+                best = item.gameObject;
+            }
+        }
+
+        return best;
+    }
 
     private TutorialHighlight BeginHideSpotHighlight()
     {

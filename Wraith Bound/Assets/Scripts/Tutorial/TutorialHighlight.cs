@@ -5,6 +5,8 @@ using UnityEngine;
 /// 튜토리얼 대상(데스크 위 손전등, 로비 캐비닛 등)에 외곽선을 상시 표시합니다.
 /// 대상의 SpotOutline(조준 시에만 표시)은 하이라이트 동안 잠시 꺼 두고, 끝나면 되돌립니다.
 /// 대상 하위에 Outline이 여러 개면(캐비닛 양쪽 문 등) 전부 표시합니다.
+/// 외곽선이 없는 대상엔 실행 중 붙이되, 메시 Read/Write가 꺼져 있으면 붙이지 않음
+/// (빌드에서 QuickOutline이 그런 메시를 고쳐 쓰다 물체가 투명해짐) — 그땐 Glow(맥박치는 작은 빛)만으로 강조.
 /// </summary>
 public class TutorialHighlight : MonoBehaviour
 {
@@ -18,6 +20,23 @@ public class TutorialHighlight : MonoBehaviour
     [SerializeField] private float pulseSpeed = 3f;
     [Tooltip("켜면 벽·문 너머에서도 외곽선이 보임 (숨을 곳으로 유도할 때)")]
     [SerializeField] private bool showThroughWalls;
+
+    [Header("Glow (작은 빛)")]
+    [Tooltip("켜면 대상 위에 맥박치는 작은 빛 — 책상 위 열쇠·서류처럼 작은 물건을 눈에 띄게")]
+    [SerializeField] private bool glow;
+    [SerializeField] private Color glowColor = new Color(1f, 0.8f, 0.45f, 1f);
+    [SerializeField] private float glowRange = 1.6f;
+    [SerializeField] private float glowMinIntensity = 0.5f;
+    [SerializeField] private float glowMaxIntensity = 1.6f;
+
+    private Light glowLight;
+
+    /// <summary>대상 위에 맥박치는 작은 빛도 켤지 (Begin 전에 정해 둠).</summary>
+    public bool Glow
+    {
+        get => glow;
+        set => glow = value;
+    }
 
     /// <summary>벽 너머에서도 보이게 (Begin 전에 정해 둠).</summary>
     public bool ShowThroughWalls
@@ -66,10 +85,19 @@ public class TutorialHighlight : MonoBehaviour
             }
         }
 
+        bool useGlow = glow;
         Outline[] existing = resolved.GetComponentsInChildren<Outline>(true);
         if (existing.Length == 0)
         {
-            AddOutline(resolved.gameObject.AddComponent<Outline>(), true);
+            if (AllMeshesReadable(resolved))
+            {
+                AddOutline(resolved.gameObject.AddComponent<Outline>(), true);
+            }
+            else
+            {
+                useGlow = true; // 외곽선 대신 빛으로만
+                Debug.Log("[Tutorial] " + resolved.name + ": 메시 Read/Write가 꺼져 있어 외곽선 대신 빛으로 강조");
+            }
         }
         else
         {
@@ -79,7 +107,60 @@ public class TutorialHighlight : MonoBehaviour
             }
         }
 
+        if (useGlow)
+        {
+            CreateGlow(resolved);
+        }
+
         isActive = true;
+    }
+
+    private static bool AllMeshesReadable(Transform root)
+    {
+        foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (filter.sharedMesh != null && !filter.sharedMesh.isReadable)
+            {
+                return false;
+            }
+        }
+
+        foreach (SkinnedMeshRenderer skinned in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            if (skinned.sharedMesh != null && !skinned.sharedMesh.isReadable)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void CreateGlow(Transform resolved)
+    {
+        Bounds bounds = new Bounds(resolved.position, Vector3.zero);
+        bool any = false;
+        foreach (Renderer r in resolved.GetComponentsInChildren<Renderer>())
+        {
+            if (!any)
+            {
+                bounds = r.bounds;
+                any = true;
+            }
+            else
+            {
+                bounds.Encapsulate(r.bounds);
+            }
+        }
+
+        glowLight = new GameObject("TutorialHighlightGlow").AddComponent<Light>();
+        glowLight.type = LightType.Point;
+        glowLight.color = glowColor;
+        glowLight.range = glowRange;
+        glowLight.intensity = glowMaxIntensity;
+        glowLight.shadows = LightShadows.None;
+        glowLight.transform.position = bounds.center + Vector3.up * (bounds.extents.y + 0.35f);
+        glowLight.transform.SetParent(resolved, true); // 물건을 집어 사라지면 같이 사라짐
     }
 
     private void AddOutline(Outline outline, bool added)
@@ -111,6 +192,12 @@ public class TutorialHighlight : MonoBehaviour
         }
 
         isActive = false;
+
+        if (glowLight != null)
+        {
+            Destroy(glowLight.gameObject);
+            glowLight = null;
+        }
 
         // 손전등을 주우면 오브젝트가 파괴되므로 null 체크
         foreach (OutlineState state in outlines)
@@ -155,6 +242,11 @@ public class TutorialHighlight : MonoBehaviour
 
         float t = (Mathf.Sin(Time.unscaledTime * pulseSpeed) + 1f) * 0.5f;
         float width = Mathf.Lerp(minWidth, maxWidth, t);
+        if (glowLight != null)
+        {
+            glowLight.intensity = Mathf.Lerp(glowMinIntensity, glowMaxIntensity, t);
+        }
+
         foreach (OutlineState state in outlines)
         {
             if (state.outline != null)
