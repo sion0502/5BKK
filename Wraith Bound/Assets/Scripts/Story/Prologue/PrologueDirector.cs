@@ -241,6 +241,12 @@ public class PrologueDirector : MonoBehaviour
             hideHighlight.End();
         }
 
+        if (hideSpotLod != null)
+        {
+            hideSpotLod.ForceLOD(-1); // 원래대로 거리별 LOD
+            hideSpotLod = null;
+        }
+
         if (!PlayerHidden)
         {
             Log("제때 숨지 않음");
@@ -300,6 +306,8 @@ public class PrologueDirector : MonoBehaviour
         done(true);
     }
 
+    private LODGroup hideSpotLod;
+
     private TutorialHighlight BeginHideSpotHighlight()
     {
         Vector3 near = hideSpotLookAt != null ? hideSpotLookAt.position : (hidePassFront != null ? hidePassFront.position : transform.position);
@@ -329,6 +337,14 @@ public class PrologueDirector : MonoBehaviour
 
         highlight.ShowThroughWalls = true;
         highlight.Begin(best.transform);
+
+        // 트롤리는 LOD 모델이라 외곽선이 가까울 때 쓰는 LOD0에만 붙어 있음 → 멀리서(병실 밖) 보면 LOD1·2로 바뀌어 외곽선이 안 보였음.
+        // 강조하는 동안엔 LOD0으로 고정
+        hideSpotLod = best.GetComponentInParent<LODGroup>();
+        if (hideSpotLod != null)
+        {
+            hideSpotLod.ForceLOD(0);
+        }
         Log("숨을 곳 외곽선 켬: " + best.name);
         return highlight;
     }

@@ -64,6 +64,19 @@ public class TutorialTipPopupUI : MonoBehaviour
             continueText.text = ContinueText;
         }
 
+        // 바로 전 팁을 닫은 직후(입력 잠금 해제가 다음 프레임으로 미뤄진 사이)에 새 팁이 뜨면,
+        // 예전 잠금을 풀지 않은 채 덮어써서 플레이어가 영영 못 움직였음
+        // (예: 프롤로그에서 잠긴 문 팁을 닫자마자 캠코더 팁이 뜸 — 둘은 서로 다른 잠금 객체를 씀).
+        if (unblockFrame >= 0)
+        {
+            unblockFrame = -1;
+            if (inputBlocker != null && inputBlocker != blocker)
+            {
+                inputBlocker.Unblock(); // 다른 잠금이면 지금 풀고 새 잠금으로 다시 잠금
+            }
+            // 같은 잠금이면 아직 잠겨 있으니 그대로 이어서 씀 (Block은 이미 잠긴 상태면 아무것도 안 함)
+        }
+
         inputBlocker = blocker;
         onClosed = closed;
         shownAt = Time.unscaledTime;
