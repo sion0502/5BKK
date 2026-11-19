@@ -277,6 +277,30 @@ public class TutorialConditions
     {
         // 직선거리로만 고르면 벽 너머 옆방·다른 층 캐비닛이 골라져 강조가 안 보였음 (2026-11-19)
         // → 눈에서 가리는 것 없이 보이는 캐비닛을 먼저, 없으면 같은 층(높이 차 2.5m 안)에서 가장 가까운 것, 그것도 없으면 그냥 가장 가까운 것
+        // 시연 맵: 무조건 입구 타일(Tile_Entranc) 안 캐비닛 (2026-11-19 사용자 결정 — 시작 지점 바로 옆 옷장 2개)
+        Transform entrance = null;
+        float entranceSqr = float.MaxValue;
+        foreach (DoorClick door in closedCabinetDoors)
+        {
+            if (door == null || !IsUnderEntranceTile(door.transform))
+            {
+                continue;
+            }
+
+            Transform root = TutorialWorldObjects.GetCabinetRoot(door);
+            float sqr = (door.transform.position - player.transform.position).sqrMagnitude;
+            if (root != null && sqr < entranceSqr)
+            {
+                entranceSqr = sqr;
+                entrance = root;
+            }
+        }
+
+        if (entrance != null)
+        {
+            return entrance;
+        }
+
         Camera eye = Camera.main;
         Vector3 eyePos = eye != null ? eye.transform.position : player.transform.position + Vector3.up * 1.6f;
         Transform visible = null, sameFloor = null, any = null;
@@ -316,6 +340,19 @@ public class TutorialConditions
         }
 
         return visible != null ? visible : (sameFloor != null ? sameFloor : any);
+    }
+
+    private static bool IsUnderEntranceTile(Transform t)
+    {
+        for (Transform c = t; c != null; c = c.parent)
+        {
+            if (c.name.StartsWith("Tile_Entranc"))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsVisibleFrom(Vector3 eye, Transform door, Transform root)

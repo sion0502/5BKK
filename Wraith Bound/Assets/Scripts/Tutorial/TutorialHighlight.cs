@@ -113,6 +113,36 @@ public class TutorialHighlight : MonoBehaviour
             }
         }
 
+        // 외곽선이 문짝에만 있는 가구(옷장)는 문 모서리 한 줄만 보였음 → 고정한 LOD0의 나머지 몸체에도 강조 동안만 외곽선을 붙임
+        // (빌드에선 메시 Read/Write가 켜진 것만 — OutlineMeshReadableFixer가 외곽선 프리팹 모델을 켜 둠. 꺼진 메시를 QuickOutline이 만지면 투명해짐)
+        if (existingList.Count > 0)
+        {
+            foreach (LODGroup lod in forcedLods)
+            {
+                LOD[] lods = lod.GetLODs();
+                if (lods.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (Renderer r in lods[0].renderers)
+                {
+                    if (r == null || !r.transform.IsChildOf(resolved) && r.transform != resolved || r.GetComponent<Outline>() != null)
+                    {
+                        continue;
+                    }
+
+                    MeshFilter mf = r.GetComponent<MeshFilter>();
+                    if (mf == null || mf.sharedMesh == null || (!mf.sharedMesh.isReadable && !Application.isEditor))
+                    {
+                        continue;
+                    }
+
+                    AddOutline(r.gameObject.AddComponent<Outline>(), true);
+                }
+            }
+        }
+
         Outline[] existing = existingList.ToArray();
         if (existing.Length == 0)
         {
