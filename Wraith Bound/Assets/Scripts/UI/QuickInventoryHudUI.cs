@@ -136,14 +136,17 @@ public class QuickInventoryHudUI : MonoBehaviour
             return;
         }
 
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        Canvas canvas = GameplayHudCanvasSetup.FindHostCanvas(transform);
         if (canvas == null)
         {
             Debug.LogWarning("[QuickInventoryHudUI] Canvas를 찾을 수 없습니다. HUD가 표시되지 않습니다.");
             return;
         }
 
-        transform.SetParent(canvas.transform, false);
+        if (!transform.IsChildOf(canvas.transform))
+        {
+            transform.SetParent(canvas.transform, false);
+        }
 
         // 자신의 RectTransform이 Canvas를 꽉 채우도록 설정 (자식 좌표 기준점)
         RectTransform rt = GetComponent<RectTransform>();
