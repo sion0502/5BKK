@@ -86,6 +86,9 @@ public class XenosauridController : MonoBehaviour
     /// 시야가 없어 소리로만 쫓으므로, 발소리를 감지한 순간이 아니라 Taunt를 마치고 실제로 달려들 때를 추격으로 본다.
     /// PlayerChaseStateLink가 추격 연출을 켤 때 사용.
     /// </summary>
+    /// <summary>Taunt 포효 클립 (시연 연출의 예고 소리가 같은 포효를 씀).</summary>
+    public AudioClip TauntClip => tauntScream != null ? tauntScream.clip : null;
+
     public bool IsChasingAfterRoar =>
         _roaredThisChase && !_taunting && _enemy != null &&
         _enemy.RuntimeState.CurrentState == EnemyBase.State.Chase;

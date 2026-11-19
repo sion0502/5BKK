@@ -8696,6 +8696,12 @@ MonoBehaviour:
   runLine: "\u2026\uB3C4\uB9DD\uCCD0\uC57C \uD574!"
   audioSource: {fileID: 553179663}
   alarmClip: {fileID: 0}
+  approachCue: 1
+  cueClip: {fileID: 0}
+  cueVolume: 0.8
+  cueSeconds: 6
+  cueStartDistance: 27
+  approachDistance: 12
 --- !u!1001 &565690019
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -22096,6 +22102,15 @@ MonoBehaviour:
   audioSource: {fileID: 242258399}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  approachCue: 1
+  cueClip: {fileID: 0}
+  cueVolume: 1
+  cueSeconds: 5
+  cueStartDistance: 27
+  cueGap: {x: 1, y: 2}
+  approachDistance: 15
+  creatureScale: 1
+  maxBodyHeight: 2.1
 --- !u!1001 &1324634443
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23356,6 +23371,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 082c325b6c8cebd4b9beea1801417a83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BGMManager
+  loopCrossfadeSeconds: 0
+  loopStartSeconds: 0
+  loopEndSeconds: 0
 --- !u!4 &1427268693
 Transform:
   m_ObjectHideFlags: 0
@@ -23470,7 +23488,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -100.25
+      value: -99.1
       objectReference: {fileID: 0}
     - target: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       propertyPath: m_LocalRotation.w
@@ -25780,6 +25798,7 @@ MonoBehaviour:
   closeSound: {fileID: 8300000, guid: 41e1c0e1dd30a5144a430a2961d12824, type: 3}
   pitchMin: 0.88
   pitchMax: 1.12
+  cabinetSoundVolume: 0.35
 --- !u!114 &1587094094
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30036,6 +30055,18 @@ MonoBehaviour:
   audioSource: {fileID: 1145728638}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  revealInSight: 1
+  chaseEffectOnStart: 1
+  leaveAfterHide: 1
+  approachCue: 1
+  cueClip: {fileID: 0}
+  cueVolume: 1
+  cueSeconds: 5
+  cueStartDistance: 27
+  cueGap: {x: 1, y: 2}
+  approachDistance: 15
+  creatureScale: 0
+  maxBodyHeight: 0
 --- !u!1 &1829138857
 GameObject:
   m_ObjectHideFlags: 0
@@ -31120,6 +31151,7 @@ MonoBehaviour:
   closeSound: {fileID: 8300000, guid: 41e1c0e1dd30a5144a430a2961d12824, type: 3}
   pitchMin: 0.88
   pitchMax: 1.12
+  cabinetSoundVolume: 0.35
 --- !u!208 &1873704808
 NavMeshObstacle:
   m_ObjectHideFlags: 0

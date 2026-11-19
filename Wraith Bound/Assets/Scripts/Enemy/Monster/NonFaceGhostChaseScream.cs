@@ -26,6 +26,9 @@ public class NonFaceGhostChaseScream : MonoBehaviour
     [Tooltip("비명이 자연스럽게 끝나도록 마지막 구간을 줄이는 시간(초)")]
     [SerializeField] private float tailFadeSeconds = 0.25f;
 
+    /// <summary>추격 비명 클립 (시연 연출의 예고 소리가 같은 비명을 씀).</summary>
+    public AudioClip Clip => clip;
+
     private enum Phase { Idle, Playing, Gap }
 
     private EnemyBase enemy;

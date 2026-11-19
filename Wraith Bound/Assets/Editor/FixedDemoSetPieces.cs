@@ -298,6 +298,12 @@ public static class FixedDemoSetPieces
         EnemyBase ghost = Creature(root, FacelessPrefab, "FacelessGhost", spawn, 1.5f);
         Ambush(root, t1, zone, ghost, spawn, doors.ToArray(), new Object[0], 0.4f,
             "…방금, 뒤에서 문 열리는 소리…?", "…따라오고 있어. 뛰어!");
+        // 안 보이는 곳에서 오면 다가오는 걸 몰랐음 → 멀리 보이는 곳에 멈춰 섰다가 달려옴 + 쫓기 시작하면 바로 추격 연출
+        var facelessSo = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        facelessSo.FindProperty("revealInSight").boolValue = true;
+        facelessSo.FindProperty("chaseEffectOnStart").boolValue = true;
+        facelessSo.FindProperty("leaveAfterHide").boolValue = true; // 숨어서 버티면 나타났던 자리로 돌아가 사라짐
+        facelessSo.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("④ 얼굴 없는 귀신: 부적" + Index(t1) + " 뒤, 등장 " + spawnPos.ToString("F1") + ", 열어 줄 문 " + doors.Count + "개" + (westDoor != null ? "" : " (서쪽 문 못 찾음)"));
     }
 
@@ -324,9 +330,14 @@ public static class FixedDemoSetPieces
             }
         }
 
-        EnemyBase xeno = Creature(root, XenoPrefab, "Xenosaurid", spawn, 1.3f);
+        EnemyBase xeno = Creature(root, XenoPrefab, "Xenosaurid", spawn, 1f);
         Ambush(root, t7, zone, xeno, spawn, new Object[0], roomDoor != null ? new Object[] { roomDoor } : new Object[0], 1.3f,
             "…?! 저 방 안에서 뭔가가…", "도망쳐!");
+        // 1.3배였을 때 몸 캡슐 키가 3.9m라 문 위 벽에 걸려 못 지나갔음 → 크기 1배 + 캡슐 키 2.1m 상한 (실행 중 DemoAmbushSequence가 적용)
+        var seqSo = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        seqSo.FindProperty("creatureScale").floatValue = 1f;
+        seqSo.FindProperty("maxBodyHeight").floatValue = 2.1f;
+        seqSo.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("⑤ Xenosaurid: 부적" + Index(t7) + " 뒤, 숨은 자리 " + spawnPos.ToString("F1") + ", 부술 문 " + (roomDoor != null ? "찾음" : "없음!"));
     }
 
