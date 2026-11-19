@@ -48,12 +48,31 @@ public class PlayerChaseStateLink : MonoBehaviour
 
         bool chased = Time.time - lastChaseTime <= chaseReleaseDelay;
 
-        // 상태가 바뀔 때만 전달 → 평소엔 F6/F7 디버그 토글을 덮어쓰지 않음
+        // 상태가 바뀔 때만 전달
         if (chased != linkedChase)
         {
             linkedChase = chased;
             chaseEffects.SetBeingChased(chased);
         }
+    }
+
+    /// <summary>
+    /// 이 적이 이번 추격에서 플레이어를 '본 것'으로 처리 → 실제로 보기 전부터 추격 연출이 켜짐.
+    /// 시연 연출(DemoAmbushSequence)처럼 등장과 동시에 쫓아오는 경우용. 적이 Chase를 벗어나면 평소처럼 풀림.
+    /// </summary>
+    public void MarkSighted(EnemyBase enemy)
+    {
+        if (enemy == null)
+        {
+            return;
+        }
+
+        if (!enemies.Contains(enemy))
+        {
+            enemies.Add(enemy);
+        }
+
+        sightedChasers.Add(enemy);
     }
 
     private void RefreshEnemies()

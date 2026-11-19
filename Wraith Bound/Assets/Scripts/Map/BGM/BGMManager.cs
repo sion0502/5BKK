@@ -26,6 +26,9 @@ public class BGMManager : MonoBehaviour
     private bool waitingForMenu;
     private float master = 1f;
 
+    // 설정의 '배경음' 음량을 곱한 기본 볼륨 (환경음은 AudioListener라 BGM 소스는 ignoreListenerVolume으로 분리)
+    private float Level => defaultVolume * GameSettings.BgmVolume;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -41,6 +44,7 @@ public class BGMManager : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         if (audioSource != null)
         {
+            audioSource.ignoreListenerVolume = true;
             defaultVolume = audioSource.volume;
             crossfade = loopCrossfadeSeconds > 0.01f && audioSource.clip != null;
             if (crossfade)
@@ -73,6 +77,7 @@ public class BGMManager : MonoBehaviour
         voiceB.priority = audioSource.priority;
         voiceB.playOnAwake = false;
         voiceB.loop = false;
+        voiceB.ignoreListenerVolume = true;
         voiceB.volume = 0f;
     }
 
@@ -93,6 +98,11 @@ public class BGMManager : MonoBehaviour
 
             waitingForMenu = false;
             PlayBGM();
+        }
+
+        if (!crossfade && audioSource != null && fadeRoutine == null && audioSource.isPlaying)
+        {
+            audioSource.volume = Level; // 설정에서 배경음 슬라이더를 움직이면 바로 반영
         }
 
         if (!crossfade || audioSource == null || voiceB == null)
@@ -156,7 +166,7 @@ public class BGMManager : MonoBehaviour
             fadeOut = Mathf.Cos(Mathf.Clamp01((t - (length - fade)) / fade) * Mathf.PI * 0.5f);
         }
 
-        voice.volume = defaultVolume * master * fadeIn * fadeOut;
+        voice.volume = Level * master * fadeIn * fadeOut;
     }
 
     private bool AnyPlaying()
@@ -210,7 +220,7 @@ public class BGMManager : MonoBehaviour
         if (audioSource != null)
         {
             audioSource.Stop();
-            audioSource.volume = defaultVolume;
+            audioSource.volume = Level;
         }
     }
 
@@ -231,7 +241,7 @@ public class BGMManager : MonoBehaviour
             return;
         }
 
-        audioSource.volume = defaultVolume;
+        audioSource.volume = Level;
         audioSource.Play();
     }
 

@@ -6782,6 +6782,10 @@ MonoBehaviour:
   audioSource: {fileID: 1952921613}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  revealInSight: 1
+  chaseEffectOnStart: 1
+  leaveAfterHide: 1
+  revealLine: 
 --- !u!1001 &536907538
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15680,6 +15684,9 @@ MonoBehaviour:
   audioSource: {fileID: 1629218215}
   bangClip: {fileID: 0}
   breakClip: {fileID: 0}
+  creatureScale: 1
+  maxBodyHeight: 2.1
+  approachCue: 0
 --- !u!1001 &1005486666
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -24441,7 +24448,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -100.25
+      value: -99.1
       objectReference: {fileID: 0}
     - target: {fileID: 4660874335345244466, guid: a45c92b026ab27846860b80723553bfa, type: 3}
       propertyPath: m_LocalRotation.w

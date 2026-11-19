@@ -53,7 +53,8 @@ public class MenuMusic : MonoBehaviour
         source.loop = false;
         source.playOnAwake = false;
         source.spatialBlend = 0f;
-        source.volume = volume;
+        source.ignoreListenerVolume = true; // 환경음 설정과 분리 — 배경음 설정만 따름
+        source.volume = volume * GameSettings.BgmVolume;
         StartCoroutine(PlayLoopRoutine());
     }
 
@@ -64,6 +65,11 @@ public class MenuMusic : MonoBehaviour
             source.Play();
             while (source.isPlaying)
             {
+                if (!stopping)
+                {
+                    source.volume = volume * GameSettings.BgmVolume; // 설정 변경 즉시 반영
+                }
+
                 yield return null;
             }
 

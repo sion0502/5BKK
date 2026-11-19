@@ -16,6 +16,15 @@ public class TutorialHighlight : MonoBehaviour
     [SerializeField] private float minWidth = 3f;
     [SerializeField] private float maxWidth = 7f;
     [SerializeField] private float pulseSpeed = 3f;
+    [Tooltip("켜면 벽·문 너머에서도 외곽선이 보임 (숨을 곳으로 유도할 때)")]
+    [SerializeField] private bool showThroughWalls;
+
+    /// <summary>벽 너머에서도 보이게 (Begin 전에 정해 둠).</summary>
+    public bool ShowThroughWalls
+    {
+        get => showThroughWalls;
+        set => showThroughWalls = value;
+    }
 
     private struct OutlineState
     {
@@ -24,6 +33,7 @@ public class TutorialHighlight : MonoBehaviour
         public bool wasEnabled;
         public Color color;
         public float width;
+        public Outline.Mode mode;
     }
 
     private readonly List<OutlineState> outlines = new List<OutlineState>();
@@ -80,8 +90,14 @@ public class TutorialHighlight : MonoBehaviour
             added = added,
             wasEnabled = outline.enabled,
             color = outline.OutlineColor,
-            width = outline.OutlineWidth
+            width = outline.OutlineWidth,
+            mode = outline.OutlineMode
         });
+
+        if (showThroughWalls)
+        {
+            outline.OutlineMode = Outline.Mode.OutlineAll;
+        }
 
         outline.OutlineColor = highlightColor;
         outline.enabled = true;
@@ -112,6 +128,7 @@ public class TutorialHighlight : MonoBehaviour
             {
                 state.outline.OutlineColor = state.color;
                 state.outline.OutlineWidth = state.width;
+                state.outline.OutlineMode = state.mode;
                 state.outline.enabled = state.wasEnabled;
             }
         }

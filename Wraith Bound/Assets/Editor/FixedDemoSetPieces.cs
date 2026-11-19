@@ -308,6 +308,13 @@ public static class FixedDemoSetPieces
         fso.FindProperty("foreshadowClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(FacelessScreamClip);
         fso.FindProperty("foreshadowPoint").objectReferenceValue = scream;
         fso.ApplyModifiedPropertiesWithoutUndo();
+        // 안 보이는 곳에서 오면 다가오는 걸 몰랐음 → 멀리 보이는 곳에 멈춰 섰다가 달려옴 + 쫓기 시작하면 바로 추격 연출
+        var facelessSo = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        facelessSo.FindProperty("revealInSight").boolValue = true;
+        facelessSo.FindProperty("chaseEffectOnStart").boolValue = true;
+        facelessSo.FindProperty("leaveAfterHide").boolValue = true; // 숨어서 버티면 나타났던 자리로 돌아가 사라짐
+        facelessSo.FindProperty("revealLine").stringValue = string.Empty; // 대사 없이 연출만 (위 결정과 같게)
+        facelessSo.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("④ 얼굴 없는 귀신: 부적" + Index(t1) + " 뒤, 등장 " + spawnPos.ToString("F1") + ", 열어 줄 문 " + doors.Count + "개" + (westDoor != null ? "" : " (서쪽 문 못 찾음)"));
     }
 
@@ -392,6 +399,13 @@ public static class FixedDemoSetPieces
         so.FindProperty("foreshadowLead").floatValue = 5f;
         so.FindProperty("foreshadowMaxDistance").floatValue = 50f;
         so.ApplyModifiedPropertiesWithoutUndo();
+        // 1.3배였을 때 몸 캡슐 키가 3.9m라 문 위 벽에 걸려 못 지나갔음 → 크기 1배 + 캡슐 키 2.1m 상한 (실행 중 DemoAmbushSequence가 적용)
+        // 예고는 위 포효(foreshadow)가 맡으므로 '멀리서 다가오는 예고 소리'는 끔 (둘 다 켜면 등장이 10초 가까이 늦어짐)
+        var fitSo = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
+        fitSo.FindProperty("creatureScale").floatValue = 1f;
+        fitSo.FindProperty("maxBodyHeight").floatValue = 2.1f;
+        fitSo.FindProperty("approachCue").boolValue = false;
+        fitSo.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("⑤ Xenosaurid(로비): 부적" + Index(seal) + " 뒤, 등장 " + spawnPos.ToString("F1") + (bestLen < float.MaxValue ? ", 부적까지 " + bestLen.ToString("F0") + "m" : " — 조건 맞는 자리 없음!"));
     }
 

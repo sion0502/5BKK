@@ -33,6 +33,7 @@ public class CutscenePlayerHandoff : MonoBehaviour
 
     private PlayerControlLock controlLock;
     private readonly List<Renderer> hiddenRenderers = new List<Renderer>();
+    private readonly List<GameObject> hiddenHuds = new List<GameObject>();
     private bool handedOff;
 
     private void Awake()
@@ -62,6 +63,32 @@ public class CutscenePlayerHandoff : MonoBehaviour
             if (go != null)
             {
                 go.SetActive(false);
+            }
+        }
+
+        HideGameplayHud();
+    }
+
+    // 플레이 HUD(인벤토리 칸·체력/스태미나)는 씬에 따로 놓인 캔버스라 컷씬 동안에도 보였음 → 전환 때까지 꺼 둠
+    private void HideGameplayHud()
+    {
+        var roots = new HashSet<GameObject>();
+        foreach (QuickInventoryHudUI hud in FindObjectsByType<QuickInventoryHudUI>(FindObjectsSortMode.None))
+        {
+            roots.Add(hud.gameObject);
+        }
+
+        foreach (PlayerStatusHudUI hud in FindObjectsByType<PlayerStatusHudUI>(FindObjectsSortMode.None))
+        {
+            roots.Add(hud.gameObject);
+        }
+
+        foreach (GameObject root in roots)
+        {
+            if (root != null && root.activeSelf && !activateOnHandoff.Contains(root))
+            {
+                root.SetActive(false);
+                hiddenHuds.Add(root);
             }
         }
     }
@@ -107,6 +134,16 @@ public class CutscenePlayerHandoff : MonoBehaviour
                 go.SetActive(true);
             }
         }
+
+        foreach (GameObject hud in hiddenHuds)
+        {
+            if (hud != null)
+            {
+                hud.SetActive(true);
+            }
+        }
+
+        hiddenHuds.Clear();
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;

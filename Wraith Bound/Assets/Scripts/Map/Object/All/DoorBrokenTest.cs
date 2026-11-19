@@ -33,19 +33,6 @@ public class DoorBrokenTest : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-#if UNITY_EDITOR
-        // 테스트 Y = 씬의 부서지는 문 전부 부수기 — 에디터에서만(2026-11-19): 빌드에서도 동작해 관람객이 Y를 누르면 시연 ⑤ 방문이 미리 부서졌음
-        if (Input.GetKeyDown(KeyCode.Y))
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            Vector3 attackerPosition = player != null ? player.transform.position : transform.position - transform.forward;
-            HitDoor(attackerPosition);
-        }
-#endif
-    }
-
     public void HitDoor(Vector3 attackerPosition)
     {
         if (isBroken) return;

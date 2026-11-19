@@ -20,23 +20,26 @@ public class SealTest : MonoBehaviour
 
     private bool opened = false;
 
-    private void Update()
+    /// <summary>봉인핵을 전부 깨고 문을 엶. (예전 G 테스트 키 동작 — 키는 없앰)</summary>
+    public void OpenGate()
     {
-        if (Input.GetKeyDown(KeyCode.G) && !opened)
+        if (opened)
         {
-            opened = true;
-            PlayDoorOpenedSound();
-
-            // 봉인핵 전부 파괴
-            foreach (var seal in seals)
-            {
-                if (seal != null)
-                    seal.BreakSeal();
-            }
-
-            // 문 열기
-            StartCoroutine(OpenDoors());
+            return;
         }
+
+        opened = true;
+        PlayDoorOpenedSound();
+
+        // 봉인핵 전부 파괴
+        foreach (var seal in seals)
+        {
+            if (seal != null)
+                seal.BreakSeal();
+        }
+
+        // 문 열기
+        StartCoroutine(OpenDoors());
     }
 
     private IEnumerator OpenDoors()

@@ -142,6 +142,21 @@ public class TraitRuntime : MonoBehaviour
         }
     }
 
+    private static void UnlockAllTraits()
+    {
+        int count = 0;
+        foreach (TraitDef def in TraitCatalog.All)
+        {
+            if (def != null && def.Implemented && !TraitProgress.IsUnlocked(def.Id))
+            {
+                TraitProgress.Unlock(def);
+                count++;
+            }
+        }
+
+        ScreenMessageUI.Show(count > 0 ? "기 " + count + "개를 모두 해금했습니다 (운영자)" : "이미 모든 기가 해금돼 있습니다", 2.5f);
+    }
+
     // 속도·스태미나 소모·인벤 칸 — 착용이 바뀔 때마다 기본값에서 다시 계산
     private void ApplyStats()
     {
@@ -178,13 +193,13 @@ public class TraitRuntime : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F5)) // 운영자 초기화 (2026-11-19 Ctrl+Shift+F12 → F5, 사용자 요청)
+        // 운영자 F5 전체 초기화(기·쪽지·부적 팁·스토리·튜토리얼)는 DevProgressReset이 맡음 — 메인 메뉴에서도 동작
+        // 운영자: F12만 — 구현된 기 전부 해금 (시연·테스트용). Ctrl/Shift를 누른 채면 무시
+        bool modifier = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+            || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (Input.GetKeyDown(KeyCode.F12) && !modifier)
         {
-            // 운영자 초기화 = 전부(기 해금 + 스토리 쪽지 수집) — 2026-11-19 사용자 결정. 누르기 전까진 쪽지가 관람객 사이에 쌓임.
-            TraitProgress.ResetAll();
-            StoryNoteProgress.ResetAll();
-            DemoTalismanTip.Reset(); // 다음 관람객에게 부적 설명 팝업 다시
-            ScreenMessageUI.Show("기 해금·쪽지 수집을 모두 초기화했습니다 (운영자)", 2.5f);
+            UnlockAllTraits();
         }
 
         if (conditions == null || PlayerDeathDebug.IsDead || PlayerDeathDebug.IsDying)

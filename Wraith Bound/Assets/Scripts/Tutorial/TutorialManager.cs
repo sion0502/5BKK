@@ -7,11 +7,17 @@ using UnityEngine;
 ///  • 기본 진행: 우상단 안내, 직접 해봐야 다음 단계로 (steps 순서대로)
 ///  • 상황형 팁: 조건이 처음 충족될 때 중앙 팝업 + 시간 정지 (tips, 각 1회)
 ///  • E 길게 누르기: 튜토리얼 전체 건너뛰기
+///  • 한 번 나온 단계·팁은 기록해 두고(PlayerPrefs) 다른 씬에서 다시 띄우지 않음
+///    — 프롤로그에서 본 이동·손전등·문·잠긴 문 안내가 본 게임(시연 맵)에서 또 나오지 않게.
+///    기록은 '새로운 게임'과 운영자 전체 초기화(F5)에서 지워짐.
 /// SceneStarter가 있으면 착지 연출이 끝난 뒤 시작합니다. Tutorial 프리팹을 씬에 놓기만 하면 동작합니다.
 /// </summary>
 public class TutorialManager : MonoBehaviour
 {
     private const string CompletedPrefsKey = "Tutorial.Completed";
+    private const string SeenPrefsKey = "Tutorial.Seen";
+
+    private static HashSet<string> seen;
 
     [Header("Mode")]
     [Tooltip("켜면 매번 표시(시연용). 끄면 한 번 완료·건너뛰기한 뒤로는 표시하지 않습니다.")]
@@ -64,6 +70,75 @@ public class TutorialManager : MonoBehaviour
         PlayerPrefs.DeleteKey(CompletedPrefsKey);
     }
 
+    /// <summary>튜토리얼 완료·본 기록 삭제 (새로운 게임 / 운영자 전체 초기화 F5에서 부름).</summary>
+    public static void ClearSavedProgress()
+    {
+        PlayerPrefs.DeleteKey(CompletedPrefsKey);
+        PlayerPrefs.DeleteKey(SeenPrefsKey);
+        seen = null;
+    }
+
+    // ───────── 한 번 나온 단계·팁 기록 ─────────
+
+    // 에디터에서 도메인 리로드 없이 다시 플레이해도 저장값(PlayerPrefs)부터 다시 읽게
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSeenCache()
+    {
+        seen = null;
+    }
+
+    private static HashSet<string> Seen
+    {
+        get
+        {
+            if (seen == null)
+            {
+                seen = new HashSet<string>();
+                foreach (string token in PlayerPrefs.GetString(SeenPrefsKey, string.Empty).Split(','))
+                {
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        seen.Add(token);
+                    }
+                }
+            }
+
+            return seen;
+        }
+    }
+
+    private static string StepToken(TutorialCondition condition) => "S" + (int)condition;
+    private static string TipToken(TutorialTipTrigger trigger) => "T" + (int)trigger;
+
+    private static void MarkSeen(string token)
+    {
+        if (Seen.Add(token))
+        {
+            PlayerPrefs.SetString(SeenPrefsKey, string.Join(",", Seen));
+            PlayerPrefs.Save();
+        }
+    }
+
+    // 다른 씬에서 이미 나온 단계는 빼고, 이미 나온 팁은 '보여줌' 처리
+    private void SkipAlreadySeen()
+    {
+        int before = steps.Count;
+        steps.RemoveAll(step => step != null && Seen.Contains(StepToken(step.condition)));
+
+        for (int i = 0; i < tips.Count; i++)
+        {
+            if (tips[i] != null && Seen.Contains(TipToken(tips[i].trigger)))
+            {
+                shownTips.Add(i);
+            }
+        }
+
+        if (before != steps.Count || shownTips.Count > 0)
+        {
+            Debug.Log("[Tutorial] 이미 본 안내 제외 — 단계 " + (before - steps.Count) + "개, 팁 " + shownTips.Count + "개");
+        }
+    }
+
     void Start()
     {
         if (!showEveryTime && PlayerPrefs.GetInt(CompletedPrefsKey, 0) == 1)
@@ -76,6 +151,11 @@ public class TutorialManager : MonoBehaviour
         TutorialDefaultsMerger.MergeMissingSteps(steps);
         TutorialDefaultsMerger.MergeMissingTips(tips);
         ApplyOnlySteps();
+        SkipAlreadySeen();
+        if (steps.Count == 0 && shownTips.Count >= tips.Count)
+        {
+            return; // 전부 이미 본 안내 — 띄울 것 없음
+        }
 
         GameObject player = GameObject.FindWithTag("Player");
         if (player == null)
@@ -158,7 +238,7 @@ public class TutorialManager : MonoBehaviour
         stepsRunning = steps.Count > 0;
         if (promptUI != null)
         {
-            promptUI.SetSkipVisible(true);
+            promptUI.SetSkipVisible(stepsRunning); // 남은 단계가 없으면(팁만) 건너뛰기 안내도 숨김
         }
 
         if (stepsRunning)
@@ -206,6 +286,7 @@ public class TutorialManager : MonoBehaviour
     {
         stepIndex = index;
         TutorialStep step = steps[index];
+        MarkSeen(StepToken(step.condition));
 
         conditions.BeginStep(step);
         if (promptUI != null)
@@ -320,6 +401,7 @@ public class TutorialManager : MonoBehaviour
             }
 
             shownTips.Add(i);
+            MarkSeen(TipToken(tips[i].trigger));
             tipPopup.Show(tips[i], inputBlocker, HandleTipClosed);
             return true;
         }

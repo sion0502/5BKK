@@ -23,6 +23,9 @@ public class MaskGhostSong : MonoBehaviour
     [Tooltip("처음부터 다시 시작할 때 소리가 커지는 시간(초) — 뚝 끊기는 소리 방지")]
     [SerializeField] private float fadeInSeconds = 0.2f;
 
+    /// <summary>순찰 노래 클립 (시연 연출의 예고 소리가 같은 노래를 씀).</summary>
+    public AudioClip Clip => clip;
+
     private EnemyBase enemy;
     private AudioSource source;
     private EnemyBase.State lastState = (EnemyBase.State)(-1);
