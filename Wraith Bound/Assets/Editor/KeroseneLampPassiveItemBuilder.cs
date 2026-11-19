@@ -74,7 +74,7 @@ public static class KeroseneLampPassiveItemBuilder
         passive.extraSlots = 0;
         passive.providesAmbientLight = true;
         passive.ambientLightRange = 2f;
-        passive.ambientLightIntensity = 2.5f;
+        passive.ambientLightIntensity = 1f; // 2026-11-19: 너무 밝아 예전(5)의 20%로
         passive.ambientLightColor = new Color(1f, 0.72f, 0.38f, 1f);
         passive.flickerLight = true;
 
