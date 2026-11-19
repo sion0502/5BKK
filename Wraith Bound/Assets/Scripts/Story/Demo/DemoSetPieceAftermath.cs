@@ -27,6 +27,16 @@ public class DemoSetPieceAftermath : MonoBehaviour
         a.armed = true;
     }
 
+    /// <summary>이번에 사라질 때 배회 괴물을 다시 내보내지 않게 함 (연출이 '그냥 사라지고 끝'을 원할 때).</summary>
+    public static void Untrack(EnemyBase setPieceCreature)
+    {
+        DemoSetPieceAftermath a = setPieceCreature != null ? setPieceCreature.GetComponent<DemoSetPieceAftermath>() : null;
+        if (a != null)
+        {
+            a.armed = false;
+        }
+    }
+
     private void OnDisable()
     {
         if (!armed || creature == null)

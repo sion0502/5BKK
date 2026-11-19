@@ -104,6 +104,8 @@ public class DemoAmbushSequence : MonoBehaviour
     [SerializeField] private float leaveWalkSpeed;
     [Tooltip("돌아가는 중 숨는 곳에서 나온 플레이어가 이 거리(m) 안에서 보이면 다시 쫓아옴")]
     [SerializeField] private float reengageDistance = 6f;
+    [Tooltip("돌아가 사라진 뒤 같은 종류 배회 괴물을 먼 곳에 다시 내보냄. 끄면 그냥 사라지고 끝 (⑤ Xenosaurid — 2026-11-19 사용자 요청)")]
+    [SerializeField] private bool respawnRoamerAfterLeave = true;
 
     [Header("크기 (0이면 그대로)")]
     [Tooltip("크리처 크기 — 씬 배치 크기 대신")]
@@ -509,6 +511,11 @@ public class DemoAmbushSequence : MonoBehaviour
             yield return null;
         }
 
+        if (!respawnRoamerAfterLeave)
+        {
+            DemoSetPieceAftermath.Untrack(creature); // 배회 괴물을 다시 내보내지 않음 — 사라지고 끝
+        }
+
         creature.gameObject.SetActive(false);
         s.PlayerDeadLogged = false;
         Debug.Log("[Demo] " + creature.name + " 사라짐");
@@ -616,10 +623,20 @@ public class DemoAmbushSequence : MonoBehaviour
             if (DemoCreatureStaging.IsOnScreen(at, player, creature.transform))
             {
                 looked += Time.deltaTime;
-                if (!lineShown && !string.IsNullOrEmpty(line))
+                if (!lineShown)
                 {
                     lineShown = true;
-                    SubtitleUI.ShowForDuration("나", line, 2f);
+                    // 처음 본 순간 등장 비명 — 예전엔 달려오기 시작할 때(추격)만 비명이라 멀리 서 있을 땐 아무 소리도 안 났음
+                    NonFaceGhostChaseScream scream = creature.GetComponentInChildren<NonFaceGhostChaseScream>();
+                    if (scream != null)
+                    {
+                        scream.ScreamNow();
+                    }
+
+                    if (!string.IsNullOrEmpty(line))
+                    {
+                        SubtitleUI.ShowForDuration("나", line, 2f);
+                    }
                 }
 
                 if (looked >= revealLookSeconds)
