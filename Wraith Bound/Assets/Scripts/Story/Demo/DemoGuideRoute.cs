@@ -63,6 +63,34 @@ public class DemoGuideRoute : MonoBehaviour
     private static DemoGuideRoute active;
 
     /// <summary>p가 아직 남은 안내 경로(현재 단계부터 끝까지) radius 안이면 true — 연출 뒤 배회 괴물을 길에서 먼 곳에 두려고 (DemoRoamingSpawner).</summary>
+    /// <summary>
+    /// 남은 길잡이 루트에서 수평 거리 radius 안인지 (층 무시) — 소리는 바닥·천장을 넘어 들리므로
+    /// 위·아래층이라도 루트 바로 위면 가까운 것으로 봄. 괴물 울음이 갈 길에서 들리지 않게 고를 때 씀.
+    /// </summary>
+    public static bool IsNearRemainingRouteFlat(Vector3 p, float radius)
+    {
+        if (active == null)
+        {
+            return false;
+        }
+
+        float r2 = radius * radius;
+        for (int i = Mathf.Max(0, active.Current); i < active.steps.Length; i++)
+        {
+            foreach (Vector3 q in active.steps[i].path)
+            {
+                float dx = q.x - p.x;
+                float dz = q.z - p.z;
+                if (dx * dx + dz * dz < r2)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public static bool IsNearRemainingRoute(Vector3 p, float radius)
     {
         if (active == null)

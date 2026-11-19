@@ -99,7 +99,7 @@ public class DemoRoamingSpawner : MonoBehaviour
 
     /// <summary>
     /// 연출 괴물이 사라진 뒤 같은 종류 배회 괴물을 다시 내보냄 — 플레이어에게서 멀고(minPlayerDistance) 안 보이고
-    /// 남은 길잡이 루트에서 routeClearance 밖인 곳 (2026-11-19 연출 뒤 괴물이 가야 할 길을 막음).
+    /// 남은 길잡이 루트에서 quietDistance(수평, 층 무시) 밖인 곳 — 그 범위 안 순찰 지점만 돌아다님 (2026-11-19 연출 뒤 괴물이 가야 할 길을 막음·울음이 계속 들림).
     /// </summary>
     public static void RespawnSameKindLater(EnemyBase vanished)
     {
@@ -108,8 +108,6 @@ public class DemoRoamingSpawner : MonoBehaviour
             instance.StartCoroutine(instance.RespawnSameKind(KindOf(vanished), vanished));
         }
     }
-
-    [SerializeField] private float routeClearance = 18f;
 
     private System.Collections.IEnumerator RespawnSameKind(string kind, EnemyBase vanished)
     {
@@ -135,10 +133,31 @@ public class DemoRoamingSpawner : MonoBehaviour
             yield break;
         }
 
-        if (!TryPickFarSpot(true, out Vector3 p) && !TryPickFarSpot(false, out p))
+        // 다시 나오는 배회 괴물은 남은 길·플레이어에서 울음이 안 들릴 만큼 먼 곳만 돌아다니게 함.
+        // 예전엔 루트 바로 위층(높이 ×3으로 멀게 계산)에 다시 나와 순찰 울음이 바닥 너머로 계속 들렸음
+        // — 연출 괴물이 사라진 뒤에도 '앞에서 계속 운다'(2026-11-19, ⑤ Xenosaurid 뒤 출구 가는 길)
+        PatrolPointZone quietZone = BuildQuietZone(kind);
+        if (quietZone == null)
         {
+            Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 — 남은 길에서 소리가 안 들릴 만큼 먼 곳이 없어 배회 괴물 " + roamer.name + " 다시 안 내보냄");
+            yield break;
+        }
+
+        if (!TryPickQuietSpot(quietZone, out Vector3 p))
+        {
+            Destroy(quietZone.gameObject);
             Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 — 배회 괴물 " + roamer.name + " 다시 둘 자리를 못 찾음");
             yield break;
+        }
+
+        if (ZoneField != null)
+        {
+            ZoneField.SetValue(roamer, quietZone);
+        }
+
+        if (roamer.Agent != null)
+        {
+            quietZones[roamer.Agent] = quietZone; // 갇혀서 옮길 때도 이 구역 안으로만 (Relocate)
         }
 
         roamer.transform.position = p;
@@ -150,30 +169,83 @@ public class DemoRoamingSpawner : MonoBehaviour
             agent.Warp(p);
         }
 
+        // 이미 Start를 마친 괴물이라 순찰 구역을 새로 읽게 순찰 런타임만 다시 만듦 (EnemyBase는 수정하지 않음)
+        InitPatrolRuntime?.Invoke(roamer, null);
         roamer.ReturnToPatrolAfterDeath();
         roamer.RuntimeState.PlayerDeadLogged = DemoGodMode.IsImmune(roamer);
         Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 → 배회 괴물 " + roamer.name + " 다시 등장 " + p.ToString("F1"));
     }
 
-    // 플레이어 30m+·안 보이는 곳, avoidRoute면 남은 길잡이 루트에서도 routeClearance 밖
-    private bool TryPickFarSpot(bool avoidRoute, out Vector3 point)
+    [Tooltip("연출 뒤 다시 나오는 배회 괴물이 남은 길·플레이어에서 떨어질 수평 거리(m) — 순찰 울음(SpatialSoundFx 최대 30m)이 바닥·벽 너머로도 안 들리게")]
+    [SerializeField] private float quietDistance = 36f;
+    [Tooltip("조용한 순찰 지점이 이보다 적으면 다시 내보내지 않음")]
+    [SerializeField] private int minQuietPoints = 3;
+
+    private readonly Dictionary<NavMeshAgent, PatrolPointZone> quietZones = new Dictionary<NavMeshAgent, PatrolPointZone>();
+
+    private static readonly MethodInfo InitPatrolRuntime =
+        typeof(EnemyBase).GetMethod("InitPatrolRuntime", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    // 맵 전체 순찰 지점 중 남은 길·플레이어에서 quietDistance(수평) 밖인 것만 모은 순찰 구역. 모자라면 null
+    private PatrolPointZone BuildQuietZone(string kind)
+    {
+        if (roamZone == null || !roamZone.HasPoints)
+        {
+            return null;
+        }
+
+        GameObject player = GameObject.FindWithTag("Player");
+        var keep = new List<Vector3>();
+        foreach (PatrolPoint pt in roamZone.Points)
+        {
+            if (pt == null)
+            {
+                continue;
+            }
+
+            Vector3 p = pt.transform.position;
+            if (player != null && FlatDistance(player.transform.position, p) < quietDistance)
+            {
+                continue;
+            }
+
+            if (DemoGuideRoute.IsNearRemainingRouteFlat(p, quietDistance))
+            {
+                continue;
+            }
+
+            keep.Add(p);
+        }
+
+        if (keep.Count < minQuietPoints)
+        {
+            return null;
+        }
+
+        Transform root = new GameObject("PatrolZone_Quiet_" + kind).transform;
+        root.SetParent(transform, false);
+        for (int i = 0; i < keep.Count; i++)
+        {
+            Transform pt = new GameObject("Quiet_" + i).transform;
+            pt.SetParent(root, false);
+            pt.position = keep[i];
+            pt.gameObject.AddComponent<PatrolPoint>();
+        }
+
+        Debug.Log("[Demo] 배회 괴물 " + kind + ": 남은 길에서 먼 순찰 지점 " + keep.Count + "/" + roamZone.Points.Length + "개");
+        return root.gameObject.AddComponent<PatrolPointZone>();
+    }
+
+    // 조용한 순찰 지점 중 플레이어 눈에 안 보이는 곳 하나
+    private static bool TryPickQuietSpot(PatrolPointZone zone, out Vector3 point)
     {
         point = Vector3.zero;
         Camera eye = Camera.main;
-        for (int k = 0; k < 24; k++)
+        PatrolPoint[] pts = zone.Points;
+        for (int k = 0; k < pts.Length * 2; k++)
         {
-            Transform tile = spawnTiles[UnityEngine.Random.Range(0, spawnTiles.Length)];
-            if (tile == null || IsExcluded(tile) || !TryRandomPoint(tile, minPlayerDistance, out Vector3 p))
-            {
-                continue;
-            }
-
+            Vector3 p = pts[UnityEngine.Random.Range(0, pts.Length)].transform.position;
             if (eye != null && !Physics.Linecast(eye.transform.position, p + Vector3.up * 1.5f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                continue;
-            }
-
-            if (avoidRoute && DemoGuideRoute.IsNearRemainingRoute(p, routeClearance))
             {
                 continue;
             }
@@ -183,6 +255,13 @@ public class DemoRoamingSpawner : MonoBehaviour
         }
 
         return false;
+    }
+
+    private static float FlatDistance(Vector3 a, Vector3 b)
+    {
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
     }
 
     /// <summary>이 괴물을 플레이어에게서 멀고 안 보이는 다른 자리로 옮김 (갓모드에서 잡힌 뒤 등). 시연 씬이 아니면 아무것도 안 함.</summary>
@@ -454,6 +533,20 @@ public class DemoRoamingSpawner : MonoBehaviour
     /// <summary>오래 갇힌 괴물을 플레이어에게서 멀고 안 보이는 다른 자리로 옮김 (DemoMonsterDoorHelper가 부름).</summary>
     public bool Relocate(NavMeshAgent agent)
     {
+        // 연출 뒤 다시 나온 배회 괴물은 남은 길에서 먼 순찰 지점 안으로만 옮김 — 맵 아무 데나 옮기면 길 근처에서 다시 울었음
+        if (agent != null && quietZones.TryGetValue(agent, out PatrolPointZone quiet) && quiet != null)
+        {
+            if (TryPickQuietSpot(quiet, out Vector3 q) && FlatDistance(q, agent.transform.position) > 1f)
+            {
+                agent.Warp(q);
+                agent.ResetPath();
+                Debug.Log("[Demo] 괴물 " + agent.name + " 다른 자리로 옮김(갇힘·갓모드, 길에서 먼 곳) → " + q.ToString("F1"));
+                return true;
+            }
+
+            return false;
+        }
+
         GameObject player = GameObject.FindWithTag("Player");
         Camera eye = Camera.main;
         for (int k = 0; k < 6; k++)
