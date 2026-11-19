@@ -6789,6 +6789,7 @@ MonoBehaviour:
   cueStartDistance: 27
   cueGap: {x: 1, y: 2}
   approachDistance: 15
+  runInFrom: {fileID: 0}
   revealInSight: 1
   revealMinDistance: 12
   revealDistance: 20
@@ -14045,6 +14046,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1030994864, guid: abc00000000009737610904651566923, type: 3}
   m_PrefabInstance: {fileID: 898454646}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &902264769
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 902264770}
+  m_Layer: 0
+  m_Name: RunInFrom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &902264770
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 902264769}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 152, y: 0.03, z: 101.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1003953920}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &902898848
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15744,6 +15776,7 @@ Transform:
   - {fileID: 636384871}
   - {fileID: 436043224}
   - {fileID: 1629218214}
+  - {fileID: 902264770}
   m_Father: {fileID: 4260511}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1003953921
@@ -15768,7 +15801,7 @@ MonoBehaviour:
   breakDelay: 0
   huntSeconds: 25
   foreshadowClip: {fileID: 8300000, guid: c84029f43006a6b4ba82199387a9c54e, type: 3}
-  foreshadowPoint: {fileID: 636384871}
+  foreshadowPoint: {fileID: 902264770}
   foreshadowVolume: 1
   foreshadowMaxDistance: 50
   foreshadowLead: 5
@@ -15784,6 +15817,7 @@ MonoBehaviour:
   cueStartDistance: 27
   cueGap: {x: 1, y: 2}
   approachDistance: 15
+  runInFrom: {fileID: 902264770}
   revealInSight: 0
   revealMinDistance: 12
   revealDistance: 20
@@ -15794,7 +15828,7 @@ MonoBehaviour:
   revealLine: "\u2026\uC800, \uC800\uAE30\u2026 \uBB50\uAC00 \uC11C \uC788\uC5B4."
   revealLight: 1
   chaseEffectOnStart: 0
-  leaveAfterHide: 0
+  leaveAfterHide: 1
   searchSeconds: 7
   leaveWalkSpeed: 0
   reengageDistance: 6
