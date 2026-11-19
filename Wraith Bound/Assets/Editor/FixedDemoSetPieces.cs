@@ -302,12 +302,7 @@ public static class FixedDemoSetPieces
         EnemyBase ghost = Creature(root, FacelessPrefab, "FacelessGhost", spawn, 1f);
         Ambush(root, t1, zone, ghost, spawn, doors.ToArray(), new Object[0], 0.4f,
             string.Empty, string.Empty); // 대사 없이 연출만 (2026-11-19 사용자 결정)
-        // 나타나기 전, 구역 뒤쪽 남서 문(얼굴 없는 귀신이 지나올 문) 근처에서 비명 한 번 — 플레이어에게 붙이지 않고 그 자리 3D 소리 (2026-11-19 사용자 요청)
-        Transform scream = DemoSetPieceBuilder.Point(root, "ForeshadowScream", new Vector3(293.9f, 1.6f, 3.7f));
-        var fso = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
-        fso.FindProperty("foreshadowClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(FacelessScreamClip);
-        fso.FindProperty("foreshadowPoint").objectReferenceValue = scream;
-        fso.ApplyModifiedPropertiesWithoutUndo();
+        // 예고 비명은 팀원 ApproachingSoundCue(멀리서 다가오는 반복 비명)가 맡음 — 근처 한 번 비명(foreshadow)은 겹쳐서 뺌 (2026-11-19)
         // 안 보이는 곳에서 오면 다가오는 걸 몰랐음 → 멀리 보이는 곳에 멈춰 섰다가 달려옴 + 쫓기 시작하면 바로 추격 연출
         var facelessSo = new SerializedObject(root.GetComponent<DemoAmbushSequence>());
         facelessSo.FindProperty("revealInSight").boolValue = true;

@@ -6772,7 +6772,7 @@ MonoBehaviour:
   breakDoors: []
   breakDelay: 0.4
   huntSeconds: 25
-  foreshadowClip: {fileID: 8300000, guid: 1a7c3e5b9d2f4864b0a2c4e6f8d13b79, type: 3}
+  foreshadowClip: {fileID: 0}
   foreshadowPoint: {fileID: 1303569570}
   foreshadowVolume: 1
   foreshadowMaxDistance: 45
@@ -17090,7 +17090,6 @@ GameObject:
   - component: {fileID: 1055298219}
   - component: {fileID: 1055298221}
   - component: {fileID: 1055298220}
-  - component: {fileID: 1055298222}
   m_Layer: 0
   m_Name: SetPiece3_OperatingRoom
   m_TagString: Untagged
@@ -17119,8 +17118,6 @@ Transform:
   - {fileID: 1331608464}
   - {fileID: 624958326}
   - {fileID: 135419433}
-  - {fileID: 2058576588}
-  - {fileID: 1339871789}
   m_Father: {fileID: 4260511}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!82 &1055298220
@@ -17258,30 +17255,12 @@ MonoBehaviour:
   cueSeconds: 6
   cueStartDistance: 27
   approachDistance: 12
---- !u!114 &1055298222
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1055298218}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df3c23744101ef04bb4e31376eb41d29, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DemoApproachingSound
-  clip: {fileID: 8300000, guid: e2a7c4b19d6f4835b8e0a1c3d5f79b46, type: 3}
-  from: {fileID: 2058576588}
-  to: {fileID: 1339871789}
-  seconds: 10
-  volume: 1
-  minDistance: 4
-  maxDistance: 60
-  triggerCenter: {fileID: 1963849377}
-  triggerRadius: 12
-  sealIndex: 3
-  stopDelay: 2.7
-  fadeOut: 0.8
+  leaveWhenHidden: 1
+  searchSeconds: 6
+  leaveMinDistance: 22
+  leaveMaxDistance: 40
+  leaveWalkSpeed: 0
+  reengageDistance: 6
 --- !u!1001 &1056802873
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23262,37 +23241,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1339871788
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1339871789}
-  m_Layer: 0
-  m_Name: SongTo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1339871789
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1339871788}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 322, y: 1.5, z: 85}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1055298219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1342344500
 PrefabInstance:
@@ -35006,37 +34954,6 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &2058576587
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2058576588}
-  m_Layer: 0
-  m_Name: SongFrom
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2058576588
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2058576587}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 325, y: 1.5, z: 112}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1055298219}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2064473445
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -226,7 +226,7 @@ public static class FixedDemoStoryBuilder
         so.FindProperty("audioSource").objectReferenceValue = audio;
         so.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("탈춤귀신 등장 " + spawn.ToString("F1") + (ghost != null ? "" : " (EnemyBase 없음!)"));
-        ApproachingSong(root, talisman.transform, sealIndex, log);
+        // 다가오는 노래는 DemoOperatingRoomSequence의 ApproachingSoundCue(팀원)가 맡음 — DemoApproachingSound는 겹쳐서 안 붙임 (2026-11-19)
     }
 
     // 맵에 놓는 부적 크기 (종이 약 0.34×0.92m — 플레이어 1.3배 맵에서 눈에 띄게)

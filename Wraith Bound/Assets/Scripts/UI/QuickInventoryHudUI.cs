@@ -627,15 +627,16 @@ public class QuickInventoryHudUI : MonoBehaviour
                 fontSize: slotNumberFontSize,
                 alignment: TextAlignmentOptions.TopLeft);
 
+            // 개수는 오른쪽 위 — 왼쪽 위 슬롯 번호와 겹치던 버그 (2026-11-19)
             view.itemCountLabel = CreateLabel(slotGo.transform, "ItemCount",
-                anchorMin: new Vector2(0f, 1f),
-                anchorMax: new Vector2(0f, 1f),
-                pivot: new Vector2(0f, 1f),
-                anchoredPos: new Vector2(4f, -10f),
+                anchorMin: new Vector2(1f, 1f),
+                anchorMax: new Vector2(1f, 1f),
+                pivot: new Vector2(1f, 1f),
+                anchoredPos: new Vector2(-labelPadding, -labelPadding),
                 width: size * 0.5f,
                 height: itemNameFontSize + 4f,
                 fontSize: itemNameFontSize,
-                alignment: TextAlignmentOptions.TopLeft);
+                alignment: TextAlignmentOptions.TopRight);
 
             view.itemNameLabel = CreateLabel(slotGo.transform, "ItemName",
                 anchorMin: new Vector2(1f, 0f),
