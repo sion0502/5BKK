@@ -60,6 +60,46 @@ public class DemoGuideRoute : MonoBehaviour
 
     public int Current { get; private set; }
 
+    private static DemoGuideRoute active;
+
+    /// <summary>p가 아직 남은 안내 경로(현재 단계부터 끝까지) radius 안이면 true — 연출 뒤 배회 괴물을 길에서 먼 곳에 두려고 (DemoRoamingSpawner).</summary>
+    public static bool IsNearRemainingRoute(Vector3 p, float radius)
+    {
+        if (active == null)
+        {
+            return false;
+        }
+
+        float r2 = radius * radius;
+        for (int i = Mathf.Max(0, active.Current); i < active.steps.Length; i++)
+        {
+            foreach (Vector3 q in active.steps[i].path)
+            {
+                Vector3 d = q - p;
+                d.y *= 3f; // 다른 층은 멀게
+                if (d.sqrMagnitude < r2)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void OnEnable()
+    {
+        active = this;
+    }
+
+    private void OnDisable()
+    {
+        if (active == this)
+        {
+            active = null;
+        }
+    }
+
     public Step CurrentStep => steps.Length > 0 ? steps[Mathf.Clamp(Current, 0, steps.Length - 1)] : null;
 
     private void Start()
