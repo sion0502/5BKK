@@ -4406,7 +4406,14 @@ MonoBehaviour:
   audioSource: {fileID: 258798656}
   creakClip: {fileID: 0}
   slamClip: {fileID: 8300000, guid: d1783a70f15a9e74fab6c260ec4e3866, type: 3}
+  slamVolume: 1.2
+  slamTriggerClosed: 0.6
   windClip: {fileID: 8300000, guid: 643f075416ec4cc4e9823419f2e85b96, type: 3}
+  windQuietVolume: 0.04
+  windPeakVolume: 0.3
+  windRampStartTime: 5
+  windRampEndTime: 14.4
+  windStopFadeSeconds: 0.25
   closedLocalRotation: {x: 0, y: -0, z: -0, w: 1}
   closedCaptured: 1
 --- !u!1 &263899156
@@ -7627,27 +7634,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &2119243802
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 461702199}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d3a5c7e1b2f46a8c0e4d6b8a1f37c52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpatialSoundFx
-  minDistance: 2
-  maxDistance: 40
-  farCutoff: 1500
-  occludedCutoff: 900
-  occludedVolume: 0.55
-  ignoreNearListener: 1.5
-  reverbDecaySeconds: 1.8
-  reverbNear: 0.25
-  reverbFar: 0.9
 --- !u!4 &461702201
 Transform:
   m_ObjectHideFlags: 0
@@ -8837,52 +8823,6 @@ MonoBehaviour:
   audioSource: {fileID: 525081653}
   screamClip: {fileID: 0}
   turnSpeed: 110
---- !u!114 &2119243801
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 525081652}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b7d4e9a6c1f48d3a5e0b8c7d2f13a96, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostHideVoice
-  clips:
-  - {fileID: 8300000, guid: c4a1e7b392d84f56a0b3c8d1e9f27a61, type: 3}
-  - {fileID: 8300000, guid: d7b2f4a8c1e94d3a85f06b7c2e1a9d43, type: 3}
-  - {fileID: 8300000, guid: e9c3a5d7b1f84e2096a4c8d0b2f6e1a7, type: 3}
-  - {fileID: 8300000, guid: f1d4b6c8a2e04a7f93b5d1c7e3a9f0b2, type: 3}
-  volume: 1
-  firstDelay: {x: 0.3, y: 1.5}
-  gapSeconds: {x: 0.4, y: 3.5}
-  minDistance: 1.2
-  maxDistance: 18
---- !u!114 &2119243804
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 525081652}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a1c5e9d3b8f4260b4d6a0c2e8f19b53, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostFootsteps
-  clip: {fileID: 8300000, guid: b3e7a9c1d5f24860a2c4e6d8f0b17a39, type: 3}
-  volume: 1
-  leftPitch: 0.93
-  rightPitch: 1.07
-  pitchJitter: 0.035
-  liftHeight: 0.06
-  plantBand: 0.03
-  minMoveSpeed: 0.25
-  minAirSeconds: 0.12
-  sameFootInterval: 0.45
-  anyFootInterval: 0.16
-  heightSmoothing: 25
 --- !u!1 &531460387
 GameObject:
   m_ObjectHideFlags: 0
@@ -12429,7 +12369,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4063274542256686944, guid: 328e2bf2ac125eb44a76bef13b4d65fd, type: 3}
+    - {fileID: 7903679013241229290, guid: 328e2bf2ac125eb44a76bef13b4d65fd, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -21840,6 +21782,14 @@ MonoBehaviour:
   audioSource: {fileID: 1345517459}
   creakClip: {fileID: 0}
   slamClip: {fileID: 0}
+  slamVolume: 1.2
+  slamTriggerClosed: 0.6
+  windClip: {fileID: 0}
+  windQuietVolume: 0.04
+  windPeakVolume: 0.3
+  windRampStartTime: 5
+  windRampEndTime: 14.4
+  windStopFadeSeconds: 0.25
   closedLocalRotation: {x: 0, y: -0, z: -0, w: 1}
   closedCaptured: 1
 --- !u!1001 &1346150265
@@ -32459,6 +32409,67 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &2119243738
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2119243737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1e72f7c3ccde248821ac0df81fcaa6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PrologueDirector
+  corridorAZone: {fileID: 390961734}
+  exitDoorZone: {fileID: 388290959}
+  apparition: {fileID: 236670305}
+  journal: {fileID: 240249824}
+  nurse: {fileID: 525081654}
+  steelDoor: {fileID: 1345517460}
+  wardDoor: {fileID: 714732826}
+  death: {fileID: 1992859817}
+  finale: {fileID: 522422840}
+  finaleDoor: {fileID: 1220750263}
+  nurseSpawn: {fileID: 694001444}
+  corridorAMid: {fileID: 679721315}
+  wardEntrance: {fileID: 1990334498}
+  hidePassStart: {fileID: 1898894734}
+  hidePassFront: {fileID: 1971225662}
+  hideSpotLookAt: {fileID: 901609560}
+  returnRoute:
+  - {fileID: 1990334498}
+  - {fileID: 679721315}
+  - {fileID: 694001444}
+  exitDoorFace: {fileID: 1745000799}
+  e1Timeout: 40
+  apparitionTimeout: 22
+  camcorderTipDelay: 0.6
+  keyTimeout: 60
+  hideTimeout: 25
+  hiddenToAppearDelay: 1.5
+  hidePauseSeconds: 1.5
+  finaleTimeout: 75
+  chaseCatchUpAfter: 25
+  chaseSpeedRatio: 0.85
+  tooCloseDistance: 3.5
+  e2AudioSource: {fileID: 461702200}
+  e2Clip: {fileID: 8300000, guid: 6c2e9b41d8a74f35b0d7e1a3c5f98d27, type: 3}
+--- !u!4 &2119243739
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2119243737}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 228003373}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2119243799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32508,6 +32519,56 @@ MonoBehaviour:
   failClip: {fileID: 8300000, guid: 0d0547e77a72dfc4fab31c87bb6232de, type: 3}
   failVolume: 1
   failStartTime: 0.08
+--- !u!114 &2119243801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525081652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b7d4e9a6c1f48d3a5e0b8c7d2f13a96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostHideVoice
+  clips:
+  - {fileID: 8300000, guid: c4a1e7b392d84f56a0b3c8d1e9f27a61, type: 3}
+  - {fileID: 8300000, guid: d7b2f4a8c1e94d3a85f06b7c2e1a9d43, type: 3}
+  - {fileID: 8300000, guid: e9c3a5d7b1f84e2096a4c8d0b2f6e1a7, type: 3}
+  - {fileID: 8300000, guid: f1d4b6c8a2e04a7f93b5d1c7e3a9f0b2, type: 3}
+  volume: 1
+  firstDelay: {x: 0.3, y: 1.5}
+  gapSeconds: {x: 0.4, y: 3.5}
+  minDistance: 1.2
+  maxDistance: 18
+  occludedCutoff: 900
+  occludedVolume: 0.55
+  ignoreNearListener: 1.5
+  reverbPreset: 13
+  reverbNear: 0.25
+  reverbFar: 0.9
+--- !u!114 &2119243802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461702199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3a5c7e1b2f46a8c0e4d6b8a1f37c52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpatialSoundFx
+  minDistance: 2
+  maxDistance: 40
+  farCutoff: 1500
+  occludedCutoff: 900
+  occludedVolume: 0.55
+  ignoreNearListener: 1.5
+  occlusionHeight: 0
+  reverbDecaySeconds: 1.8
+  reverbNear: 0.25
+  reverbFar: 0.9
 --- !u!114 &2119243803
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32526,66 +32587,30 @@ MonoBehaviour:
   volume: 0.65
   startTime: 0
   fadeStartTime: 1.6
---- !u!114 &2119243738
+--- !u!114 &2119243804
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2119243737}
+  m_GameObject: {fileID: 525081652}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a1e72f7c3ccde248821ac0df81fcaa6, type: 3}
+  m_Script: {fileID: 11500000, guid: 7a1c5e9d3b8f4260b4d6a0c2e8f19b53, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PrologueDirector
-  corridorAZone: {fileID: 390961734}
-  exitDoorZone: {fileID: 388290959}
-  apparition: {fileID: 236670305}
-  journal: {fileID: 240249824}
-  nurse: {fileID: 525081654}
-  steelDoor: {fileID: 1345517460}
-  wardDoor: {fileID: 714732826}
-  death: {fileID: 1992859817}
-  finale: {fileID: 522422840}
-  finaleDoor: {fileID: 1220750263}
-  nurseSpawn: {fileID: 694001444}
-  corridorAMid: {fileID: 679721315}
-  wardEntrance: {fileID: 1990334498}
-  hidePassStart: {fileID: 1898894734}
-  hidePassFront: {fileID: 1971225662}
-  hideSpotLookAt: {fileID: 901609560}
-  returnRoute:
-  - {fileID: 1990334498}
-  - {fileID: 679721315}
-  - {fileID: 694001444}
-  exitDoorFace: {fileID: 1745000799}
-  e1Timeout: 40
-  apparitionTimeout: 22
-  keyTimeout: 60
-  hideTimeout: 25
-  hiddenToAppearDelay: 1.5
-  hidePauseSeconds: 1.5
-  finaleTimeout: 75
-  chaseCatchUpAfter: 25
-  chaseSpeedRatio: 0.85
-  tooCloseDistance: 3.5
-  e2AudioSource: {fileID: 461702200}
-  e2Clip: {fileID: 8300000, guid: 6c2e9b41d8a74f35b0d7e1a3c5f98d27, type: 3}
---- !u!4 &2119243739
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2119243737}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 228003373}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::NurseGhostFootsteps
+  clip: {fileID: 8300000, guid: b3e7a9c1d5f24860a2c4e6d8f0b17a39, type: 3}
+  volume: 1
+  leftPitch: 0.93
+  rightPitch: 1.07
+  pitchJitter: 0.035
+  liftHeight: 0.06
+  plantBand: 0.03
+  minAirSeconds: 0.12
+  sameFootInterval: 0.45
+  anyFootInterval: 0.16
+  heightSmoothing: 25
+  minMoveSpeed: 0.25
 --- !u!1 &2120950856
 GameObject:
   m_ObjectHideFlags: 0
