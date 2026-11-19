@@ -26,10 +26,15 @@ public class TutorialPromptUI : MonoBehaviour
 
     private float targetAlpha;
     private float checkShownAt = -1f;
+    private TutorialStepCardStyle card;
 
     void Awake()
     {
         ApplyFallbackFont();
+
+        // 오른쪽 위 작은 상자 → 화면 가운데 아래 큰 '단계 카드' (2026-11-19 — 관람객이 못 보고 지나침)
+        card = gameObject.AddComponent<TutorialStepCardStyle>();
+        card.Apply(panelGroup, keyText, keyBadge, messageText);
 
         if (panelGroup != null)
         {
@@ -44,7 +49,7 @@ public class TutorialPromptUI : MonoBehaviour
     {
         float dt = Time.unscaledDeltaTime;
 
-        if (panelGroup != null)
+        if (panelGroup != null && (card == null || !card.IsAnimating))
         {
             panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, targetAlpha, dt * fadeSpeed);
         }
@@ -55,6 +60,18 @@ public class TutorialPromptUI : MonoBehaviour
     public bool IsFadedOut => panelGroup == null || panelGroup.alpha <= 0.001f;
 
     public void ShowStep(TutorialStep step, int index, int total)
+    {
+        targetAlpha = 1f;
+        if (card != null)
+        {
+            card.ShowStep(index, total, () => ApplyStepContent(step));
+            return;
+        }
+
+        ApplyStepContent(step);
+    }
+
+    private void ApplyStepContent(TutorialStep step)
     {
         if (keyText != null)
         {
@@ -80,6 +97,10 @@ public class TutorialPromptUI : MonoBehaviour
     public void MarkComplete()
     {
         ShowCheck();
+        if (card != null)
+        {
+            card.MarkComplete();
+        }
 
         if (messageText != null)
         {
@@ -94,6 +115,11 @@ public class TutorialPromptUI : MonoBehaviour
 
     public void ShowFinished(string message)
     {
+        if (card != null)
+        {
+            card.SetProgressText(string.Empty);
+        }
+
         if (keyBadge != null)
         {
             keyBadge.gameObject.SetActive(false);

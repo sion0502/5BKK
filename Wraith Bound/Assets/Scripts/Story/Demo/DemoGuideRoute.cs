@@ -60,6 +60,73 @@ public class DemoGuideRoute : MonoBehaviour
 
     public int Current { get; private set; }
 
+    private static DemoGuideRoute active;
+
+    /// <summary>p가 아직 남은 안내 경로(현재 단계부터 끝까지) radius 안이면 true — 연출 뒤 배회 괴물을 길에서 먼 곳에 두려고 (DemoRoamingSpawner).</summary>
+    public static bool IsNearRemainingRoute(Vector3 p, float radius)
+    {
+        if (active == null)
+        {
+            return false;
+        }
+
+        float r2 = radius * radius;
+        for (int i = Mathf.Max(0, active.Current); i < active.steps.Length; i++)
+        {
+            foreach (Vector3 q in active.steps[i].path)
+            {
+                Vector3 d = q - p;
+                d.y *= 3f; // 다른 층은 멀게
+                if (d.sqrMagnitude < r2)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 캠코더 부적 감지가 가리킬 목표 (2026-11-19): 안내 순서상 아직 안 태운 첫 부적, 부적이 다 모였으면 출구(마지막 단계 목표).
+    /// 연출 루트 순서(④→③→⑤)를 따르게 — 루트 밖 부적은 가리키지 않음.
+    /// </summary>
+    public static Transform NextCamcorderTarget()
+    {
+        if (active == null || active.steps.Length == 0)
+        {
+            return null;
+        }
+
+        if (DemoSealProgress.Count < DemoSealProgress.Total)
+        {
+            foreach (Step s in active.steps)
+            {
+                if (s.kind == StepKind.Talisman && s.talisman != null && !DemoSealProgress.Has(s.talisman.Index))
+                {
+                    return s.talisman.transform;
+                }
+            }
+
+            return null;
+        }
+
+        return active.steps[active.steps.Length - 1].target;
+    }
+
+    private void OnEnable()
+    {
+        active = this;
+    }
+
+    private void OnDisable()
+    {
+        if (active == this)
+        {
+            active = null;
+        }
+    }
+
     public Step CurrentStep => steps.Length > 0 ? steps[Mathf.Clamp(Current, 0, steps.Length - 1)] : null;
 
     private void Start()

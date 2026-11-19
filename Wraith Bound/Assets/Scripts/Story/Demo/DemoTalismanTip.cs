@@ -11,7 +11,8 @@ public class DemoTalismanTip : MonoBehaviour
     private const string Message =
         "출구 대문은 <b>부적 세 장</b>으로 봉인돼 있습니다.\n" +
         "병원 곳곳에 놓인 부적을 조준하고 <b>E</b>를 누르면 부적이 불타고,\n대문의 봉인도 한 장씩 함께 타오릅니다.\n" +
-        "<b>세 장</b>을 태우면 출구가 열립니다.";
+        "<b>세 장</b>을 태우면 출구가 열립니다.\n\n" +
+        "<b>캠코더 화면</b>으로 비추면 다음 부적의 기운이 벽 너머로도 보입니다.";
 
     private static DemoTalismanTip instance;
     private static bool shown;

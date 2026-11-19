@@ -17,6 +17,7 @@ using UnityEngine.AI;
 ///  · leaveAfterHide: 플레이어가 숨어서 searchSeconds 동안 버티면(또는 놓치면) 숨은 곳 주변을 서성이던 크리처가
 ///    나타났던 자리로 걸어 돌아가 사라짐 — 예전엔 숨은 곳 근처를 계속 맴돌다 앞길로 가서 진행이 막혔음.
 ///    돌아가는 길에 플레이어가 숨는 곳에서 나와 가까이 보이면 다시 쫓아옴.
+///  · runInFrom(출구에서 뛰어 들어오기): 크리처를 출구 복도 안쪽(안 보이는 곳)에서 켜 바로 쫓게 함 — 달려 들어오는 모습이 보임.
 /// </summary>
 public class DemoAmbushSequence : MonoBehaviour
 {
@@ -69,6 +70,11 @@ public class DemoAmbushSequence : MonoBehaviour
     [SerializeField] private Vector2 cueGap = new Vector2(1f, 2f);
     [Tooltip("플레이어와 이 거리보다 가까이에서는 나타나지 않음 (정해 둔 자리가 더 가까우면 그 자리)")]
     [SerializeField] private float approachDistance = 15f;
+
+    [Header("등장 연출 — 출구·복도에서 뛰어 들어오기 (있으면 다른 등장 연출 대신)")]
+    [Tooltip("있으면 크리처를 spawn 대신 이 자리(플레이어 눈에 안 보이는 출구 복도 안쪽)에서 켜고 바로 쫓게 함 — " +
+             "정해 둔 자리에서 눈앞에 '뿅' 나타나지 않고 출구 쪽에서 달려 들어옴. leaveAfterHide면 숨은 뒤 이 자리로 돌아가 사라짐")]
+    [SerializeField] private Transform runInFrom;
 
     [Header("등장 연출 — 멀리서 보여주기 (켜면 예고 소리 대신)")]
     [SerializeField] private bool revealInSight;
@@ -250,7 +256,13 @@ public class DemoAmbushSequence : MonoBehaviour
         Vector3 appear = spawnPos;
         ApproachingSoundCue cue = null;
         bool revealed = false;
-        if (revealInSight && creature != null && !creature.gameObject.activeSelf
+        if (runInFrom != null && creature != null && !creature.gameObject.activeSelf)
+        {
+            // 출구 복도 안쪽(안 보이는 곳)에서 켜져 쫓기 시작 → AI가 길을 따라 달려 들어옴
+            appear = runInFrom.position;
+            Debug.Log("[Demo] " + name + " 출구 쪽에서 달려 들어옴 — 등장 " + appear.ToString("F1"));
+        }
+        else if (revealInSight && creature != null && !creature.gameObject.activeSelf
             && DemoCreatureStaging.TryPickRevealPoint(spawnPos, playerT, creature.transform, revealMinDistance, revealMaxDistance, revealDistance, out Vector3 revealPoint))
         {
             revealed = true;

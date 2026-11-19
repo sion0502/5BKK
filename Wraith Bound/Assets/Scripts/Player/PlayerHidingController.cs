@@ -187,7 +187,7 @@ public class PlayerHidingController : MonoBehaviour
                         hit.normal,
                         spot.transform.forward);
 
-                if (hitAngle <= maxFrontAngle)
+                if (spot.allowAnySide || hitAngle <= maxFrontAngle)
                 {
                     currentSpot = spot;
                     return;

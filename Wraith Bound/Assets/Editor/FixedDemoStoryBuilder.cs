@@ -88,6 +88,7 @@ public static class FixedDemoStoryBuilder
         }
 
         root.gameObject.AddComponent<DemoCreatureTuning>(); // 괴물 추격 속도 = 플레이어 달리기 (탈춤귀신 ×1.1)
+        root.gameObject.AddComponent<DemoCamcorderTalismanSense>(); // 캠코더로 비추면 다음 루트 부적·출구의 기운이 보임 (2026-11-19)
         FixedDemoSetPieces.Build(root, log); // 시연 동선: 잠긴 문 풀기·열쇠·④ 얼굴 없는 귀신·⑤ Xenosaurid
         FixedDemoHideSpots.Build(root, log); // ③ 수술실 방 숨는 곳(트롤리) — 사용자 요청 2개 이상
         FixedDemoRoamers.Build(root, log); // 맵을 돌아다니는 괴물 4종(무작위 타일)
@@ -226,7 +227,7 @@ public static class FixedDemoStoryBuilder
         so.FindProperty("audioSource").objectReferenceValue = audio;
         so.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine("탈춤귀신 등장 " + spawn.ToString("F1") + (ghost != null ? "" : " (EnemyBase 없음!)"));
-        ApproachingSong(root, talisman.transform, sealIndex, log);
+        // 다가오는 노래는 DemoOperatingRoomSequence의 ApproachingSoundCue(팀원)가 맡음 — DemoApproachingSound는 겹쳐서 안 붙임 (2026-11-19)
     }
 
     // 맵에 놓는 부적 크기 (종이 약 0.34×0.92m — 플레이어 1.3배 맵에서 눈에 띄게)

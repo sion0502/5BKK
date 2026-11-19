@@ -91,14 +91,17 @@ public class PlayerStatusHudUI : MonoBehaviour
             return;
         }
 
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        Canvas canvas = GameplayHudCanvasSetup.FindHostCanvas(transform);
         if (canvas == null)
         {
             Debug.LogWarning("[PlayerStatusHudUI] Canvas를 찾을 수 없습니다.");
             return;
         }
 
-        transform.SetParent(canvas.transform, false);
+        if (!transform.IsChildOf(canvas.transform))
+        {
+            transform.SetParent(canvas.transform, false);
+        }
     }
 
     private void BuildHealthUI()

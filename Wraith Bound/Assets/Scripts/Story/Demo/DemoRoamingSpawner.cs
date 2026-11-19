@@ -93,6 +93,96 @@ public class DemoRoamingSpawner : MonoBehaviour
         {
             instance.spawned.Add(appeared);
         }
+
+        DemoSetPieceAftermath.Track(appeared); // 따돌려서 사라지면 같은 종류 배회 괴물을 길에서 먼 곳에 다시 내보냄
+    }
+
+    /// <summary>
+    /// 연출 괴물이 사라진 뒤 같은 종류 배회 괴물을 다시 내보냄 — 플레이어에게서 멀고(minPlayerDistance) 안 보이고
+    /// 남은 길잡이 루트에서 routeClearance 밖인 곳 (2026-11-19 연출 뒤 괴물이 가야 할 길을 막음).
+    /// </summary>
+    public static void RespawnSameKindLater(EnemyBase vanished)
+    {
+        if (instance != null && instance.isActiveAndEnabled && vanished != null)
+        {
+            instance.StartCoroutine(instance.RespawnSameKind(KindOf(vanished), vanished));
+        }
+    }
+
+    [SerializeField] private float routeClearance = 18f;
+
+    private System.Collections.IEnumerator RespawnSameKind(string kind, EnemyBase vanished)
+    {
+        yield return null;
+        if (PlayerDeathDebug.IsDying || PlayerDeathDebug.IsDead)
+        {
+            yield break;
+        }
+
+        EnemyBase roamer = null;
+        foreach (EnemyBase e in spawned)
+        {
+            if (e != null && e != vanished && !e.gameObject.activeSelf && KindOf(e) == kind)
+            {
+                roamer = e;
+                break;
+            }
+        }
+
+        if (roamer == null)
+        {
+            Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 — 다시 내보낼 같은 종류 배회 괴물 없음");
+            yield break;
+        }
+
+        if (!TryPickFarSpot(true, out Vector3 p) && !TryPickFarSpot(false, out p))
+        {
+            Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 — 배회 괴물 " + roamer.name + " 다시 둘 자리를 못 찾음");
+            yield break;
+        }
+
+        roamer.transform.position = p;
+        roamer.gameObject.SetActive(true);
+        yield return null;
+        NavMeshAgent agent = roamer.GetComponent<NavMeshAgent>();
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.Warp(p);
+        }
+
+        roamer.ReturnToPatrolAfterDeath();
+        roamer.RuntimeState.PlayerDeadLogged = DemoGodMode.IsImmune(roamer);
+        Debug.Log("[Demo] 연출 " + vanished.name + " 사라짐 → 배회 괴물 " + roamer.name + " 다시 등장 " + p.ToString("F1"));
+    }
+
+    // 플레이어 30m+·안 보이는 곳, avoidRoute면 남은 길잡이 루트에서도 routeClearance 밖
+    private bool TryPickFarSpot(bool avoidRoute, out Vector3 point)
+    {
+        point = Vector3.zero;
+        Camera eye = Camera.main;
+        for (int k = 0; k < 24; k++)
+        {
+            Transform tile = spawnTiles[UnityEngine.Random.Range(0, spawnTiles.Length)];
+            if (tile == null || IsExcluded(tile) || !TryRandomPoint(tile, minPlayerDistance, out Vector3 p))
+            {
+                continue;
+            }
+
+            if (eye != null && !Physics.Linecast(eye.transform.position, p + Vector3.up * 1.5f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                continue;
+            }
+
+            if (avoidRoute && DemoGuideRoute.IsNearRemainingRoute(p, routeClearance))
+            {
+                continue;
+            }
+
+            point = p;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>이 괴물을 플레이어에게서 멀고 안 보이는 다른 자리로 옮김 (갓모드에서 잡힌 뒤 등). 시연 씬이 아니면 아무것도 안 함.</summary>
