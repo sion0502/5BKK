@@ -100,6 +100,7 @@ public class HospitalMusic : MonoBehaviour
         source.loop = false;
         source.playOnAwake = false;
         source.spatialBlend = 0f;
+        source.ignoreListenerVolume = true; // 환경음 설정과 분리 — 배경음 설정만 따름
         source.volume = 0f;
         return source;
     }
@@ -176,6 +177,6 @@ public class HospitalMusic : MonoBehaviour
 
         float fadeIn = entry > 0f ? Mathf.Sin(Mathf.Clamp01((t - entry) / fade) * Mathf.PI * 0.5f) : 1f;
         float fadeOut = t >= end - fade ? Mathf.Cos(Mathf.Clamp01((t - (end - fade)) / fade) * Mathf.PI * 0.5f) : 1f;
-        voice.volume = volume * master * fadeIn * fadeOut;
+        voice.volume = volume * GameSettings.BgmVolume * master * fadeIn * fadeOut;
     }
 }

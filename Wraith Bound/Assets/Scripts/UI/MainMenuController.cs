@@ -85,9 +85,7 @@ public class MainMenuController : MonoBehaviour
     private TextMeshProUGUI dialogMessage;
     private Button dialogYesButton;
     private Button dialogNoButton;
-    private TextMeshProUGUI fullscreenLabel;
-    private TextMeshProUGUI volumeValueLabel;
-    private TextMeshProUGUI sensitivityValueLabel;
+    private SettingsPanelUI settingsPanelUI;
     private readonly Dictionary<CanvasGroup, Coroutine> fadeRoutines = new Dictionary<CanvasGroup, Coroutine>();
 
     private bool isReady;
@@ -229,7 +227,10 @@ public class MainMenuController : MonoBehaviour
             MoveCameraTo(MainMenuViews.Id.Settings);
         }
 
-        RefreshSettingsLabels();
+        if (settingsPanelUI != null)
+        {
+            settingsPanelUI.Refresh();
+        }
         OpenPanel(settingsGroup);
     }
 
@@ -963,80 +964,8 @@ public class MainMenuController : MonoBehaviour
     private void BuildSettingsPanel(RectTransform canvasRect, TMP_FontAsset menuFont)
     {
         RectTransform root = CreateGroupRoot(canvasRect, "SettingsPanel", out settingsGroup);
-        Vector2 panelSize = new Vector2(760f, 470f);
-        RectTransform panel = MenuUIUtility.CreateCenteredPanel(root, "Background", new Vector2(0f, -60f), panelSize,
-            new Color(0.05f, 0.05f, 0.06f, 0.88f));
-
-        Color text = MenuSkin.Text;
-        MenuUIUtility.CreateHeader(panel, "설정", menuFont, new Vector2(0f, 175f), 560f);
-
-        float labelX = -220f;
-        float sliderX = 60f;
-        float valueX = 290f;
-        Vector2 labelSize = new Vector2(220f, 50f);
-        Vector2 sliderSize = new Vector2(320f, 36f);
-
-        // 전체 음량
-        MenuUIUtility.CreateLabel(panel, "전체 음량", menuFont, new Vector2(labelX, 90f), labelSize, 28f,
-            TextAlignmentOptions.Left, text);
-        MenuUIUtility.CreateSlider(panel, new Vector2(sliderX, 90f), sliderSize, 0f, 1f, GameSettings.MasterVolume, v =>
-        {
-            GameSettings.MasterVolume = v;
-            RefreshSettingsLabels();
-        });
-        volumeValueLabel = MenuUIUtility.CreateLabel(panel, "", menuFont, new Vector2(valueX, 90f), new Vector2(110f, 50f), 26f,
-            TextAlignmentOptions.Right, text);
-
-        // 마우스 감도
-        MenuUIUtility.CreateLabel(panel, "마우스 감도", menuFont, new Vector2(labelX, 10f), labelSize, 28f,
-            TextAlignmentOptions.Left, text);
-        MenuUIUtility.CreateSlider(panel, new Vector2(sliderX, 10f), sliderSize, GameSettings.MinSensitivity,
-            GameSettings.MaxSensitivity, GameSettings.MouseSensitivity, v =>
-            {
-                GameSettings.MouseSensitivity = v;
-                RefreshSettingsLabels();
-            });
-        sensitivityValueLabel = MenuUIUtility.CreateLabel(panel, "", menuFont, new Vector2(valueX, 10f), new Vector2(110f, 50f), 26f,
-            TextAlignmentOptions.Right, text);
-
-        // 전체 화면
-        MenuUIUtility.CreateLabel(panel, "전체 화면", menuFont, new Vector2(labelX, -70f), labelSize, 28f,
-            TextAlignmentOptions.Left, text);
-        Button fullscreenButton = MenuUIUtility.CreateMenuButton(panel, "", menuFont, new Vector2(sliderX, -70f),
-            new Vector2(180f, 48f), () =>
-            {
-                GameSettings.Fullscreen = !GameSettings.Fullscreen;
-                RefreshSettingsLabels(!Screen.fullScreen); // Screen.fullScreen은 다음 프레임에 바뀜
-            });
-        fullscreenLabel = fullscreenButton.GetComponentInChildren<TextMeshProUGUI>(true);
-
-        AddHoverSound(MenuUIUtility.CreateMenuButton(panel, "뒤로", menuFont, new Vector2(0f, -175f),
-            new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f), ClosePanels));
-
-        RefreshSettingsLabels();
-    }
-
-    private void RefreshSettingsLabels()
-    {
-        RefreshSettingsLabels(Screen.fullScreen);
-    }
-
-    private void RefreshSettingsLabels(bool fullscreen)
-    {
-        if (volumeValueLabel != null)
-        {
-            volumeValueLabel.text = Mathf.RoundToInt(GameSettings.MasterVolume * 100f) + "%";
-        }
-
-        if (sensitivityValueLabel != null)
-        {
-            sensitivityValueLabel.text = GameSettings.MouseSensitivity.ToString("0.0") + "x";
-        }
-
-        if (fullscreenLabel != null)
-        {
-            fullscreenLabel.text = fullscreen ? "켜짐" : "꺼짐";
-        }
+        settingsPanelUI = SettingsPanelUI.Build(root, menuFont,
+            new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f), ClosePanels);
     }
 
     private void BuildDialog(RectTransform canvasRect, TMP_FontAsset menuFont)

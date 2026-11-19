@@ -31,6 +31,9 @@ public class PauseMenuController : MonoBehaviour
     private Canvas pauseCanvas;
     private CanvasGroup pauseCanvasGroup;
     private GameObject pausePanel;
+    private RectTransform mainRoot;
+    private RectTransform settingsRoot;
+    private SettingsPanelUI settingsPanelUI;
     private Volume pauseBlurVolume;
     private Coroutine blurFadeCoroutine;
     private bool isPaused;
@@ -59,7 +62,11 @@ public class PauseMenuController : MonoBehaviour
 
         if (Input.GetKeyDown(pauseKey))
         {
-            if (isPaused)
+            if (isPaused && IsSettingsOpen)
+            {
+                CloseSettings();
+            }
+            else if (isPaused)
             {
                 ResumeGame();
             }
@@ -91,6 +98,11 @@ public class PauseMenuController : MonoBehaviour
         }
 
         isPaused = true;
+        if (IsSettingsOpen)
+        {
+            CloseSettings();
+        }
+
         Time.timeScale = 0f;
         EnsurePlayerCameraPostProcessing();
         SetGameplayEnabled(false);
@@ -108,6 +120,11 @@ public class PauseMenuController : MonoBehaviour
         }
 
         isPaused = false;
+        if (IsSettingsOpen)
+        {
+            CloseSettings();
+        }
+
         Time.timeScale = 1f;
         RestorePlayerCameraPostProcessing();
         SetGameplayEnabled(true);
@@ -444,6 +461,16 @@ public class PauseMenuController : MonoBehaviour
         RectTransform canvasRect = pauseCanvas.GetComponent<RectTransform>();
         pausePanel = canvasRect.gameObject;
 
+        // 기존 일시정지 화면 요소는 mainRoot 아래에 둠 (옵션 패널을 열 때 통째로 숨기기 위해)
+        GameObject mainObject = new GameObject("MainRoot", typeof(RectTransform));
+        mainObject.transform.SetParent(canvasRect, false);
+        RectTransform mainRoot = mainObject.GetComponent<RectTransform>();
+        this.mainRoot = mainRoot;
+        mainRoot.anchorMin = Vector2.zero;
+        mainRoot.anchorMax = Vector2.one;
+        mainRoot.offsetMin = Vector2.zero;
+        mainRoot.offsetMax = Vector2.zero;
+
         if (dimBackgroundAlpha > 0.01f)
         {
             MenuUIUtility.CreateFullScreenPanel(
@@ -452,50 +479,97 @@ public class PauseMenuController : MonoBehaviour
                 "DimBackground");
         }
 
-        float startY = buttonSpacing * 1.5f;
-        float lastY = startY - (buttonHeight + buttonSpacing) * 3f;
+        float startY = buttonSpacing * 1.5f + (buttonHeight + buttonSpacing) * 0.5f;
+        float lastY = startY - (buttonHeight + buttonSpacing) * 4f;
 
         // 참고 디자인: 은은한 연기 바탕 위에 붓질 머리 '일시정지' + 아래 구분선·조작 안내 (테두리 없음)
         Sprite smoke = MenuSkin.PanelBg;
         if (smoke != null)
         {
-            Image bg = MenuSkin.AddImage(canvasRect, "Smoke", smoke, new Color(1f, 1f, 1f, 0.6f), sliced: true);
+            Image bg = MenuSkin.AddImage(mainRoot, "Smoke", smoke, new Color(1f, 1f, 1f, 0.6f), sliced: true);
             MenuSkin.Place(bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, (startY + 130f + lastY - 110f) * 0.5f), new Vector2(buttonWidth + 420f, startY - lastY + 400f));
         }
 
-        MenuUIUtility.CreateHeader(canvasRect, "일시정지", menuFont, new Vector2(0f, startY + 110f), buttonWidth + 220f);
-        MenuUIUtility.CreateDivider(canvasRect, new Vector2(0f, lastY - 70f), buttonWidth + 220f);
-        TextMeshProUGUI hint = MenuUIUtility.CreateLabel(canvasRect, "ESC   계속하기", menuFont, new Vector2(0f, lastY - 105f),
+        MenuUIUtility.CreateHeader(mainRoot, "일시정지", menuFont, new Vector2(0f, startY + 110f), buttonWidth + 220f);
+        MenuUIUtility.CreateDivider(mainRoot, new Vector2(0f, lastY - 70f), buttonWidth + 220f);
+        TextMeshProUGUI hint = MenuUIUtility.CreateLabel(mainRoot, "ESC   계속하기", menuFont, new Vector2(0f, lastY - 105f),
             new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center, MenuSkin.TextDim);
         hint.characterSpacing = 4f;
         AddHoverSound(MenuUIUtility.CreateMenuButton(
-            canvasRect,
+            mainRoot,
             "계속하기",
             menuFont,
             new Vector2(0f, startY),
             new Vector2(buttonWidth, buttonHeight),
             ResumeGame));
         AddHoverSound(MenuUIUtility.CreateMenuButton(
-            canvasRect,
-            "다시하기",
+            mainRoot,
+            "옵션",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing)),
             new Vector2(buttonWidth, buttonHeight),
-            RestartStage));
+            OpenSettings));
         AddHoverSound(MenuUIUtility.CreateMenuButton(
-            canvasRect,
-            "메인메뉴로",
+            mainRoot,
+            "다시하기",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 2f),
             new Vector2(buttonWidth, buttonHeight),
-            GoToMainMenu));
+            RestartStage));
         AddHoverSound(MenuUIUtility.CreateMenuButton(
-            canvasRect,
-            "바탕화면으로",
+            mainRoot,
+            "메인메뉴로",
             menuFont,
             new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 3f),
             new Vector2(buttonWidth, buttonHeight),
+            GoToMainMenu));
+        AddHoverSound(MenuUIUtility.CreateMenuButton(
+            mainRoot,
+            "바탕화면으로",
+            menuFont,
+            new Vector2(0f, startY - (buttonHeight + buttonSpacing) * 4f),
+            new Vector2(buttonWidth, buttonHeight),
             QuitToDesktop));
+
+        // 옵션 패널 (평소엔 숨김 — '옵션' 버튼으로 열고 '뒤로'/ESC로 닫음)
+        GameObject settingsObject = new GameObject("SettingsRoot", typeof(RectTransform));
+        settingsObject.transform.SetParent(canvasRect, false);
+        settingsRoot = settingsObject.GetComponent<RectTransform>();
+        settingsRoot.anchorMin = Vector2.zero;
+        settingsRoot.anchorMax = Vector2.one;
+        settingsRoot.offsetMin = Vector2.zero;
+        settingsRoot.offsetMax = Vector2.zero;
+        settingsPanelUI = SettingsPanelUI.Build(settingsRoot, menuFont,
+            new Vector2(buttonWidth * 0.7f, buttonHeight * 0.85f), CloseSettings);
+        settingsObject.SetActive(false);
     }
+
+    private void OpenSettings()
+    {
+        if (settingsRoot == null)
+        {
+            return;
+        }
+
+        settingsPanelUI.Refresh();
+        mainRoot.gameObject.SetActive(false);
+        settingsRoot.gameObject.SetActive(true);
+    }
+
+    private void CloseSettings()
+    {
+        GameSettings.Save();
+        if (settingsRoot != null)
+        {
+            settingsRoot.gameObject.SetActive(false);
+        }
+
+        if (mainRoot != null)
+        {
+            mainRoot.gameObject.SetActive(true);
+        }
+    }
+
+    private bool IsSettingsOpen => settingsRoot != null && settingsRoot.gameObject.activeSelf;
 }
